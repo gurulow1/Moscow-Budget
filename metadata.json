@@ -1,0 +1,8 @@
+{
+  "name": "Remix: Открытый бюджет Москвы - Сервисы",
+  "description": "Интерактивные сервисы и геймификация для Открытого бюджета Москвы",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
