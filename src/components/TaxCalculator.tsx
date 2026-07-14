@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useId } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Calculator, Sparkles, AlertCircle, RefreshCw } from 'lucide-react';
 import { Persona } from '../../types';
@@ -14,11 +14,12 @@ interface TaxCalculatorProps {
 export default function TaxCalculator({ activePersona, onCalculate, isCompleted, isLoading }: TaxCalculatorProps) {
   // Set slider limits depending on persona
   const isStudent = activePersona === 'Student';
-  const isBiz = activePersona === 'Entrepreneur';
+  const idPrefix = useId();
+  const eduInputId = `${idPrefix}-education-cost`;
+  const sportInputId = `${idPrefix}-sport-cost`;
   
   const [eduCost, setEduCost] = useState<number>(isStudent ? 45000 : 75000);
   const [sportCost, setSportCost] = useState<number>(isStudent ? 15000 : 35000);
-  const [calculatedResult, setCalculatedResult] = useState<number | null>(null);
   const [isMobile, setIsMobile] = useState<boolean>(false);
 
   // Sync initial slider values based on Selected Persona for interactive feedback
@@ -36,7 +37,6 @@ export default function TaxCalculator({ activePersona, onCalculate, isCompleted,
       setEduCost(130000);
       setSportCost(60000);
     }
-    setCalculatedResult(null);
   }, [activePersona]);
 
   // Responsive display listener to toggle controls seamlessly
@@ -50,16 +50,13 @@ export default function TaxCalculator({ activePersona, onCalculate, isCompleted,
   // Compute live real-time values for instant feedback
   const liveDeduction = Math.round(Math.min(eduCost + sportCost, 150000) * 0.13);
 
-  // Sync projected values back to localStorage for real-time Analytics update
+  // Keep the latest educational estimate for the visualisation module.
   useEffect(() => {
-    const totalBase = eduCost + sportCost;
-    const cappedBase = Math.min(totalBase, 150000);
-    const projectedYearlyNdfl = Math.max(50000, cappedBase * 1.5 * 0.13);
-    safeLocalStorage.setItem('mos_calc_last_result', projectedYearlyNdfl.toString());
-  }, [eduCost, sportCost]);
+    safeLocalStorage.setItem('mos_calc_last_deduction', liveDeduction.toString());
+    window.dispatchEvent(new CustomEvent('mos_calc_deduction_update', { detail: liveDeduction }));
+  }, [liveDeduction]);
 
   const handleCalculate = () => {
-    setCalculatedResult(liveDeduction);
     onCalculate();
   };
 
@@ -79,13 +76,8 @@ export default function TaxCalculator({ activePersona, onCalculate, isCompleted,
     setSportCost(Math.min(num, 200000));
   };
 
-  const eduLabel = isBiz 
-    ? "Расходы на обучение персонала / повышение квалификации" 
-    : "Стоимость обучения в год (Вуз, курсы, лекции)";
-
-  const sportLabel = isBiz
-    ? "Расходы на спорт сотрудников (аренда спортзала, фитнес)"
-    : "Расходы на спорт и фитнес (абонементы, секции)";
+  const eduLabel = "Личные расходы на обучение в год";
+  const sportLabel = "Личные расходы на спорт и фитнес";
 
   if (isLoading) {
     return (
@@ -134,13 +126,14 @@ export default function TaxCalculator({ activePersona, onCalculate, isCompleted,
         {/* Slider 1: Education */}
         <div className="space-y-3">
           <div className="flex justify-between items-center gap-2">
-            <label className="text-xs sm:text-sm font-semibold text-[#0F172A] dark:text-slate-200 tracking-tight leading-relaxed max-w-[65%]">
+            <label htmlFor={eduInputId} className="text-xs sm:text-sm font-semibold text-[#0F172A] dark:text-slate-200 tracking-tight leading-relaxed max-w-[65%]">
               {eduLabel}
             </label>
             {/* Desktop input рядом */}
             {!isMobile ? (
               <div className="flex items-center gap-1.5 shrink-0 bg-[#F8FAFC] dark:bg-slate-950 border border-[#E2E8F0] dark:border-slate-800 px-2 py-1 rounded-md font-mono">
                 <input
+                  id={eduInputId}
                   type="text"
                   value={eduCost === 0 ? '' : eduCost.toLocaleString('ru-RU')}
                   onChange={(e) => handleEduInputChange(e.target.value)}
@@ -169,6 +162,7 @@ export default function TaxCalculator({ activePersona, onCalculate, isCompleted,
                 </button>
                 <div className="flex-1 flex flex-col items-center justify-center min-w-0">
                   <input
+                    id={eduInputId}
                     type="text"
                     value={eduCost === 0 ? '' : eduCost.toLocaleString('ru-RU')}
                     onChange={(e) => handleEduInputChange(e.target.value)}
@@ -195,6 +189,7 @@ export default function TaxCalculator({ activePersona, onCalculate, isCompleted,
             </div>
           ) : (
             <input 
+              aria-label={eduLabel}
               type="range" 
               min="0" 
               max="300000" 
@@ -209,13 +204,14 @@ export default function TaxCalculator({ activePersona, onCalculate, isCompleted,
         {/* Slider 2: Sport */}
         <div className="space-y-3">
           <div className="flex justify-between items-center gap-2">
-            <label className="text-xs sm:text-sm font-semibold text-[#0F172A] dark:text-slate-200 tracking-tight leading-relaxed max-w-[65%]">
+            <label htmlFor={sportInputId} className="text-xs sm:text-sm font-semibold text-[#0F172A] dark:text-slate-200 tracking-tight leading-relaxed max-w-[65%]">
               {sportLabel}
             </label>
             {/* Desktop input рядом */}
             {!isMobile ? (
               <div className="flex items-center gap-1.5 shrink-0 bg-[#F8FAFC] dark:bg-slate-950 border border-[#E2E8F0] dark:border-slate-800 px-2 py-1 rounded-md font-mono">
                 <input
+                  id={sportInputId}
                   type="text"
                   value={sportCost === 0 ? '' : sportCost.toLocaleString('ru-RU')}
                   onChange={(e) => handleSportInputChange(e.target.value)}
@@ -244,6 +240,7 @@ export default function TaxCalculator({ activePersona, onCalculate, isCompleted,
                 </button>
                 <div className="flex-1 flex flex-col items-center justify-center min-w-0">
                   <input
+                    id={sportInputId}
                     type="text"
                     value={sportCost === 0 ? '' : sportCost.toLocaleString('ru-RU')}
                     onChange={(e) => handleSportInputChange(e.target.value)}
@@ -270,6 +267,7 @@ export default function TaxCalculator({ activePersona, onCalculate, isCompleted,
             </div>
           ) : (
             <input 
+              aria-label={sportLabel}
               type="range" 
               min="0" 
               max="200000" 
@@ -288,7 +286,7 @@ export default function TaxCalculator({ activePersona, onCalculate, isCompleted,
           <div className="flex flex-col">
             <span className="text-[9px] text-emerald-800 dark:text-emerald-400 font-extrabold uppercase tracking-wide mb-1 leading-none flex items-center gap-1.5 select-none animate-pulse">
               <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block shrink-0" />
-              Итоговый возврат (расчет онлайн)
+              Ориентировочный возврат по ставке 13%
             </span>
             <span className="text-xl sm:text-2xl font-black text-emerald-900 dark:text-emerald-300 tracking-tight leading-none font-mono">
               {formatCurrency(liveDeduction)}
@@ -300,7 +298,7 @@ export default function TaxCalculator({ activePersona, onCalculate, isCompleted,
         <div className="flex items-start gap-2.5 bg-[#F8FAFC] dark:bg-slate-950 rounded-xl p-3.5 border border-[#E2E8F0] dark:border-slate-800">
           <AlertCircle size={15} className="text-[#475569] dark:text-slate-400 mt-0.5 shrink-0" />
           <p className="text-xs text-[#475569] dark:text-slate-400 leading-relaxed font-medium">
-            Согласно НК РФ общее пороговое ограничение по совокупной сумме социальных вычетов составляет <span className="font-bold text-[#0F172A] dark:text-slate-200">150 000 ₽</span> в год (для собственного обучения). На обучение детей действует отдельный лимит <span className="font-bold text-[#0F172A] dark:text-slate-200">110 000 ₽</span>. Вы получаете возврат <span className="font-bold text-[#0F172A] dark:text-slate-200">13%</span> от понесённых расходов.
+            Совокупный лимит расходов для большинства социальных вычетов — <span className="font-bold text-[#0F172A] dark:text-slate-200">150 000 ₽</span> в год; обучение детей учитывается отдельно в пределах <span className="font-bold text-[#0F172A] dark:text-slate-200">110 000 ₽</span> на ребёнка. Это учебная оценка: фактический возврат зависит от дохода, ставки и уже уплаченного НДФЛ. <a href="https://www.nalog.gov.ru/rn77/taxation/taxes/ndfl/nalog_vichet/soc_nv/soc_nv_ob/" target="_blank" rel="noopener noreferrer" className="font-bold text-[#CC1111] hover:underline">Проверить условия на сайте ФНС</a>.
           </p>
         </div>
 
@@ -309,7 +307,7 @@ export default function TaxCalculator({ activePersona, onCalculate, isCompleted,
           {isCompleted ? (
             <div className="flex items-center gap-3 bg-[#065f46] text-white px-5 py-4 rounded-xl border border-emerald-800 shadow-md flex-1 animate-fade-in font-bold text-xs sm:text-sm shadow-emerald-900/10">
               <span className="w-5 h-5 flex items-center justify-center rounded-full bg-white dark:bg-[#1e293b]/20 shrink-0 text-xs font-black select-none">✓</span>
-              <span>Вычет успешно зафиксирован! Вы получили +100 баллов</span>
+              <span>Учебный расчёт сохранён! Вы получили +100 баллов</span>
             </div>
           ) : (
             <button 
@@ -317,7 +315,7 @@ export default function TaxCalculator({ activePersona, onCalculate, isCompleted,
               className="px-6 py-3.5 font-bold rounded-xl transition-all duration-200 shadow-xs text-xs sm:text-sm flex justify-center items-center gap-2 cursor-pointer uppercase tracking-wider bg-[#CC1111] dark:bg-[#E11D48] hover:bg-[#A30E0E] dark:hover:bg-[#CC1111] active:scale-[0.98] text-white"
             >
               <Sparkles size={16} />
-              Зафиксировать вычет (+100 баллов)
+              Сохранить учебный расчёт (+100 баллов)
             </button>
           )}
 
@@ -334,7 +332,7 @@ export default function TaxCalculator({ activePersona, onCalculate, isCompleted,
                     Награда получена:
                   </span>
                   <span className="text-sm font-bold tracking-tight text-emerald-700 dark:text-emerald-300">
-                    +100 Б «Миллион призов»
+                    +100 учебных баллов
                   </span>
                 </div>
               </motion.div>

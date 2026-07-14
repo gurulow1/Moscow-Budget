@@ -89,19 +89,19 @@ export default function Header({ balance, totalXp = 100, completedActivities = [
       {/* DESKTOP HEADER */}
       <header className="hidden md:flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-4 py-4 px-6 bg-white dark:bg-slate-900 rounded-2xl border border-[#E2E8F0] dark:border-slate-800 shadow-xs relative z-30 select-none">
         
-        {/* Left side: Site title in official style */}
+        {/* Project title and visible prototype status */}
         <div className="flex items-center gap-3.5 flex-1 min-w-0">
           <div className="flex items-center justify-center bg-[#CC1111] w-10 h-10 rounded-xl text-white shadow-sm shrink-0">
             <LandPlot size={20} className="stroke-[2.5px]" />
           </div>
           <div className="min-w-0">
             <div className="flex flex-col 2xl:flex-row 2xl:items-baseline 2xl:gap-x-2 text-base lg:text-lg font-extrabold text-[#0F172A] dark:text-white tracking-tight leading-tight">
-              <span>Открытый бюджет города Москвы</span>
+              <span>МосГорБюджет.Трек</span>
               <span className="hidden 2xl:inline text-neutral-300 dark:text-slate-600 font-normal">//</span>
-              <span className="text-[#CC1111] dark:text-red-500 font-bold">Игровые сервисы</span>
+              <span className="text-[#CC1111] dark:text-red-500 font-bold">Бюджет Москвы — интерактивно</span>
             </div>
             <span className="text-xs text-[#475569] dark:text-slate-400 font-black tracking-widest block sm:mt-1 uppercase">
-              Официальный интерактивный портал
+              Конкурсный прототип • не официальный сервис
             </span>
           </div>
         </div>
@@ -167,7 +167,7 @@ export default function Header({ balance, totalXp = 100, completedActivities = [
                   <AnimatedNumber value={balance} />
                 </span>
                 <span className="text-[10px] font-bold text-[#475569] dark:text-slate-400 leading-tight shrink-0 hidden xl:block truncate max-w-[120px]">
-                  баллов "Миллион призов"
+                  учебных баллов
                 </span>
                 <span className="text-[10px] sm:text-xs font-bold text-[#475569] dark:text-slate-400 leading-tight shrink-0 xl:hidden">
                   баллов
@@ -201,10 +201,12 @@ export default function Header({ balance, totalXp = 100, completedActivities = [
             {isDark ? <Sun size={18} className="text-amber-400" /> : <Moon size={18} className="text-slate-600" />}
           </button>
           
-          {/* User profile from Mos.ID - CLickable with Dropdown menu (Audit #8) */}
+          {/* Local demo profile */}
           <div className="relative shrink-0">
             <button 
               onClick={() => setProfileOpen(!profileOpen)}
+              aria-expanded={profileOpen}
+              aria-haspopup="menu"
               className={cn(
                 "flex items-center gap-2.5 pl-2 pr-3 py-1.5 bg-[#F8FAFC] dark:bg-slate-950 rounded-xl border transition-all cursor-pointer select-none outline-none overflow-hidden",
                 profileOpen ? "border-[#CC1111] dark:border-red-500 bg-[#CC1111]/5 dark:bg-red-950/20" : "border-[#E2E8F0] dark:border-slate-800 hover:bg-[#F1F5F9] dark:hover:bg-slate-900"
@@ -215,10 +217,10 @@ export default function Header({ balance, totalXp = 100, completedActivities = [
                 <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-900" />
               </div>
               <div className="flex flex-col items-start leading-none text-left min-w-0 pr-1">
-                <span className="text-[13px] font-black text-[#0F172A] dark:text-white truncate max-w-[80px] lg:max-w-[120px]">Алексей М.</span>
+                <span className="text-[13px] font-black text-[#0F172A] dark:text-white truncate max-w-[80px] lg:max-w-[120px]">Демо-профиль</span>
                 <span className="text-[9px] font-bold text-[#CC1111] dark:text-red-400 uppercase tracking-wider mt-1.5 flex items-center gap-0.5">
                   <ShieldCheck size={11} className="text-emerald-500 dark:text-emerald-400 shrink-0" />
-                  <span className="hidden sm:inline">Мой профиль</span>
+                  <span className="hidden sm:inline">Локальный прогресс</span>
                   <span className="sm:hidden">Профиль</span>
                 </span>
               </div>
@@ -234,15 +236,16 @@ export default function Header({ balance, totalXp = 100, completedActivities = [
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 10, scale: 0.95 }}
                     className="absolute right-0 mt-2 w-72 bg-white dark:bg-[#1e293b] border border-[#E2E8F0] dark:border-slate-800 shadow-lg rounded-2xl p-4 z-50 flex flex-col gap-3.5"
+                    role="menu"
                   >
                     <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
                       <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#CC1111] to-[#E11D48] text-white font-extrabold flex items-center justify-center text-sm shadow-sm select-none">
-                        АМ
+                        ДЕМО
                       </div>
                       <div>
-                        <h4 className="text-sm font-extrabold text-[#0F172A] dark:text-slate-100 leading-snug">Алексей Морозов</h4>
+                        <h4 className="text-sm font-extrabold text-[#0F172A] dark:text-slate-100 leading-snug">Участник демонстрации</h4>
                         <span className="text-[9px] bg-emerald-50 text-emerald-800 font-extrabold border border-emerald-200 uppercase tracking-wider px-2 py-0.5 rounded leading-none block w-max mt-1">
-                          Mos.ID подтвержден
+                          Данные хранятся локально
                         </span>
                       </div>
                     </div>
@@ -293,12 +296,12 @@ export default function Header({ balance, totalXp = 100, completedActivities = [
                           <Layers size={13} className="text-[#CC1111]" />
                           Уровень доступа:
                         </span>
-                        <span className="text-emerald-600 font-black">Максимальный</span>
+                        <span className="text-emerald-600 font-black">Демо</span>
                       </div>
                     </div>
 
                     <div className="text-[10px] text-slate-400 font-semibold text-center leading-relaxed">
-                      Авторизация выполнена в защищенной игровой зоне бюджета Москвы.
+                      Профиль не связан с Mos.ID и не передаёт персональные данные.
                     </div>
                   </motion.div>
                 </>
@@ -317,7 +320,7 @@ export default function Header({ balance, totalXp = 100, completedActivities = [
           <div className="flex items-center justify-center bg-[#CC1111] w-8.5 h-8.5 rounded-xl text-white shadow-sm shrink-0">
             <LandPlot size={17} className="stroke-[2.5px]" />
           </div>
-          <span className="text-[11px] font-black text-[#0F172A] dark:text-white tracking-tight">Мой бюджет</span>
+          <span className="text-[11px] font-black text-[#0F172A] dark:text-white tracking-tight">Бюджет.Трек</span>
         </div>
 
         {/* Right aspect: Balance and profile info */}

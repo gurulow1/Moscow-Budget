@@ -21,10 +21,10 @@ interface Particle {
 }
 
 const BUDGET_STATS = [
-  { icon: TrendingUp, label: 'Доходы 2026', value: '5,93 трлн ₽', color: '#10B981' },
-  { icon: Building2, label: 'Расходы 2026', value: '6,38 трлн ₽', color: '#3B82F6' },
-  { icon: Users, label: 'Социальная поддержка', value: '4,5 млн человек', color: '#F59E0B' },
-  { icon: ShieldCheck, label: 'Государственных программ', value: '13 программ', color: '#8B5CF6' },
+  { icon: TrendingUp, label: 'Доходы 2026', value: '5,94 трлн ₽', color: '#10B981' },
+  { icon: Building2, label: 'Расходы 2026', value: '6,39 трлн ₽', color: '#3B82F6' },
+  { icon: Users, label: 'Социальная сфера', value: '3,2 трлн ₽', color: '#F59E0B' },
+  { icon: ShieldCheck, label: 'Дефицит 2026', value: '447,6 млрд ₽', color: '#8B5CF6' },
 ];
 
 export default function SplashPortal({ onEnter }: SplashPortalProps) {
@@ -39,7 +39,8 @@ export default function SplashPortal({ onEnter }: SplashPortalProps) {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    let animId: number;
+    let animId = 0;
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     let width = window.innerWidth;
     let height = window.innerHeight;
 
@@ -111,7 +112,7 @@ export default function SplashPortal({ onEnter }: SplashPortalProps) {
         const dy = mouseRef.current.y - p.targetY;
         const dist = Math.sqrt(dx * dx + dy * dy);
         
-        if (dist < 120) {
+        if (dist > 0 && dist < 120) {
           const force = (120 - dist) / 120;
           p.targetX -= (dx / dist) * force * 30;
           p.targetY -= (dy / dist) * force * 30;
@@ -170,13 +171,12 @@ export default function SplashPortal({ onEnter }: SplashPortalProps) {
       animId = requestAnimationFrame(render);
     };
 
-    render();
-
-    // Show content after a brief delay
-    setTimeout(() => setShowContent(true), 300);
+    const contentTimer = window.setTimeout(() => setShowContent(true), prefersReducedMotion ? 0 : 300);
+    if (!prefersReducedMotion) render();
 
     return () => {
       cancelAnimationFrame(animId);
+      window.clearTimeout(contentTimer);
       window.removeEventListener('resize', resize);
       window.removeEventListener('mousemove', handleMouseMove);
     };
@@ -217,7 +217,7 @@ export default function SplashPortal({ onEnter }: SplashPortalProps) {
             >
               <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-xs font-bold text-[#94a3b8] uppercase tracking-widest">
                 <Landmark size={14} className="text-[#CC1111]" />
-                Официальный портал Правительства Москвы
+                Конкурсный образовательный прототип
               </span>
             </motion.div>
 
@@ -228,8 +228,8 @@ export default function SplashPortal({ onEnter }: SplashPortalProps) {
               transition={{ delay: 0.4, duration: 0.7 }}
               className="text-4xl sm:text-5xl lg:text-6xl font-black text-white text-center tracking-tight leading-tight mb-4"
             >
-              Открытый бюджет
-              <span className="block text-[#CC1111] mt-1">города Москвы</span>
+              МосГорБюджет
+              <span className="block text-[#CC1111] mt-1">.Трек</span>
             </motion.h1>
 
             {/* Subtitle */}
@@ -289,7 +289,7 @@ export default function SplashPortal({ onEnter }: SplashPortalProps) {
               transition={{ delay: 1.8, duration: 0.6 }}
               className="mt-6 text-[10px] sm:text-xs text-[#475569] font-medium text-center"
             >
-              Данные актуальны на 2026 год • Закон о бюджете города Москвы на 2026 г. и плановый период 2027–2028 гг.
+              Базовые показатели — по Закону города Москвы № 39 от 01.11.2025 • Проект не является официальным городским сервисом
             </motion.p>
           </motion.div>
         )}

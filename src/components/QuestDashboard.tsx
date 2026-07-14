@@ -6,8 +6,8 @@ import {
   Briefcase, ArrowRight, Info, Check, ToggleLeft, ToggleRight,
   TrendingUp, Activity, FileText, Ban, Sparkle, Clock
 } from 'lucide-react';
-import { cn, safeLocalStorage } from '../lib/utils';
-import { BUDGET_QUESTIONS_BANK, getRandomBudgetQuestion, BudgetQuestion } from '../data/budgetQuestions';
+import { cn, readStoredStringArray, safeLocalStorage } from '../lib/utils';
+import { BUDGET_QUESTIONS_BANK, BudgetQuestion } from '../data/budgetQuestions';
 import { Send, Bot, User as UserIcon, Crown, Map as MapIcon, Coins, Lock } from 'lucide-react';
 
 interface QuestDashboardProps {
@@ -37,31 +37,40 @@ interface Quiz {
   questions: QuizQuestion[];
 }
 
+const CORE_ACTIVITY_IDS = [
+  'quiz-1', 'quiz-2', 'quiz-3', 'quiz-4', 'quiz-5',
+  'game-1', 'game-2', 'game-3', 'game-4', 'game-5',
+  'special-1', 'special-2', 'special-3',
+];
+
+const getMoscowDateKey = () =>
+  new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Moscow' }).format(new Date());
+
 const quizzesData: Quiz[] = [
   {
     id: "quiz-1",
     title: "Доходы бюджета Москвы",
     reward: 100,
-    topic: "Налоговые источники, НДФЛ и корпоративные поступления",
+    topic: "Ключевые параметры бюджета Москвы на 2026 год",
     difficulty: "Легкий",
     questions: [
       {
-        question: "Какой налог формирует наибольшую часть налоговых доходов бюджета города Москвы?",
-        options: ["Налог на прибыль организаций", "Налог на имущество физических лиц", "Транспортный налог"],
+        question: "Какой объём доходов предусмотрен бюджетом Москвы на 2026 год?",
+        options: ["Около 5,94 трлн ₽", "Около 3,2 трлн ₽", "Около 447,6 млрд ₽"],
         correct: 0,
-        explanation: "Налог на прибыль организаций и НДФЛ являются главными китами доходной части бюджета столицы."
+        explanation: "План доходов — 5 937,4 млрд ₽ по Закону города Москвы № 39 от 01.11.2025."
       },
       {
-        question: "Куда зачисляется налог на профессиональный доход (самозанятые) в Москве?",
-        options: ["100% в федеральный бюджет", "100% в бюджет города Москвы", "60% в бюджет Москвы, 40% в ФОМС"],
-        correct: 2,
-        explanation: "Согласно Бюджетному кодексу РФ, 60% идет в субъект (Москва), а 40% направляется на обязательное медицинское страхование."
+        question: "Какой объём расходов предусмотрен бюджетом Москвы на 2026 год?",
+        options: ["Около 6,39 трлн ₽", "Около 810 млрд ₽", "Около 5,94 млрд ₽"],
+        correct: 0,
+        explanation: "План расходов — 6 385,0 млрд ₽."
       },
       {
-        question: "Является ли торговый сбор в Москве региональным или местным налогом по кодексу?",
-        options: ["Региональным", "Местным (но зачисляется в бюджет субъекта-города федерального значения)", "Федеральным"],
-        correct: 1,
-        explanation: "Торговый сбор относится к местным сборам, но в городах федерального значения (Москва, СПб, Севастополь) он устанавливается законами этих субъектов и идет в их бюджет."
+        question: "Каков плановый дефицит бюджета Москвы на 2026 год?",
+        options: ["447,6 млрд ₽", "44,8 млрд ₽", "1,29 трлн ₽"],
+        correct: 0,
+        explanation: "Плановый дефицит составляет 447,6 млрд ₽ — разницу между расходами и доходами."
       }
     ]
   },
@@ -139,37 +148,37 @@ const quizzesData: Quiz[] = [
         explanation: "Бюджет Москвы утверждается Московской городской Думой на очередной финансовый год и плановый период."
       },
       {
-        question: "Что из перечисленного является индикатором эффективности госпрограммы 'Столичное образование'?",
-        options: ["Количество торговых центров", "Результаты учащихся на ЕГЭ и Всероссийской олимпиаде школьников", "Общая площадь уложенной плитки"],
-        correct: 1,
-        explanation: "Качество образования измеряется академическими успехами выпускников и доступностью передовой инфраструктуры."
+        question: "Какой объём предусмотрен на развитие здравоохранения Москвы в 2026 году?",
+        options: ["615 млрд ₽", "173,3 млрд ₽", "96,7 млрд ₽"],
+        correct: 0,
+        explanation: "На развитие здравоохранения предусмотрено 615 млрд ₽ без учёта оплаты медицинской помощи из Фонда ОМС."
       }
     ]
   },
   {
     id: "quiz-5",
-    title: "Инициативный бюджет и Открытый город",
+    title: "Открытые данные и бюджетный процесс",
     reward: 100,
-    topic: "Софинансирование, портал Активный Гражданин и народные инициативы",
+    topic: "Официальные источники и период бюджетного планирования",
     difficulty: "Легкий",
     questions: [
       {
-        question: "Что такое инициативное бюджетирование?",
-        options: ["Распределение денег только по решению Мэра", "Участие граждан в выборе проектов благоустройства за счет бюджетных средств", "Штрафы за нецелевое использование"],
-        correct: 1,
-        explanation: "Жители сами выдвигают проекты (скверы, площадки), голосуют за них, а город выделяет финансирование."
-      },
-      {
-        question: "Через какую цифровую платформу москвичи чаще всего голосуют за распределение локальных бюджетов развития?",
-        options: ["Активный гражданин", "Одноклассники", "Сайт Федерального казначейства"],
+        question: "Какой документ устанавливает ключевые параметры бюджета Москвы на 2026 год?",
+        options: ["Закон города Москвы № 39 от 01.11.2025", "Письмо ФНС", "Решение коммерческого банка"],
         correct: 0,
-        explanation: "Портал 'Активный гражданин' интегрирован с системой принятия решений по городскому благоустройству."
+        explanation: "Доходы, расходы и дефицит установлены Законом города Москвы № 39 от 1 ноября 2025 года."
       },
       {
-        question: "Из каких источников, кроме бюджета, может софинансироваться инициативный проект?",
-        options: ["Только кредиты Центробанка", "Добровольные взносы граждан и спонсорские средства бизнеса", "Иностранные гранты"],
+        question: "Где опубликованы интерактивные данные о бюджете Москвы?",
+        options: ["budget.mos.ru", "nalog.gov.ru", "cbr.ru"],
+        correct: 0,
+        explanation: "Официальный городской источник — портал «Открытый бюджет Москвы» budget.mos.ru."
+      },
+      {
+        question: "На какой период принят Закон города Москвы № 39?",
+        options: ["Только на 2026 год", "На 2026 год и плановый период 2027–2028 годов", "До 2030 года"],
         correct: 1,
-        explanation: "Инициативные проекты допускают софинансирование со стороны жителей или локальных предпринимателей для повышения контроля за качеством."
+        explanation: "Закон устанавливает бюджет на 2026 год и плановые показатели на 2027 и 2028 годы."
       }
     ]
   }
@@ -183,7 +192,7 @@ interface ChatMessage {
   timestamp: string;
 }
 
-const getAIResponse = (query: string, generateDailyQuiz: () => Quiz): { text: string; quiz?: Quiz } => {
+const getReferenceResponse = (query: string, generateDailyQuiz: () => Quiz): { text: string; quiz?: Quiz } => {
   const normalizedQuery = query.toLowerCase().trim();
   
   // Checking for quiz requests
@@ -199,61 +208,61 @@ const getAIResponse = (query: string, generateDailyQuiz: () => Quiz): { text: st
   ) {
     const quiz = generateDailyQuiz();
     return {
-      text: `Отличная идея! Я подготовил для вас специальный интерактивный экспресс-квиз: **"${quiz.title}"** (тема: *${quiz.topic}*), состоящий из 3 профессиональных вопросов из нашей базы знаний. За успешное полное прохождение вы получите до **${quiz.reward} баллов**!\n\nНажмите кнопку **«Принять вызов»** ниже, чтобы запустить квиз прямо сейчас!`,
+      text: `Готов квиз **"${quiz.title}"**: три вопроса из проверенного банка. За прохождение можно получить до **${quiz.reward} учебных баллов**. Нажмите **«Принять вызов»**, чтобы начать.`,
       quiz
     };
   }
   
   if (normalizedQuery.includes('доход') || normalizedQuery.includes('налог') || normalizedQuery.includes('ндфл') || normalizedQuery.includes('прибыль') || normalizedQuery.includes('сбор') || normalizedQuery.includes('вычет')) {
     return {
-      text: `Согласно **Закону о бюджете города Москвы на 2026 год**, налоговые доходы составляют фундамент бюджета. Главными источниками выступают **НДФЛ** и **Налог на прибыль организаций** (их сумма превышает **80%** всех налоговых поступлений).\n\nТакже существенную роль играют налог на имущество организаций и торговый сбор. Для малого бизнеса и самозанятых в Москве предусмотрена эффективная система патентов и налоговых вычетов (например, совокупный социальный лимит вычета по 3-НДФЛ для личного обучения был планово проиндексирован и увеличен до **150 000 рублей**, на обучение детей действует отдельный лимит — 110 тыс. руб.).`
+      text: `На 2026 год доходы Москвы запланированы в размере **5 937,4 млрд ₽**, расходы — **6 385,0 млрд ₽**, дефицит — **447,6 млрд ₽**. Общий лимит расходов для большинства социальных вычетов составляет **150 000 ₽**, а на обучение ребёнка — **110 000 ₽** на обоих родителей. Фактический возврат зависит от уплаченного НДФЛ. Источники: Закон Москвы № 39 и ФНС России.`
     };
   }
   
   if (normalizedQuery.includes('транспорт') || normalizedQuery.includes('метро') || normalizedQuery.includes('электробус') || normalizedQuery.includes('дорог') || normalizedQuery.includes('мцд') || normalizedQuery.includes('бкл')) {
     return {
-      text: `Программа **«Развитие транспортной системы»** традиционно является наиболее бюджетоемкой госпрограммой Москвы. За счет бюджета в 2026 году продолжается активное развитие передовой инфраструктуры:\n\n1. Строительство новых радиальных веток метро (Троицкая, Рублево-Архангельская линии).\n2. Регулярная опережающая закупка современных низкопольных **электробусов** отечественного бренда.\n3. Финансирование полной интеграции дорожной сети, диаметров МЦД и уникальных речных электротрамвайщиков.`
+      text: `Развитие транспортной системы — одно из крупнейших направлений расходов Москвы. В учебной диаграмме оно показано округлённой долей около **20%**. Точные актуальные статьи и исполнение проверяйте на **budget.mos.ru**.`
     };
   }
   
   if (normalizedQuery.includes('социал') || normalizedQuery.includes('пенси') || normalizedQuery.includes('льгот') || normalizedQuery.includes('выплат') || normalizedQuery.includes('семь') || normalizedQuery.includes('поддержк')) {
     return {
-      text: `Бюджет города Москвы на 2026 год является строго **социально ориентированным**. Более **50%** всех расходов города направлено непосредственно на социальную сферу:\n\n* **Индексация доплат к пенсиям** (городской социальный стандарт) и социальных пособий семей с детьми на уровень выше инфляции.\n* Финансирование льготного и бесплатного проезда для школьников, студентов и пенсионеров.\n* Поддержка программ социальной интеграции, активного долголетия и адресной помощи нуждающимся гражданам.`
+      text: `На социальную сферу Москвы в 2026 году предусмотрено около **3,2 трлн ₽**, то есть примерно половина расходов. Внутри этого объёма программа социальной поддержки жителей составляет **810 млрд ₽**. Источник: портал «Открытый бюджет Москвы».`
     };
   }
   
   if (normalizedQuery.includes('школ') || normalizedQuery.includes('колледж') || normalizedQuery.includes('детск') || normalizedQuery.includes('образован') || normalizedQuery.includes('мэш')) {
     return {
-      text: `Государственная программа **«Столичное образование»** обеспечивает равные учебные стандарты во всех районах Москвы. Ключевые статьи бюджета 2026 года включают:\n\n* Проект **«Мой Колледж»**: целевое финансирование подготовки ИТ и инженерных кадров.\n* Капитальный ремонт и технологическое оснащение сотен общеобразовательных школ по единому стандарту.\n* Развитие цифровой среды **МЭШ** (Московская электронная школа) и бесплатного горячего питания для младших классов.`
+      text: `На развитие образования Москвы в 2026 году предусмотрено **814,6 млрд ₽**. Это около 12,8% всех плановых расходов. Детализацию программы смотрите на **budget.mos.ru**.`
     };
   }
   
   if (normalizedQuery.includes('больниц') || normalizedQuery.includes('клиник') || normalizedQuery.includes('врач') || normalizedQuery.includes('здоров') || normalizedQuery.includes('медицин') || normalizedQuery.includes('емиас') || normalizedQuery.includes('лекарств')) {
     return {
-      text: `В рамках программы **«Столичное здравоохранение»** Москва переходит на новый стандарт амбулаторной помощи. Расходы бюджета гарантируют:\n\n* Полное льготное обеспечение необходимыми лекарственными препаратами граждан с хроническими заболеваниями.\n* Оснащение медицинских центров передовым диагностическим оборудованием и запуск флагманских скоропомощных корпусов.\n* Масштабирование цифровой системы **ЕМИАС** с использованием интеллектуальных нейросетей-помощников в диагностике.`
+      text: `На развитие здравоохранения Москвы в 2026 году предусмотрено **615 млрд ₽** без учёта оплаты медицинской помощи из Фонда ОМС. Детализацию программы и исполнение следует проверять на **budget.mos.ru**.`
     };
   }
   
   if (normalizedQuery.includes('промышлен') || normalizedQuery.includes('инвест') || normalizedQuery.includes('завод') || normalizedQuery.includes('технополис') || normalizedQuery.includes('субсид') || normalizedQuery.includes('бизнес')) {
     return {
-      text: `Правительство Москвы активно субсидирует промышленность и новые ИТ-производства:\n\n* Особая экономическая зона **«Технополис Москва»** предлагает резидентам снижение налога на прибыль до **2%** (вместо стандартных 25%), освобождение от имущественного, земельного и транспортного налогов на 10 лет.\n* Предоставление льготных целевых займов через Московский Фонд развития промышленности.\n* Программа компенсации процентов по кредитам на закупку инновационного оборудования.`
+      text: `В плане на 2026 год на программу **«Экономическое развитие и инвестиционная привлекательность»** предусмотрено **226,5 млрд ₽**, а на развитие цифровой среды и инноваций — **243,1 млрд ₽**. Условия конкретных льгот нужно проверять на официальных страницах соответствующих программ.`
     };
   }
 
   if (normalizedQuery.includes('эколог') || normalizedQuery.includes('парк') || normalizedQuery.includes('озелен') || normalizedQuery.includes('дерев') || normalizedQuery.includes('воздух') || normalizedQuery.includes('река')) {
     return {
-      text: `Экологическая стратегия координируется в рамках госпрограммы **«Развитие городской среды»**. Финансируются проекты по озеленению дворов, защите лесов Новой Москвы, комплексной очистке малых рек столицы (проект Яуза) и регулярному мониторингу чистоты воздуха.`
+      text: `На программу **«Развитие городской среды»** в 2026 году предусмотрено **263,2 млрд ₽**. В справочнике приводится только верхнеуровневая сумма; состав мероприятий смотрите в официальной программе.`
     };
   }
 
   if (normalizedQuery.includes('спорт') || normalizedQuery.includes('лужники') || normalizedQuery.includes('площадк') || normalizedQuery.includes('тренир') || normalizedQuery.includes('арен')) {
     return {
-      text: `Развитие массовой физической культуры — важнейший приоритет программы **«Спорт Москвы»**. Город финансирует модернизацию крупных спортивных кластеров (Лужники, Воробьевы горы) и постоянно расширяет сеть бесплатных локальных уличных тренажеров и хоккейных коробок во дворах.`
+      text: `На программу **«Спорт Москвы»** в 2026 году предусмотрено **173,3 млрд ₽**. Это плановый объём из официального обзора бюджета.`
     };
   }
 
   return {
-    text: `Спасибо за ваш вопрос о бюджете Москвы на 2026 год! Я с радостью помогу вам разобраться.\n\nПоскольку я являюсь профильным консультантом финансового органа, я могу предоставить вам подробные аналитические выкладки по направлениям:\n* 📊 **Доходы и налоги** (НДФЛ, вычеты)\n* 🚇 **Транспортная инфраструктура** (метро, электробусы)\n* 🏥 **Здравоохранение и образование** (школы, ЕМИАС, МЭШ)\n* ⚙️ **Промышленность и субсидии инвестициям**\n\nИли напишите слово **«викторина»**, чтобы запустить интерактивный квиз дня и заработать призовые баллы!`
+    text: `Это локальный интерактивный справочник, а не официальный консультант и не генеративный ИИ. Я могу показать проверенные верхнеуровневые показатели по темам **доходы**, **социальная сфера**, **образование**, **здравоохранение**, **городская среда** и **спорт**. Для первичных данных используйте **budget.mos.ru**, а для налоговых вычетов — **nalog.gov.ru**.`
   };
 };
 
@@ -360,8 +369,7 @@ export default function QuestDashboard({
 
   // NFT collectibles district cards state
   const [unlockedNfts, setUnlockedNfts] = useState<string[]>(() => {
-    const saved = safeLocalStorage.getItem('mos_unlocked_nfts_v3');
-    return saved ? JSON.parse(saved) : [];
+    return readStoredStringArray('mos_unlocked_nfts_v3');
   });
 
   useEffect(() => {
@@ -499,9 +507,6 @@ export default function QuestDashboard({
     setGame5Toggle2(false);
     setGame5Toggle3(false);
     // Spec
-    setSpec1Age('');
-    setSpec1District('Тверской');
-    setSpec1Name('');
     setSpec2DeductionInput(85000);
     setSpec3CheckedSectors([]);
     setActiveSpec3SubTab('health');
@@ -517,11 +522,7 @@ export default function QuestDashboard({
 
 
   // --- SPECIAL PROJECTS STATE ---
-  // Special 1: Mos.ID
-  const [spec1Age, setSpec1Age] = useState<string>('');
-  const [spec1District, setSpec1District] = useState<string>('Тверской');
-  const [spec1Name, setSpec1Name] = useState<string>('');
-  // Special 2: Фискальный проект
+  // Special 2: Fiscal learning scenario
   const [spec2DeductionInput, setSpec2DeductionInput] = useState<number>(85000);
   // Special 3: Аналитический серфинг
   const [spec3CheckedSectors, setSpec3CheckedSectors] = useState<string[]>([]);
@@ -529,13 +530,22 @@ export default function QuestDashboard({
   const [showSpec3Task, setShowSpec3Task] = useState<boolean>(false);
   const [spec3QuestionAnswer, setSpec3QuestionAnswer] = useState<string | null>(null);
 
-  // --- AI BUDGET ASSISTANT CHAT STATES & HANDLERS ---
+  // --- LOCAL BUDGET REFERENCE CHAT STATES & HANDLERS ---
   const [inputMessage, setInputMessage] = useState<string>('');
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>(() => {
     const saved = safeLocalStorage.getItem('mos_ai_chat_history');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed: unknown = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.every(message =>
+          typeof message === 'object' && message !== null &&
+          typeof message.id === 'string' &&
+          (message.sender === 'ai' || message.sender === 'user') &&
+          typeof message.text === 'string' &&
+          typeof message.timestamp === 'string'
+        )) {
+          return parsed as ChatMessage[];
+        }
       } catch (e) {
         // Fallback below
       }
@@ -544,7 +554,7 @@ export default function QuestDashboard({
       {
         id: 'welcome',
         sender: 'ai',
-        text: "Приветствую! Я Бюджетный Ассистент портала «Открытый бюджет города Москвы». Рад помочь вам разобраться в Законе о бюджете столицы на 2026 год!\n\nЗадайте мне любой вопрос касательно столичных налогов, метро, школ, экологии, бюджета здравоохранения, или просто напишите **«викторина»**, чтобы запустить интеллектуальный экспресс-вызов и получить баллы!",
+        text: "Привет! Это интерактивный справочник конкурсного прототипа. Он отвечает по заранее подготовленным темам и не является официальным консультантом. Напишите **«викторина»**, чтобы запустить учебный квиз дня.",
         timestamp: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
       }
     ];
@@ -565,10 +575,10 @@ export default function QuestDashboard({
       bank.splice(idx, 1);
     }
     return {
-      id: `ai-quiz-${Date.now()}`,
-      title: "Интерактивный ИИ Квиз",
+      id: `daily-quiz-${getMoscowDateKey()}`,
+      title: "Интерактивный квиз дня",
       reward: 150,
-      topic: "Генеративная подборка вопросов о бюджете Москвы",
+      topic: "Случайная подборка из проверенного банка вопросов",
       difficulty: "Средний",
       questions: selected.map(q => ({
         question: q.question,
@@ -588,10 +598,10 @@ export default function QuestDashboard({
       bank.splice(idx, 1);
     }
     const randomQuiz: Quiz = {
-      id: `random-quiz-${Date.now()}`,
+      id: `daily-quiz-${getMoscowDateKey()}`,
       title: "Финансовый Экспресс-Квиз дня",
       reward: 150,
-      topic: "Случайный набор сложных вопросов о бюджете Москвы 2026",
+      topic: "Подборка из проверенного банка вопросов о бюджете Москвы 2026",
       difficulty: "Средний",
       questions: selected.map(q => ({
         question: q.question,
@@ -623,7 +633,7 @@ export default function QuestDashboard({
     setIsTyping(true);
 
     setTimeout(() => {
-      const aiResponse = getAIResponse(queryText, generateDailyQuiz);
+      const aiResponse = getReferenceResponse(queryText, generateDailyQuiz);
       const aiMsg: ChatMessage = {
         id: `msg-${Date.now() + 1}`,
         sender: 'ai',
@@ -642,6 +652,8 @@ export default function QuestDashboard({
     submitDashboardQuery(inputMessage);
     setInputMessage('');
   };
+
+  const coreCompletedCount = CORE_ACTIVITY_IDS.filter(id => completedActivities.includes(id)).length;
 
   return (
     <div className="bg-[#0F172A] text-[#F8FAFC] rounded-2xl p-4 sm:p-8 border border-[rgba(148,163,184,0.1)] shadow-xs transition-all duration-300 flex flex-col flex-1 h-auto md:h-full select-none" id="mos_game_center">
@@ -1399,7 +1411,7 @@ export default function QuestDashboard({
                       <span>🗺️</span> Интерактивная карта
                     </h3>
                     <p className="text-xs text-blue-900 font-medium leading-relaxed mt-1">
-                      Исследуйте планируемые социальные объекты, поликлиники и школы на реальной интерактивной карте.
+                      Исследуйте условные сценарии социальных объектов на демонстрационной векторной карте.
                     </p>
                   </div>
                   <div className="mt-4 pt-3 border-t border-blue-200 flex items-center justify-between">
@@ -1707,7 +1719,7 @@ export default function QuestDashboard({
                   <div className="space-y-4">
                     <p className="text-xs sm:text-sm font-semibold text-slate-700 leading-normal">
                       Добавьте статьи расходов в интерактивный ресивер вычетов. Совокупный лимит по соцвычетам составляет <strong className="font-mono">150 000 ₽</strong>. 
-                      Попробуйте превысить его и отправьте декларацию в ФНС!
+                      Попробуйте превысить его и завершите учебный расчёт. Данные никуда не отправляются.
                     </p>
 
                     <div className="flex flex-wrap gap-2 mb-4">
@@ -1743,8 +1755,8 @@ export default function QuestDashboard({
                     {/* Receipt visualizer */}
                     <div className="bg-white dark:bg-[#1e293b] border text-[#0F172A] dark:text-slate-100 p-5 rounded-2xl border-slate-200 dark:border-slate-700/50 max-w-sm mx-auto shadow-xs">
                       <div className="text-center pb-3 border-b border-dashed border-slate-300">
-                        <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#CC1111]">МОСГОРНАЛОГ // СОЦВЫЧЕТ</span>
-                        <h4 className="font-extrabold text-[#0F172A] dark:text-slate-100 text-sm mt-0.5">Электронный Отчёт 3-НДФЛ</h4>
+                        <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#CC1111]">УЧЕБНАЯ МОДЕЛЬ // СОЦВЫЧЕТ</span>
+                        <h4 className="font-extrabold text-[#0F172A] dark:text-slate-100 text-sm mt-0.5">Черновой расчёт 3-НДФЛ</h4>
                       </div>
 
                       <div className="py-4 space-y-2 text-xs font-semibold leading-normal">
@@ -1791,7 +1803,7 @@ export default function QuestDashboard({
                         <button
                           onClick={() => {
                             if (game4RawSum >= 150000) {
-                              handleCompleteActivity('game-4', 150, "Декларация подана! Вычет на сумму 19 500 ₽ успешно одобрен ФНС.");
+                              handleCompleteActivity('game-4', 150, "Учебный расчёт завершён: при ставке 13% ориентир составляет 19 500 ₽.");
                               resetGameStates();
                             } else {
                               showToast("Вы добавили менее 150 000 ₽ расходов. Добавьте ещё расходов, чтобы превзойти лимит налоговой планки!", 0);
@@ -1799,7 +1811,7 @@ export default function QuestDashboard({
                           }}
                           className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl text-xs uppercase"
                         >
-                          Подать в ФНС РФ
+                          Завершить учебный расчёт
                         </button>
                       </div>
                     )}
@@ -1921,7 +1933,7 @@ export default function QuestDashboard({
             
             <div className="grid grid-cols-1 gap-4">
               
-              {/* Special 1: Mos.ID Verification */}
+              {/* Special 1: local needs profile */}
               <div className={cn(
                 "p-5 rounded-xl border transition-all",
                 completedActivities.includes('special-1') 
@@ -1931,9 +1943,9 @@ export default function QuestDashboard({
                 <div className="flex justify-between items-start gap-4 mb-3">
                   <div>
                     <span className="text-[9px] font-extrabold uppercase bg-[#CC1111]/10 text-[#CC1111] dark:bg-[#CC1111]/20 dark:text-red-400 px-2 py-0.5 rounded border border-[#CC1111]/15">Спецраздел 01</span>
-                    <h3 className="text-sm sm:text-base font-bold text-slate-800 dark:text-[#f8fafc] mt-1">Mos.ID Проверка статуса льгот</h3>
+                    <h3 className="text-sm sm:text-base font-bold text-slate-800 dark:text-[#f8fafc] mt-1">Учебный профиль потребностей</h3>
                     <p className="text-xs text-[#475569] dark:text-slate-300 font-medium leading-relaxed mt-0.5">
-                      Заполните персональные данные для подтверждения вашего профиля в государственной информационной системе столицы.
+                      Познакомьтесь с принципом персонализации без ввода имени, возраста и других персональных данных.
                     </p>
                   </div>
                   <span className="text-xs font-bold font-mono text-[#CC1111] dark:text-red-400 shrink-0">+80 Б</span>
@@ -1942,45 +1954,21 @@ export default function QuestDashboard({
                 {completedActivities.includes('special-1') ? (
                   <div className="p-3 bg-emerald-50/50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900 text-emerald-800 dark:text-emerald-400 font-semibold rounded-lg text-xs flex items-center gap-2">
                     <CheckCircle2 size={15} />
-                    <span>Статус Участника успешно верифицирован Государственной системой Москвы</span>
+                    <span>Учебный сценарий пройден. Запросов во внешние государственные системы не выполнялось.</span>
                   </div>
                 ) : (
-                  <form 
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      if (!spec1Age || !spec1Name) {
-                        showToast("Заполните поля возраста и имени!", 0);
-                        return;
-                      }
-                      handleCompleteActivity('special-1', 80, "Ваш Mos.ID профиль и статус участника верифицированы государственной системой.");
-                    }}
-                    className="mt-4 pt-4 border-t border-dashed border-slate-200 dark:border-slate-700 grid grid-cols-1 sm:grid-cols-3 gap-3 items-end"
-                  >
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">Имя</label>
-                      <input 
-                        type="text" required placeholder="Введите имя" value={spec1Name}
-                        onChange={(e) => setSpec1Name(e.target.value)}
-                        className="w-full text-base md:text-xs font-semibold p-2 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:border-[#CC1111]/70 bg-[#F8FAFC] dark:bg-slate-900 text-slate-800 dark:text-white"
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">Возраст</label>
-                      <input 
-                        type="number" required placeholder="Лет" value={spec1Age}
-                        onChange={(e) => setSpec1Age(e.target.value)}
-                        className="w-full text-base md:text-xs font-semibold p-2 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:border-[#CC1111]/70 bg-[#F8FAFC] dark:bg-slate-900 text-slate-800 dark:text-white"
-                      />
-                    </div>
-
-                    <button 
-                      type="submit"
-                      className="px-4 py-2 bg-[#CC1111] hover:bg-[#A30E0E] text-white font-bold rounded-lg text-xs uppercase cursor-pointer"
+                  <div className="mt-4 pt-4 border-t border-dashed border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <p className="text-xs text-slate-600 dark:text-slate-300 font-medium">
+                      В рабочей версии роль можно выбирать вручную. Интеграция с Mos.ID — только возможное направление развития после согласований.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => handleCompleteActivity('special-1', 80, "Учебный сценарий персонализации завершён без ввода персональных данных.")}
+                      className="px-4 py-2 bg-[#CC1111] hover:bg-[#A30E0E] text-white font-bold rounded-lg text-xs uppercase cursor-pointer shrink-0"
                     >
-                      Подтвердить в Mos.ID
+                      Пройти сценарий
                     </button>
-                  </form>
+                  </div>
                 )}
               </div>
 
@@ -2006,7 +1994,7 @@ export default function QuestDashboard({
                 {completedActivities.includes('special-2') ? (
                   <div className="p-3 bg-emerald-50/50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900 text-emerald-800 dark:text-emerald-400 font-semibold rounded-lg text-xs flex items-center gap-2">
                     <CheckCircle2 size={15} />
-                    <span>Фискальная декларация за обучение проверена инспекцией ФНС. Начислено 120 баллов.</span>
+                    <span>Учебный сценарий расчёта завершён. Во внешние системы ничего не отправлялось.</span>
                   </div>
                 ) : (
                   <div className="mt-4 pt-4 border-t border-dashed border-slate-200 dark:border-slate-700 space-y-3">
@@ -2028,7 +2016,7 @@ export default function QuestDashboard({
                       <button
                         onClick={() => {
                           if (spec2DeductionInput >= 100000) {
-                            handleCompleteActivity('special-2', 120, "Фискальная миссия выполнена! Вы подали декларацию с расходами свыше 100т.р.");
+                            handleCompleteActivity('special-2', 120, "Учебная фискальная миссия выполнена: задано более 100 000 ₽ расходов.");
                           } else {
                             showToast("Задайте расходы свыше 100 000 ₽ на ползунке!", 0);
                           }
@@ -2099,7 +2087,7 @@ export default function QuestDashboard({
                         <div>
                           <h4 className="font-extrabold text-[#CC1111] dark:text-red-400 mb-1 text-xs">Раздел: Столичное Здравоохранение (2026)</h4>
                           <p>
-                            Бюджет Москвы по программе <strong>«Столичное здравоохранение»</strong> направлен на внедрение единого стандарта поликлиник и скоропомощной помощи. Внедрение единого цифрового контура <strong>ЕМИАС</strong> и технологий искусственного интеллекта сократило время первичного приёма пациентов на 40% во всех столичных клиниках.
+                            На программу развития здравоохранения Москвы в 2026 году предусмотрено <strong>615 млрд ₽</strong> без учёта оплаты медицинской помощи из Фонда ОМС. Детализацию мероприятий следует проверять на портале budget.mos.ru.
                           </p>
                         </div>
                       )}
@@ -2261,12 +2249,12 @@ export default function QuestDashboard({
             let isWin = false;
 
             if (budgetStatus === 'deficit_danger') {
-              statusText = `Дефицит бюджета слишком высок (${deficitPercent}%). Бюджетная комиссия г. Москвы отклонила данный проект закона из-за угрозы финансовой стабильности субъекта. Срочно перераспределите средства, снизив расходы!`;
+              statusText = `В учебной модели дефицит слишком высок (${deficitPercent}%). Перераспределите условные средства и повторите расчёт.`;
             } else if (residentComfort < 55) {
-              statusText = `Бюджет сбалансирован, но индекс комфорта жителей критически упал до ${residentComfort}%. Жители района высказали недовольство на портале «Активный Гражданин». Повысьте финансирование дефицитных программ!`;
+              statusText = `Бюджет сбалансирован, но условный индекс комфорта снизился до ${residentComfort}%. Повысьте финансирование дефицитных направлений.`;
             } else {
               isWin = true;
-              statusText = `Поздравляем! Ваш проект бюджета для района ${d.name} официально одобрен Президиумом Правительства Москвы. Вы эффективно удовлетворили запросы жителей (${d.primaryDemand}) и сохранили финансовую дисциплину.`;
+              statusText = `Симуляция для района ${d.name} успешно пройдена: учтён приоритет «${d.primaryDemand}» и сохранён баланс условных средств.`;
             }
 
             setSimulationReport({
@@ -2286,7 +2274,7 @@ export default function QuestDashboard({
               }
               const rewardKey = 'mayor-success-' + d.id;
               if (!completedActivities.includes(rewardKey)) {
-                handleCompleteActivity(rewardKey, 150, `Префект одобрен! Бюджет района ${d.name} успешно сбалансирован! Получена NFT карточка.`);
+                handleCompleteActivity(rewardKey, 150, `Учебный сценарий района ${d.name} успешно сбалансирован. Получена коллекционная карточка.`);
               } else {
                 showToast(`Проведена успешная симуляция для района ${d.name}!`, 20);
               }
@@ -2677,7 +2665,7 @@ export default function QuestDashboard({
               <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700/50/60 text-xs">
                 <span className="font-extrabold text-[#CC1111] uppercase select-none block text-[10px] tracking-wider">🗺️ Мониторинг Финансовых Округов Москвы</span>
                 <p className="text-[#475569] font-medium leading-relaxed max-w-4xl mt-0.5">
-                  Нажмите на округ на интерактивной векторной карте ниже, чтобы проанализировать плановые показатели финансирования, налоговые источники и запустить быстрое префектурное администрирование!
+                  Нажмите на округ, чтобы открыть демонстрационный сценарий. Значения на карте условные и не являются официальной районной статистикой.
                 </p>
               </div>
 
@@ -2871,7 +2859,7 @@ export default function QuestDashboard({
         </AnimatePresence>
       </div>
 
-      {/* ================== BOTTOM SECTION: БЮДЖЕТНЫЙ АССИСТЕНТ (AI) ================== */}
+      {/* ================== BOTTOM SECTION: LOCAL BUDGET REFERENCE ================== */}
       <div className="mt-8 pt-6 border-t border-[#E2E8F0] dark:border-[#334155]/60 space-y-4" id="budget_ai_assistant">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -2880,11 +2868,11 @@ export default function QuestDashboard({
             </div>
             <div>
               <h3 className="text-sm font-extrabold text-[#0F172A] dark:text-white tracking-tight flex items-center gap-1.5">
-                <span>Бюджетный Ассистент</span>
-                <span className="text-[9px] font-extrabold uppercase bg-[#CC1111]/15 text-[#CC1111] px-1.5 py-0.5 rounded leading-none select-none">AI Live</span>
+                <span>Интерактивный бюджетный справочник</span>
+                <span className="text-[9px] font-extrabold uppercase bg-[#CC1111]/15 text-[#CC1111] px-1.5 py-0.5 rounded leading-none select-none">Локальная база</span>
                 <span 
                   className="text-slate-400 hover:text-slate-600 dark:hover:text-amber-400 cursor-help text-[11px] font-bold select-none shrink-0"
-                  title="Официальный консультант Закона о бюджете Москвы на 2026 год"
+                  title="Подготовленные ответы; не официальный консультант и не генеративный ИИ"
                 >
                   ⓘ
                 </span>
@@ -2899,7 +2887,7 @@ export default function QuestDashboard({
                 {
                   id: 'welcome',
                   sender: 'ai' as const,
-                  text: "Приветствую! Я Бюджетный Ассистент портала «Открытый бюджет города Москвы». Рад помочь вам разобраться в Законе о бюджете столицы на 2026 год!\n\nЗадайте мне любой вопрос касательно столичных налогов, метро, школ, экологии, бюджета здравоохранения, или просто напишите **«викторина»**, чтобы запустить интеллектуальный экспресс-вызов и получить баллы!",
+                  text: "Привет! Это интерактивный справочник конкурсного прототипа. Он отвечает по заранее подготовленным темам и не является официальным консультантом. Напишите **«викторина»**, чтобы запустить учебный квиз дня.",
                   timestamp: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
                 }
               ];
@@ -2970,7 +2958,7 @@ export default function QuestDashboard({
                       {isAI && msg.quiz && (
                         <div className="mt-3.5 pt-3 border-t border-neutral-800/60 flex flex-col sm:flex-row items-center justify-between gap-3 bg-neutral-900/40 p-3 rounded-lg border border-neutral-800">
                           <div className="text-left shrink-0">
-                            <span className="text-[9px] uppercase font-bold text-amber-400 block tracking-tight">Доступно призовое испытание</span>
+                            <span className="text-[9px] uppercase font-bold text-amber-400 block tracking-tight">Доступно учебное испытание</span>
                             <span className="text-[11px] font-extrabold text-white block leading-none mt-0.5">{msg.quiz.title}</span>
                             <span className="text-[10px] text-neutral-400 mt-0.5 block">Тема: {msg.quiz.topic}</span>
                           </div>
@@ -3073,7 +3061,7 @@ export default function QuestDashboard({
         <div>
           <div className="flex items-center gap-1.5 text-[10px] font-extrabold text-[#475569] uppercase tracking-wider">
             <Award size={14} className="text-[#CC1111]" />
-            <span>Общий Прогресс Карьеры Трека</span>
+            <span>Общий прогресс учебного трека</span>
           </div>
           <p className="text-xs text-[#475569] font-medium mt-0.5 italic">Миссии повышают общую финансовую грамотность москвичей.</p>
         </div>
@@ -3081,12 +3069,12 @@ export default function QuestDashboard({
         <div className="w-full md:w-64 space-y-1.5 shrink-0">
           <div className="flex justify-between items-baseline text-xs font-bold text-[#0F172A] dark:text-slate-100">
             <span>Завершено:</span>
-            <span className="font-mono text-[#CC1111]">{completedActivities.length} из 13 заданий ({Math.round((completedActivities.length / 13) * 100)}%)</span>
+            <span className="font-mono text-[#CC1111]">{coreCompletedCount} из 13 заданий ({Math.round((coreCompletedCount / 13) * 100)}%)</span>
           </div>
           <div className="w-full bg-[#F1F5F9] border border-[#E2E8F0] dark:border-slate-800 h-2.5 rounded-full overflow-hidden">
             <div 
               className="bg-emerald-600 h-full transition-all duration-500" 
-              style={{ width: `${(completedActivities.length / 13) * 100}%` }}
+              style={{ width: `${(coreCompletedCount / 13) * 100}%` }}
             />
           </div>
         </div>

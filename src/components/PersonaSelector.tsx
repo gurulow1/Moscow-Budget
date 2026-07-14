@@ -16,32 +16,32 @@ const PERSONAS: { id: Persona; label: string; icon: ElementType; color: string; 
     label: 'Студент', 
     icon: GraduationCap, 
     color: 'text-blue-600 dark:text-blue-400',
-    description: 'Доступные льготы на обучение, спорт, льготный проезд и стипендиальные программы.',
-    suggestion: 'Рекомендуется: «Налоговый вычет за обучение в вузе и абонемент в фитнес-клуб».'
+    description: 'Учебный пример личных расходов на обучение и спорт с небольшими стартовыми значениями.',
+    suggestion: 'Сценарий: обучение 45 000 ₽ и спорт 15 000 ₽.'
   },
   { 
     id: 'Professional', 
     label: 'Молодой специалист', 
     icon: Rocket, 
     color: 'text-emerald-600 dark:text-emerald-400',
-    description: 'Субсидии на приобретение жилья, повышение квалификации и налоговые льготы 3-НДФЛ.',
-    suggestion: 'Рекомендуется: «Вычет за профессиональное обучение, ДМС и спортивные секции».'
+    description: 'Учебный пример расходов на собственное повышение квалификации и физкультурные услуги.',
+    suggestion: 'Сценарий: обучение 80 000 ₽ и спорт 40 000 ₽.'
   },
   { 
     id: 'Entrepreneur', 
     label: 'Предприниматель', 
     icon: Briefcase, 
     color: 'text-amber-600 dark:text-amber-400',
-    description: 'Гранты Правительства Москвы для малого бизнеса, компенсации процентов по кредитам и льготная аренда.',
-    suggestion: 'Рекомендуется: «Калькулятор налоговых каникул и расчет субсидий на оборудование».'
+    description: 'Личный учебный пример для предпринимателя, который платит НДФЛ с подходящих доходов.',
+    suggestion: 'Сценарий не рассчитывает расходы бизнеса, гранты или субсидии.'
   },
   { 
     id: 'Family', 
     label: 'Семья с детьми', 
     icon: Users, 
     color: 'text-purple-600 dark:text-purple-400',
-    description: 'Материнский капитал, бесплатное питание в школах, компенсация детского сада и семейные программы.',
-    suggestion: 'Рекомендуется: «Вычет за обучение детей, кружки, спортивные секции и летние лагеря».'
+    description: 'Учебный пример повышенных семейных расходов; право на конкретный вычет проверяется отдельно.',
+    suggestion: 'Лимит обучения ребёнка имеет отдельные условия на сайте ФНС.'
   },
 ];
 
@@ -74,11 +74,11 @@ export default function PersonaSelector({ activePersona, onSelect, isLoading }: 
         <div className="flex items-start justify-between">
           <div>
             <span className="text-[10px] font-bold text-[#CC1111] dark:text-[#E11D48] uppercase tracking-wider block mb-1">
-              Персонализированный бюджет
+              Учебный сценарий
             </span>
-            <h2 className="text-xl font-bold text-[#0F172A] dark:text-slate-100 tracking-tight">Финансовый чекап профиля</h2>
+            <h2 className="text-xl font-bold text-[#0F172A] dark:text-slate-100 tracking-tight">Выберите пример пользователя</h2>
             <p className="text-[#475569] dark:text-slate-400 text-xs sm:text-sm mt-0.5">
-              Выберите ваш социальный статус, чтобы кастомизировать расчет вычетов, аналитику и отслеживать бюджетные треки.
+              Выбор меняет только стартовые значения калькулятора и не подтверждает право на льготы.
             </p>
           </div>
         </div>
@@ -121,7 +121,7 @@ export default function PersonaSelector({ activePersona, onSelect, isLoading }: 
               <Info size={15} className="text-[#475569] dark:text-slate-400" />
             </div>
             <div>
-              <span className="text-[10px] uppercase font-bold text-[#475569] dark:text-slate-400 tracking-wider">Ваш профиль льгот</span>
+              <span className="text-[10px] uppercase font-bold text-[#475569] dark:text-slate-400 tracking-wider">Описание учебного примера</span>
               <p className="text-xs sm:text-sm font-medium text-[#0F172A] dark:text-slate-200 mt-0.5 leading-relaxed">
                 {currentPersonaInfo.description}
               </p>

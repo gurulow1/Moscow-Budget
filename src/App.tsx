@@ -10,12 +10,11 @@ import SplashPortal from './components/SplashPortal';
 import OnboardingTour from './components/OnboardingTour';
 import { Persona } from '../types';
 import { Calculator, Target, PieChart as PieChartIcon, Check, Sparkles } from 'lucide-react';
-import { cn, safeLocalStorage } from './lib/utils';
+import { cn, readStoredNumber, readStoredStringArray, safeLocalStorage } from './lib/utils';
 
 export default function App() {
   const [balance, setBalance] = useState<number>(() => {
-    const saved = safeLocalStorage.getItem('mos_game_balance_v3');
-    return saved ? parseInt(saved, 10) : 0;
+    return readStoredNumber('mos_game_balance_v3');
   });
   
   useEffect(() => {
@@ -29,8 +28,7 @@ export default function App() {
   });
   
   const [completedActivities, setCompletedActivities] = useState<string[]>(() => {
-    const saved = safeLocalStorage.getItem('mos_completed_activities_v3');
-    return saved ? JSON.parse(saved) : [];
+    return readStoredStringArray('mos_completed_activities_v3');
   });
 
   const [isDataLoading, setIsDataLoading] = useState(false);
@@ -48,9 +46,7 @@ export default function App() {
   }, [completedActivities]);
 
   const [totalXp, setTotalXp] = useState<number>(() => {
-    const saved = safeLocalStorage.getItem('mos_total_xp_v3');
-    if (saved) return parseInt(saved, 10);
-    return balance;
+    return readStoredNumber('mos_total_xp_v3', balance);
   });
 
   useEffect(() => {
@@ -125,8 +121,14 @@ export default function App() {
       )}
 
       <div className="w-full max-w-7xl px-4 sm:px-6 lg:px-8 mx-auto flex flex-col gap-4 md:gap-6 flex-1 pb-16 md:pb-4 relative z-10">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-[11px] font-semibold text-amber-950">
+          <span><strong>Конкурсный прототип:</strong> не является официальным сервисом и не подключён к городским информационным системам.</span>
+          <a href="https://budget.mos.ru/news/14617" target="_blank" rel="noopener noreferrer" className="shrink-0 font-bold text-[#CC1111] hover:underline">
+            Источник данных →
+          </a>
+        </div>
         
-        {/* Header (glowing points + Mos.ID profile) */}
+        {/* Header (local demo profile and learning points) */}
         <div className={cn("py-2 md:py-0 transition-all duration-500", getTourClass(1))} id="tour-header">
           <Header balance={balance} totalXp={totalXp} completedActivities={completedActivities} />
         </div>
@@ -219,9 +221,9 @@ export default function App() {
           </AnimatePresence>
         </main>
 
-        {/* Institution footer (budget.mos.ru style, hidden on mobile for clean fit) */}
+        {/* Project footer, hidden on mobile for compact layout */}
         <footer className="hidden md:flex mt-8 pt-6 border-t border-[#E2E8F0] text-center flex-col sm:flex-row items-center justify-between gap-4 text-xs font-semibold text-[#475569]">
-          <span>© 1992–2026 Департамент финансов города Москвы, Официальный портал</span>
+          <span>МосГорБюджет.Трек — конкурсный прототип, не официальный сервис Правительства Москвы</span>
           <div className="flex items-center gap-4">
             <a href="https://budget.mos.ru" target="_blank" rel="noopener noreferrer" className="hover:text-slate-600 transition-colors">Портал бюджета</a>
             <span>•</span>
@@ -246,9 +248,7 @@ export default function App() {
           >
             <button
               onClick={() => {
-                // Dispatch event so TaxCalculator runs its own internal calculation
-                // and then calls onCalculate(). Never bypass the form directly.
-                window.dispatchEvent(new CustomEvent('trigger_tax_calculate'));
+                handleCalculate();
                 if (!calculatorTaskCompleted) {
                   const el = document.getElementById('tour-calculator-mobile');
                   el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -347,7 +347,7 @@ export default function App() {
         </button>
       </div>
       
-      {/* Global AI Chat assistant overlay drawer and mobile FAB button */}
+      {/* Global local-reference drawer and mobile FAB button */}
       <BudgetAIChatDrawer activeMobileTab={activeMobileTab} tourStep={tourStep} />
     </div>
   );

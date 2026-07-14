@@ -3,14 +3,14 @@ import { PieChart as PieChartIcon, Info, Map as MapIcon, Wallet, Activity, Arrow
 import { motion, AnimatePresence } from 'motion/react';
 import { cn, safeLocalStorage } from '../lib/utils';
 
-// Global Data — based on Moscow Budget 2026: Expenses = 6.38 trln RUB
-// Sources: Education 814.6B, Transport 1.29T, Healthcare 615B, Social 810B, Others ~2.85T
+// Rounded overview based on the Moscow 2026 budget plan.
+// Official source: https://budget.mos.ru/news/14617
 const SECTORS = [
-  { id: 'edu', name: 'Образование', value: 13, color: '#2563EB', kpis: ['🎓 814,6 млрд ₽', '✏️ Программа «Мой Колледж»'] },
-  { id: 'trans', name: 'Транспортная система', value: 20, color: '#8B5CF6', kpis: ['🚇 1,29 трлн ₽', '⚡ +700 электробусов'] },
-  { id: 'health', name: 'Здравоохранение', value: 10, color: '#CC1111', kpis: ['🏥 615 млрд ₽', '❤️ Реновация поликлиник'] },
-  { id: 'soc', name: 'Социальная поддержка', value: 13, color: '#10B981', kpis: ['🤝 810 млрд ₽', '👴 4,5 млн получателей'] },
-  { id: 'other', name: 'Прочие расходы', value: 44, color: '#F59E0B', kpis: ['🏙️ ЖКХ, культура, спорт, безопасность', '💡 Цифровизация и экономика'] },
+  { id: 'edu', name: 'Образование', value: 13, color: '#2563EB', kpis: ['🎓 814,6 млрд ₽', '≈ 12,8% расходов'] },
+  { id: 'trans', name: 'Транспортная система', value: 20, color: '#8B5CF6', kpis: ['🚇 около 1,29 трлн ₽', '≈ 20% расходов'] },
+  { id: 'health', name: 'Здравоохранение', value: 10, color: '#CC1111', kpis: ['🏥 615 млрд ₽', '≈ 9,6% расходов'] },
+  { id: 'soc', name: 'Социальная поддержка', value: 13, color: '#10B981', kpis: ['🤝 810 млрд ₽', '≈ 12,7% расходов'] },
+  { id: 'other', name: 'Другие направления', value: 44, color: '#F59E0B', kpis: ['🏙️ ЖКХ, культура, спорт, безопасность', 'Округлённый остаток'] },
 ];
 
 const SUBCATEGORIES: Record<string, { name: string; value: number }[]> = {
@@ -49,12 +49,12 @@ const DISTRICTS = [
   { id: 'ВАО', label: 'ВАО', fund: '380 млрд ₽', fundValue: 380, perCapita: '112 000 ₽/чел', value: 380, obj: 'Экологическая модернизация производств в промзонах и озеленение Измайловского парка.', share: '17%', rank: 5, color: '#0284C7' },
 ];
 
-const TOTAL_BUDGET = 6.38; // trillion rubles — Moscow 2026 expenses (official)
+const TOTAL_BUDGET = 6.385; // trillion rubles — Moscow 2026 planned expenses
 
 export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
   const [isPersonal, setIsPersonal] = useState(false);
   const [selectedDistrict, setSelectedDistrict] = useState(DISTRICTS[0]);
-  const [personalTax, setPersonalTax] = useState(50000);
+  const [deductionModelAmount, setDeductionModelAmount] = useState(7800);
   
   // Interactive Display Mode Tool Toggle "% / ₽"
   const [displayUnit, setDisplayUnit] = useState<'percent' | 'currency'>('percent');
@@ -71,11 +71,17 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
   const [isMobile, setIsMobile] = useState<boolean>(false);
 
   useEffect(() => {
-    // Read the latest calculated NDFL from local storage
-    const savedCalculated = safeLocalStorage.getItem('mos_calc_last_result');
+    const savedCalculated = safeLocalStorage.getItem('mos_calc_last_deduction');
     if (savedCalculated && !isNaN(Number(savedCalculated))) {
-      setPersonalTax(Number(savedCalculated)); 
+      setDeductionModelAmount(Number(savedCalculated));
     } 
+
+    const handleUpdate = (event: Event) => {
+      const value = (event as CustomEvent<number>).detail;
+      if (Number.isFinite(value)) setDeductionModelAmount(value);
+    };
+    window.addEventListener('mos_calc_deduction_update', handleUpdate);
+    return () => window.removeEventListener('mos_calc_deduction_update', handleUpdate);
   }, []);
 
   // Responsive boundary check for replacing pie-charts with stacked-bars
@@ -94,7 +100,7 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
 
   const getAbsoluteRubleValue = (percentage: number) => {
     if (isPersonal) {
-      return personalTax * (percentage / 100);
+      return deductionModelAmount * (percentage / 100);
     } else {
       // 5 trillion * percent
       return (TOTAL_BUDGET * (percentage / 100)) * 1000 * 1000 * 1000 * 1000;
@@ -118,7 +124,7 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
       }
       return { ...s, displayValue, absoluteRubles: rubleValue };
     });
-  }, [isPersonal, personalTax, displayUnit]);
+  }, [isPersonal, deductionModelAmount, displayUnit]);
 
   // SVG Donut Calculations
   const donutRadius = 38;
@@ -147,12 +153,6 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
     const activeId = hoveredSector || selectedSector;
     return SECTORS.find(s => s.id === activeId) || null;
   }, [hoveredSector, selectedSector]);
-
-  // Calculate proportional district funding based on NDFL
-  const calculatedDistrictFund = useMemo(() => {
-    const share = personalTax * (selectedDistrict.value / 5000);
-    return formatCurrency(share);
-  }, [selectedDistrict, personalTax]);
 
   if (isLoading) {
     return (
@@ -223,8 +223,11 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
               Интерактивная карта распределения расходов
             </h2>
             <p className="text-[#475569] text-xs sm:text-sm leading-relaxed mt-0.5">
-              Изучите структуру расходов города Москвы на 2026 год, погружайтесь в подкатегории и управляйте масштабом. Доли приведены по профильным госпрограммам; при этом на социальную сферу города в целом направлено около половины бюджета (≈3,2 трлн ₽).
+              Изучите округлённую структуру расходов Москвы на 2026 год. Верхнеуровневые суммы взяты из официального плана; детализация внутри направлений и округовые сценарии ниже являются учебной моделью. На социальную сферу в целом предусмотрено около 3,2 трлн ₽.
             </p>
+            <a href="https://budget.mos.ru/news/14617" target="_blank" rel="noopener noreferrer" className="inline-block mt-1 text-[11px] font-bold text-[#CC1111] hover:underline">
+              Официальный источник данных →
+            </a>
           </div>
         </div>
 
@@ -279,7 +282,7 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
               )}
             >
               <Wallet size={14} />
-              Мой вклад
+              Модель вычета
               {isPersonal && (
                 <motion.div
                   layoutId="active_analytic_toggle"
@@ -303,9 +306,9 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
             <Wallet size={16} />
           </div>
           <div className="text-xs sm:text-sm">
-            <h4 className="font-extrabold text-[#0F172A] dark:text-slate-100">Откуда берутся эти цифры?</h4>
+            <h4 className="font-extrabold text-[#0F172A] dark:text-slate-100">Что показывает эта модель?</h4>
             <p className="text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-              Исходя из ваших расчетных данных НДФЛ в размере <span className="font-mono text-[#0F172A] dark:text-slate-200 font-extrabold">{formatCurrency(personalTax)}</span>, ваш индивидуальный вклад деликатно распределяется пропорционально фактическим расходам Правительства Москвы. Например: ваш вклад в <span className="text-slate-800 dark:text-slate-300 font-bold">Образование (13% бюджета)</span> составляет <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold">{formatCurrency(personalTax * 0.13)}</span>, а в <span className="text-slate-800 dark:text-slate-300 font-bold">Здравоохранение (10%)</span> составляет <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold">{formatCurrency(personalTax * 0.10)}</span>.
+              Для сравнения масштаба ориентировочная сумма возврата <span className="font-mono text-[#0F172A] dark:text-slate-200 font-extrabold">{formatCurrency(deductionModelAmount)}</span> условно распределяется по округлённым долям расходов. Например, 13% модели приходится на образование — <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold">{formatCurrency(deductionModelAmount * 0.13)}</span>. Это не распределение вашего НДФЛ и не расчёт личного вклада в бюджет.
             </p>
           </div>
         </motion.div>
@@ -372,8 +375,8 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
                         <div className="text-right shrink-0">
                           <span className="text-[9px] uppercase font-black text-[#64748B] tracking-widest block mb-0.5">
                             {displayUnit === 'percent' 
-                              ? (isPersonal ? "Мой вклад (%)" : "Доля бюджета")
-                              : (isPersonal ? "Моя доля (НДФЛ)" : "Объем финансирования")
+                              ? (isPersonal ? "Доля модели (%)" : "Доля бюджета")
+                              : (isPersonal ? "Сумма модели" : "Объем финансирования")
                             }
                           </span>
                           <span className="text-sm font-black font-mono text-[#0F172A] dark:text-white tracking-tight">
@@ -520,12 +523,21 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
                       strokeDashoffset={slice.strokeDashoffset}
                       strokeLinecap="butt"
                       className="cursor-pointer"
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`${slice.name}: ${slice.value}%`}
                       onClick={(e) => {
                         e.stopPropagation();
                         setSelectedSector(isSelected ? null : slice.id);
                       }}
                       onMouseEnter={() => setHoveredSector(slice.id)}
                       onMouseLeave={() => setHoveredSector(null)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setSelectedSector(isSelected ? null : slice.id);
+                        }
+                      }}
                       animate={{
                         strokeWidth: isActive ? 11 : 8.5,
                         opacity: isAnySelected && !isSelected ? 0.35 : 1,
@@ -600,7 +612,7 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
                       className="flex flex-col items-center"
                     >
                       <span className="text-[11px] uppercase font-black tracking-widest text-[#64748B] leading-none">
-                        БЮДЖЕТ МОСКВЫ
+                        {isPersonal ? 'МОДЕЛЬ ВЫЧЕТА' : 'БЮДЖЕТ МОСКВЫ'}
                       </span>
                       {displayUnit === 'percent' ? (
                         <span className="text-3xl font-black font-mono text-[#0F172A] dark:text-white tracking-tight mt-1">
@@ -608,7 +620,7 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
                         </span>
                       ) : (
                         <span className="text-lg font-black font-mono text-[#0F172A] dark:text-white tracking-tight mt-1">
-                          {isPersonal ? formatCurrency(personalTax) : `${TOTAL_BUDGET.toFixed(2)} трлн ₽`}
+                          {isPersonal ? formatCurrency(deductionModelAmount) : `${TOTAL_BUDGET.toFixed(3)} трлн ₽`}
                         </span>
                       )}
                       <span className="text-[8px] font-bold text-[#CC1111] uppercase tracking-wide mt-1.5 animate-pulse">
@@ -645,13 +657,13 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
               <MapIcon size={20} className="stroke-[2.5px]" />
             </div>
             <div>
-              <span className="text-[10px] font-black text-[#CC1111] uppercase tracking-wider block mb-0.5">Территориальный паспорт</span>
-              <h3 className="text-base font-black text-[#0F172A] dark:text-slate-100 tracking-tight">Развитие административных округов г. Москвы</h3>
+              <span className="text-[10px] font-black text-[#CC1111] uppercase tracking-wider block mb-0.5">Учебный конструктор</span>
+              <h3 className="text-base font-black text-[#0F172A] dark:text-slate-100 tracking-tight">Сценарии развития административных округов</h3>
             </div>
           </div>
           
-          <div className="bg-emerald-50 text-emerald-800 border border-emerald-200 font-black text-[10px] uppercase tracking-wider px-3 py-1 rounded-lg w-max shrink-0">
-            📊 Социальный норматив: на душу населения
+          <div className="bg-amber-50 text-amber-900 border border-amber-300 font-black text-[10px] uppercase tracking-wider px-3 py-1 rounded-lg w-max shrink-0">
+            ⚠ Демо-данные, не официальная статистика
           </div>
         </div>
 
@@ -660,7 +672,7 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
           <div className="bg-amber-50 rounded-xl p-3 border border-amber-200 text-[#0F172A] dark:text-slate-100 flex items-center justify-between gap-2.5">
             <div className="flex items-center gap-2 text-xs font-bold">
               <Star size={15} className="text-amber-500 fill-amber-500 animate-pulse" />
-              <span>Ваш домашний округ — <strong className="text-[#CC1111] font-black">{myDistrict}</strong>. Показываем приоритетные данные финансирования на душу населения!</span>
+              <span>Выбран демо-сценарий округа <strong className="text-[#CC1111] font-black">{myDistrict}</strong>. Настройка хранится только в браузере.</span>
             </div>
             <button 
               onClick={() => {
@@ -681,9 +693,9 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
             <div className="flex items-center justify-between">
               <span className="text-xs font-black uppercase text-slate-500 tracking-wider flex items-center gap-1.5 leading-none">
                 <Trophy size={14} className="text-[#CC1111]" />
-                Рейтинг округов по финансированию на душу населения
+                Сравнение пяти демонстрационных сценариев
               </span>
-              <span className="text-[10px] text-slate-400 font-bold tracking-tight">план 2026 г.</span>
+              <span className="text-[10px] text-amber-700 font-bold tracking-tight">условные значения</span>
             </div>
 
             <div className="space-y-2.5">
@@ -692,12 +704,13 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
                 const isHome = myDistrict === dist.id;
                 
                 return (
-                  <div 
+                  <button
+                    type="button"
                     key={dist.id}
                     id={`district-row-${dist.id}`}
                     onClick={() => setSelectedDistrict(dist)}
                     className={cn(
-                      "flex items-center gap-3 p-3 rounded-xl border transition-all duration-200 cursor-pointer select-none",
+                      "w-full text-left flex items-center gap-3 p-3 rounded-xl border transition-all duration-200 cursor-pointer select-none",
                       isSelected 
                         ? "bg-white dark:bg-[#1e293b] border-[#CC1111] shadow-xs animate-pulse-once" 
                         : "bg-white dark:bg-[#1e293b]/80 border-slate-200 dark:border-slate-700/50 hover:border-slate-300"
@@ -725,7 +738,7 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
                         className="text-[10px] text-[#475569] dark:text-slate-400 font-semibold leading-relaxed block mt-0.5 line-clamp-2"
                         title={dist.obj}
                       >
-                        Флагман: {dist.obj}
+                        Сценарий: {dist.obj}
                       </span>
                     </div>
 
@@ -733,7 +746,7 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
                       <span className="text-xs font-black text-slate-800 dark:text-slate-100 font-mono block leading-none">{dist.perCapita}</span>
                       <span className="text-[9px] font-bold text-slate-400 font-mono mt-0.5 block leading-none">Общий: {dist.fund}</span>
                     </div>
-                  </div>
+                  </button>
                 );
               })}
             </div>
@@ -745,7 +758,7 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
             <div>
               <div className="flex justify-between items-start gap-3">
                 <span className="text-[10px] uppercase font-black text-[#CC1111] tracking-widest block mb-1">
-                  ПАСПОРТ РАЗВИТИЯ
+                  ДЕМО-СЦЕНАРИЙ
                 </span>
                 
                 {/* Pin/Favorite My District button */}
@@ -778,24 +791,24 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
               <div className="space-y-4">
                 
                 <div>
-                  <span className="text-[9px] uppercase font-black text-slate-400 tracking-wider block mb-0.5">Общее финансирование из бюджета:</span>
+                  <span className="text-[9px] uppercase font-black text-slate-400 tracking-wider block mb-0.5">Условный объём сценария:</span>
                   <span className="text-lg font-black font-mono text-[#0F172A] dark:text-slate-100 tracking-tight block">
                     {selectedDistrict.fund}
                   </span>
                 </div>
 
                 <div>
-                  <span className="text-[9px] uppercase font-black text-slate-400 tracking-wider block mb-0.5">В пересчете на 1 жителя округа:</span>
+                  <span className="text-[9px] uppercase font-black text-slate-400 tracking-wider block mb-0.5">Условно на 1 жителя:</span>
                   <span className="text-lg font-black font-mono text-[#CC1111] tracking-tight block">
                     {selectedDistrict.perCapita}
                   </span>
                   <p className="text-[10px] text-slate-500 font-medium leading-relaxed mt-0.5">
-                    * Показывает соотношение общих целевых муниципальных расходов к фактической численности населения префектуры.
+                    * Иллюстративная величина для учебного сравнения; не является показателем бюджета префектуры.
                   </p>
                 </div>
 
                 <div className="border-t border-slate-100 pt-3">
-                  <span className="text-[9px] uppercase font-black text-slate-400 tracking-wider block mb-1.5">Флагманский проект в 2026 году:</span>
+                  <span className="text-[9px] uppercase font-black text-slate-400 tracking-wider block mb-1.5">Учебный приоритет сценария:</span>
                   <div className="bg-[#F8FAFC] dark:bg-slate-900 border border-slate-200 dark:border-slate-700/50 rounded-xl p-3">
                     <p className="text-xs font-bold text-[#0F172A] dark:text-slate-100 leading-relaxed">
                       {selectedDistrict.obj}

@@ -65,3 +65,23 @@ export const safeLocalStorage = {
     }
   }
 };
+
+export function readStoredNumber(key: string, fallback = 0): number {
+  const raw = safeLocalStorage.getItem(key);
+  if (raw === null) return fallback;
+
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : fallback;
+}
+
+export function readStoredStringArray(key: string): string[] {
+  const raw = safeLocalStorage.getItem(key);
+  if (!raw) return [];
+
+  try {
+    const value: unknown = JSON.parse(raw);
+    return Array.isArray(value) && value.every(item => typeof item === 'string') ? value : [];
+  } catch {
+    return [];
+  }
+}

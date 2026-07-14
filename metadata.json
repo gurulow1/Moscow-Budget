@@ -1,8 +1,6 @@
 {
-  "name": "Remix: Открытый бюджет Москвы - Сервисы",
-  "description": "Интерактивные сервисы и геймификация для Открытого бюджета Москвы",
+  "name": "МосГорБюджет.Трек — конкурсный прототип",
+  "description": "Интерактивный образовательный проект о бюджете Москвы на 2026 год",
   "requestFramePermissions": [],
-  "majorCapabilities": [
-    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
-  ]
+  "majorCapabilities": []
 }
