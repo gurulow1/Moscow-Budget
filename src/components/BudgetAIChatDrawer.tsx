@@ -15,7 +15,7 @@ interface ChatMessage {
   timestamp: string;
 }
 
-const WELCOME_TEXT = `Привет! Это интерактивный справочник конкурсного прототипа. Ответы выбираются из заранее подготовленных тем и не заменяют официальные источники.
+const WELCOME_TEXT = `Привет! Это интерактивный справочник учебного проекта. Ответы выбираются из заранее подготовленных тем и не заменяют официальные источники.
 
 Какой вопрос о бюджете вас интересует?`;
 
@@ -166,18 +166,14 @@ export default function BudgetAIChatDrawer({ activeMobileTab, tourStep = null }:
       timestamp: nowTime(),
     };
     setMessages((prev) => [...prev, userMsg]);
-    setIsTyping(true);
-
-    setTimeout(() => {
-      const aiMsg: ChatMessage = {
-        id: `drawer-msg-${Date.now() + 1}`,
-        sender: 'ai',
-        text: generateResponse(raw),
-        timestamp: nowTime(),
-      };
-      setMessages((prev) => [...prev, aiMsg]);
-      setIsTyping(false);
-    }, 1000);
+    const aiMsg: ChatMessage = {
+      id: `drawer-msg-${Date.now() + 1}`,
+      sender: 'ai',
+      text: generateResponse(raw),
+      timestamp: nowTime(),
+    };
+    setMessages((prev) => [...prev, aiMsg]);
+    setIsTyping(false);
   };
 
   useEffect(() => {
@@ -212,9 +208,9 @@ export default function BudgetAIChatDrawer({ activeMobileTab, tourStep = null }:
           id="tour-ai"
           onClick={() => setIsOpen(true)}
           className={cn(
-            'fixed bottom-20 md:bottom-6 right-6 md:right-8 z-50 w-12 h-12 bg-[#CC1111] text-white rounded-full flex items-center justify-center shadow-2xl hover:bg-[#A30E0E] transition duration-200 cursor-pointer active:scale-95 border-2 border-white',
+            'fixed bottom-[8.25rem] md:bottom-6 right-5 md:right-8 z-50 w-11 h-11 bg-[#0F9F91] text-white rounded-full flex items-center justify-center shadow-[0_12px_28px_rgba(15,159,145,0.28)] hover:bg-[#0B766E] transition duration-200 cursor-pointer active:scale-95 border-2 border-white/90',
             tourStep !== null && tourStep !== 6 && 'blur-xs opacity-20 pointer-events-none scale-[0.98] transition-all duration-500',
-            tourStep === 6 && 'z-[220] ring-4 ring-[#CC1111]/30 scale-105 animate-pulse'
+            tourStep === 6 && 'z-[220] ring-4 ring-[#0F9F91]/30 scale-105 animate-pulse'
           )}
           title="Открыть интерактивный справочник"
           aria-label="Открыть интерактивный справочник"

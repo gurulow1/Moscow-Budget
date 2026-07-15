@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'motion/react';
-import { User, LandPlot, ShieldCheck, Trophy, Sparkles, BookOpen, Layers, CheckCircle2, Sun, Moon } from 'lucide-react';
+import { User, LandPlot, ShieldCheck, Trophy, Sparkles, BookOpen, Layers, CheckCircle2, Sun, Moon, HelpCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { cn, safeLocalStorage } from '../lib/utils';
 
@@ -40,9 +40,10 @@ interface HeaderProps {
   balance: number;
   totalXp?: number;
   completedActivities?: string[];
+  onReset?: () => void;
 }
 
-export default function Header({ balance, totalXp = 100, completedActivities = [] }: HeaderProps) {
+export default function Header({ balance, totalXp = 100, completedActivities = [], onReset }: HeaderProps) {
   const [prevBalance, setPrevBalance] = useState(balance);
   const [floatingPoints, setFloatingPoints] = useState<number | null>(null);
   
@@ -87,7 +88,7 @@ export default function Header({ balance, totalXp = 100, completedActivities = [
   return (
     <>
       {/* DESKTOP HEADER */}
-      <header className="hidden md:flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-4 py-4 px-6 bg-white dark:bg-slate-900 rounded-2xl border border-[#E2E8F0] dark:border-slate-800 shadow-xs relative z-30 select-none">
+      <header className="hidden md:flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-4 py-4 px-6 glass-surface rounded-[28px] relative z-30 select-none">
         
         {/* Project title and visible prototype status */}
         <div className="flex items-center gap-3.5 flex-1 min-w-0">
@@ -100,9 +101,6 @@ export default function Header({ balance, totalXp = 100, completedActivities = [
               <span className="hidden 2xl:inline text-neutral-300 dark:text-slate-600 font-normal">//</span>
               <span className="text-[#CC1111] dark:text-red-500 font-bold">Бюджет Москвы — интерактивно</span>
             </div>
-            <span className="text-xs text-[#475569] dark:text-slate-400 font-black tracking-widest block sm:mt-1 uppercase">
-              Конкурсный прототип • не официальный сервис
-            </span>
           </div>
         </div>
          
@@ -114,7 +112,7 @@ export default function Header({ balance, totalXp = 100, completedActivities = [
             <input
               type="text"
               placeholder="Поиск по бюджету... (Enter)"
-              className="w-full text-base xl:text-xs font-semibold pl-8 pr-3 py-2 bg-[#F8FAFC] dark:bg-slate-950 border border-[#E2E8F0] dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 focus:border-[#CC1111]/60 focus:bg-white dark:bg-[#1e293b] dark:focus:bg-slate-900 text-slate-800 dark:text-slate-200 rounded-xl outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
+              className="w-full text-base xl:text-xs font-semibold pl-8 pr-3 py-2 bg-white/65 dark:bg-slate-950/50 border border-slate-200/70 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 focus:border-[#0F9F91]/60 focus:bg-white dark:focus:bg-slate-900 text-slate-800 dark:text-slate-200 rounded-full outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   const val = e.currentTarget.value;
@@ -217,7 +215,7 @@ export default function Header({ balance, totalXp = 100, completedActivities = [
                 <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-900" />
               </div>
               <div className="flex flex-col items-start leading-none text-left min-w-0 pr-1">
-                <span className="text-[13px] font-black text-[#0F172A] dark:text-white truncate max-w-[80px] lg:max-w-[120px]">Демо-профиль</span>
+                <span className="text-[13px] font-black text-[#0F172A] dark:text-white truncate max-w-[80px] lg:max-w-[120px]">Мой прогресс</span>
                 <span className="text-[9px] font-bold text-[#CC1111] dark:text-red-400 uppercase tracking-wider mt-1.5 flex items-center gap-0.5">
                   <ShieldCheck size={11} className="text-emerald-500 dark:text-emerald-400 shrink-0" />
                   <span className="hidden sm:inline">Локальный прогресс</span>
@@ -240,10 +238,10 @@ export default function Header({ balance, totalXp = 100, completedActivities = [
                   >
                     <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
                       <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#CC1111] to-[#E11D48] text-white font-extrabold flex items-center justify-center text-sm shadow-sm select-none">
-                        ДЕМО
+                         Я
                       </div>
                       <div>
-                        <h4 className="text-sm font-extrabold text-[#0F172A] dark:text-slate-100 leading-snug">Участник демонстрации</h4>
+                        <h4 className="text-sm font-extrabold text-[#0F172A] dark:text-slate-100 leading-snug">Локальный профиль</h4>
                         <span className="text-[9px] bg-emerald-50 text-emerald-800 font-extrabold border border-emerald-200 uppercase tracking-wider px-2 py-0.5 rounded leading-none block w-max mt-1">
                           Данные хранятся локально
                         </span>
@@ -296,13 +294,26 @@ export default function Header({ balance, totalXp = 100, completedActivities = [
                           <Layers size={13} className="text-[#CC1111]" />
                           Уровень доступа:
                         </span>
-                        <span className="text-emerald-600 font-black">Демо</span>
+                        <span className="text-emerald-600 font-black">Локально</span>
                       </div>
                     </div>
 
                     <div className="text-[10px] text-slate-400 font-semibold text-center leading-relaxed">
                       Профиль не связан с Mos.ID и не передаёт персональные данные.
                     </div>
+
+                    {onReset && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setProfileOpen(false);
+                          onReset();
+                        }}
+                        className="w-full rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2 text-[10px] font-extrabold uppercase tracking-wider text-slate-500 hover:border-[#CC1111]/40 hover:text-[#CC1111] transition-colors"
+                      >
+                        Сбросить учебный прогресс
+                      </button>
+                    )}
                   </motion.div>
                 </>
               )}
@@ -313,7 +324,7 @@ export default function Header({ balance, totalXp = 100, completedActivities = [
       </header>
 
       {/* MOBILE COMPACT HEADER */}
-      <header className="flex md:hidden items-center justify-between h-14 px-3.5 bg-white dark:bg-slate-900 rounded-xl border border-[#E2E8F0] dark:border-slate-800 shadow-xs w-full relative z-20 select-none">
+      <header className="flex md:hidden items-center justify-between h-14 px-3.5 glass-surface rounded-[22px] w-full relative z-20 select-none">
         
         {/* Left aspect: Only icon logo */}
         <div className="flex items-center gap-2">
@@ -327,7 +338,7 @@ export default function Header({ balance, totalXp = 100, completedActivities = [
         <div className="flex items-center gap-1.5 min-w-0 justify-end">
           
           {/* Balance element */}
-          <div className="relative flex items-center gap-1 px-1.5 py-1.5 bg-[#F8FAFC] dark:bg-slate-950 border border-[#E2E8F0] dark:border-slate-800 rounded-lg min-w-max shrink-0">
+          <div className="relative flex items-center gap-1 px-1.5 py-1.5 bg-white/65 dark:bg-slate-950/50 border border-slate-200/70 dark:border-slate-800 rounded-full min-w-max shrink-0">
             <div className="w-4 h-4 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-[10px] text-white font-black shadow-xs shrink-0">
               <span className="drop-shadow-xs">₽</span>
             </div>
@@ -355,30 +366,35 @@ export default function Header({ balance, totalXp = 100, completedActivities = [
           {/* Compact Theme Switcher in Mobile Header */}
           <button
             onClick={() => setIsDark(!isDark)}
-            className="p-1.5 rounded-lg border border-[#E2E8F0] dark:border-slate-800 bg-[#F8FAFC] dark:bg-slate-950 text-slate-500 dark:text-slate-400 hover:text-[#CC1111] dark:hover:text-red-400 active:scale-90 transition-all cursor-pointer shrink-0 outline-none"
+            className="p-1.5 rounded-full border border-slate-200/70 dark:border-slate-800 bg-white/65 dark:bg-slate-950/50 text-slate-500 dark:text-slate-400 hover:text-[#0F9F91] dark:hover:text-teal-300 active:scale-90 transition-all cursor-pointer shrink-0 outline-none"
             title={isDark ? "Светлая тема" : "Темная тема"}
           >
             {isDark ? <Sun size={12} className="text-amber-500" /> : <Moon size={12} className="text-slate-500" />}
           </button>
 
-          {/* Aleksey User block copy */}
-          <div className="flex items-center gap-1 pl-1 pr-1.5 py-1.5 bg-[#F8FAFC] dark:bg-slate-950 rounded-lg border border-[#E2E8F0] dark:border-slate-800 min-w-0 shrink-0">
-            <div className="bg-[#CC1111]/10 text-[#CC1111] dark:text-red-500 p-1 rounded-md shrink-0">
-              <User size={11} className="stroke-[2.5px]" />
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new CustomEvent('start_mos_onboarding'))}
+            title="Как это работает"
+            aria-label="Открыть экскурсию по проекту"
+            className="flex items-center gap-1 pl-1 pr-1.5 py-1.5 bg-white/65 dark:bg-slate-950/50 rounded-full border border-slate-200/70 dark:border-slate-800 min-w-0 shrink-0 hover:border-[#0F9F91]/40 transition-colors"
+          >
+            <div className="bg-[#DDF7F1] text-[#0F9F91] dark:text-teal-300 p-1 rounded-full shrink-0">
+              <HelpCircle size={11} className="stroke-[2.5px]" />
             </div>
-          </div>
+          </button>
 
         </div>
       </header>
 
       {/* MOBILE XP WIDGET BAR - UNDER MAIN SHAPKA (Audit #8: Level 1 • Налоговый новичок • 100/150 XP progress bar) */}
-      <div className="flex md:hidden flex-col gap-1 px-3.5 py-2 bg-gradient-to-r from-slate-900 to-[#1E293B] rounded-xl border border-white/5 text-white shadow-xs select-none">
+      <div className="flex md:hidden flex-col gap-1 px-3.5 py-2 bg-[#DDF7F1]/85 rounded-[18px] border border-white/90 text-[#0B766E] shadow-[0_10px_28px_rgba(15,118,110,0.1)] select-none backdrop-blur-md">
         <div className="flex items-center justify-between text-[10px] font-black tracking-tight leading-none">
-          <span className="text-amber-400 font-black">Lvl {lvlInfo.level} • {lvlInfo.title}</span>
-          <span className="text-slate-400 font-mono">{totalXp}/{lvlInfo.nextLevelXp} XP</span>
+          <span className="text-[#8DE7D9] font-black">Lvl {lvlInfo.level} • {lvlInfo.title}</span>
+          <span className="text-[#5D7C7B] font-mono">{totalXp}/{lvlInfo.nextLevelXp} XP</span>
         </div>
         {/* Progress bar line height 4px */}
-        <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden mt-1 border border-slate-700/50">
+        <div className="w-full bg-white/75 h-1.5 rounded-full overflow-hidden mt-1 border border-white/80">
           <div 
             className="bg-gradient-to-r from-[#CC1111] to-[#E11D48] h-full rounded-full transition-all duration-300"
             style={{ width: `${lvlInfo.progress}%` }}

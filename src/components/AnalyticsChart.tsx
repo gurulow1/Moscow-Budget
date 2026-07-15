@@ -2,16 +2,22 @@ import { useState, useEffect, useMemo } from 'react';
 import { PieChart as PieChartIcon, Info, Map as MapIcon, Wallet, Activity, ArrowUpRight, CheckCircle2, Star, StarOff, Trophy, ListOrdered } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn, safeLocalStorage } from '../lib/utils';
+import {
+  BUDGET_SECTORS,
+  TOTAL_EXPENSES_BILLION,
+  formatBudgetAmount,
+  getBudgetSource,
+} from '../data/budgetFacts';
 
-// Rounded overview based on the Moscow 2026 budget plan.
-// Official source: https://budget.mos.ru/news/14617
-const SECTORS = [
-  { id: 'edu', name: 'Образование', value: 13, color: '#2563EB', kpis: ['🎓 814,6 млрд ₽', '≈ 12,8% расходов'] },
-  { id: 'trans', name: 'Транспортная система', value: 20, color: '#8B5CF6', kpis: ['🚇 около 1,29 трлн ₽', '≈ 20% расходов'] },
-  { id: 'health', name: 'Здравоохранение', value: 10, color: '#CC1111', kpis: ['🏥 615 млрд ₽', '≈ 9,6% расходов'] },
-  { id: 'soc', name: 'Социальная поддержка', value: 13, color: '#10B981', kpis: ['🤝 810 млрд ₽', '≈ 12,7% расходов'] },
-  { id: 'other', name: 'Другие направления', value: 44, color: '#F59E0B', kpis: ['🏙️ ЖКХ, культура, спорт, безопасность', 'Округлённый остаток'] },
-];
+// Official ruble values are the source of truth; shares are derived from them.
+const SECTORS = BUDGET_SECTORS.map((sector) => ({
+  ...sector,
+  value: sector.share,
+  kpis: [
+    formatBudgetAmount(sector.amountBillion),
+    `${sector.share}% расходов`,
+  ],
+}));
 
 const SUBCATEGORIES: Record<string, { name: string; value: number }[]> = {
   edu: [
@@ -48,8 +54,6 @@ const DISTRICTS = [
   { id: 'ТиНАО', label: 'ТиНАО', fund: '490 млрд ₽', fundValue: 490, perCapita: '122 000 ₽/чел', value: 490, obj: 'Строительство новых центров притяжения, школ, больниц и проведение скоростного трамвая.', share: '22%', rank: 4, color: '#CC1111' },
   { id: 'ВАО', label: 'ВАО', fund: '380 млрд ₽', fundValue: 380, perCapita: '112 000 ₽/чел', value: 380, obj: 'Экологическая модернизация производств в промзонах и озеленение Измайловского парка.', share: '17%', rank: 5, color: '#0284C7' },
 ];
-
-const TOTAL_BUDGET = 6.385; // trillion rubles — Moscow 2026 planned expenses
 
 export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
   const [isPersonal, setIsPersonal] = useState(false);
@@ -98,19 +102,18 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
     return new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', maximumFractionDigits: 0 }).format(val);
   };
 
-  const getAbsoluteRubleValue = (percentage: number) => {
+  const getAbsoluteRubleValue = (percentage: number, officialAmountBillion?: number) => {
     if (isPersonal) {
       return deductionModelAmount * (percentage / 100);
     } else {
-      // 5 trillion * percent
-      return (TOTAL_BUDGET * (percentage / 100)) * 1000 * 1000 * 1000 * 1000;
+      return (officialAmountBillion ?? TOTAL_EXPENSES_BILLION * (percentage / 100)) * 1_000_000_000;
     }
   };
 
   const currentData = useMemo(() => {
     return SECTORS.map(s => {
       let displayValue = '';
-      const rubleValue = getAbsoluteRubleValue(s.value);
+      const rubleValue = getAbsoluteRubleValue(s.value, s.amountBillion);
       
       if (displayUnit === 'percent') {
         displayValue = `${s.value}%`;
@@ -118,8 +121,7 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
         if (isPersonal) {
           displayValue = formatCurrency(rubleValue);
         } else {
-          // trillion rubles representation
-          displayValue = `${(TOTAL_BUDGET * (s.value / 100)).toFixed(2)} трлн ₽`;
+          displayValue = formatBudgetAmount(s.amountBillion);
         }
       }
       return { ...s, displayValue, absoluteRubles: rubleValue };
@@ -156,7 +158,7 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
 
   if (isLoading) {
     return (
-      <div className="bg-white dark:bg-[#1e293b] rounded-2xl p-4 sm:p-8 border border-[#E2E8F0] dark:border-[rgba(255,255,255,0.08)] shadow-md dark:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.35)] flex flex-col gap-8 min-h-[400px]">
+      <div className="glass-surface rounded-[28px] p-4 sm:p-8 flex flex-col gap-8 min-h-[400px]">
         <div className="flex flex-col lg:flex-row justify-between gap-5 border-b border-slate-100 dark:border-slate-800 pb-5">
           <div className="flex items-center gap-3">
             <div className="h-12 w-12 bg-slate-200 dark:bg-slate-800 rounded-2xl animate-pulse" />
@@ -207,16 +209,16 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
   };
 
   return (
-    <div id="analytics_dashboard" className="bg-white dark:bg-[#1e293b] rounded-2xl p-4 sm:p-8 border border-[#E2E8F0] dark:border-[rgba(255,255,255,0.08)] shadow-md dark:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.35)] flex flex-col gap-8">
+    <div id="analytics_dashboard" className="glass-surface rounded-[28px] p-4 sm:p-8 flex flex-col gap-8">
       
       {/* 1. Header & Toggle Controls */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 border-b border-[#F1F5F9] pb-5">
         <div className="flex items-center gap-3">
-          <div className="bg-[#CC1111]/10 text-[#CC1111] p-3 rounded-2xl border border-[#CC1111]/20 shrink-0">
+          <div className="bg-[#DDF7F1] text-[#0F9F91] p-3 rounded-2xl border border-[#BDEDE4] shrink-0">
             <PieChartIcon size={24} className="stroke-[2.5px]" />
           </div>
           <div>
-            <span className="text-[10px] font-black text-[#CC1111] uppercase tracking-widest block mb-0.5">
+            <span className="text-[10px] font-black text-[#0F9F91] uppercase tracking-widest block mb-0.5">
               Финансовый Анализ
             </span>
             <h2 className="text-xl font-black text-[#0F172A] dark:text-slate-100 tracking-tight">
@@ -340,7 +342,7 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
               const isAnySelected = selectedSector !== null;
               const rubleAmountFormatted = isPersonal 
                 ? formatCurrency(item.absoluteRubles) 
-                : `${(TOTAL_BUDGET * (item.value / 100)).toFixed(2)} трлн ₽`;
+                : formatBudgetAmount(item.amountBillion);
               
               return (
                 <motion.div 
@@ -394,6 +396,18 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
                         ))}
                       </div>
 
+                      {!isPersonal && (
+                        <a
+                          href={getBudgetSource(item.sourceId).url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(event) => event.stopPropagation()}
+                          className="w-fit text-[10px] font-bold text-[#0B766E] hover:underline"
+                        >
+                          {item.status === 'official' ? 'Официальная цифра' : 'Расчётный остаток'} · источник ↗
+                        </a>
+                      )}
+
                       {/* Expandable Drill Down area directly inside card (Audit #5) */}
                       <AnimatePresence>
                         {isSelected && (
@@ -405,7 +419,7 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
                           >
                             <div className="flex justify-between items-center bg-[#CC1111]/5 px-3 py-1.5 rounded-lg border border-[#CC1111]/15">
                               <span className="text-[10px] uppercase font-black text-[#CC1111] tracking-wider leading-none">
-                                🕵️ Детализация подкатегорий программы:
+                                Учебная модель подкатегорий:
                               </span>
                               <span className="text-[9px] font-black text-slate-500 uppercase">
                                 кликните для скрытия
@@ -417,7 +431,7 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
                                 const subPercentOfBudget = (item.value * (sub.value / 100)).toFixed(1);
                                 const subRubleAmount = isPersonal 
                                   ? formatCurrency(item.absoluteRubles * (sub.value / 100))
-                                  : `${((TOTAL_BUDGET * (item.value / 100)) * (sub.value / 100)).toFixed(2)} трлн ₽`;
+                                  : formatBudgetAmount(item.amountBillion * (sub.value / 100));
                                 
                                 return (
                                   <div key={sIdx} className="bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700/50 rounded-xl p-3 flex flex-col gap-2">
@@ -468,7 +482,7 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
               </p>
               {currentData.map((s) => {
                 const isSelected = selectedSector === s.id;
-                const progressRuble = isPersonal ? formatCurrency(s.absoluteRubles) : displayUnit === 'percent' ? `${s.value}%` : `${(TOTAL_BUDGET * (s.value / 100)).toFixed(2)} трлн ₽`;
+                const progressRuble = isPersonal ? formatCurrency(s.absoluteRubles) : displayUnit === 'percent' ? `${s.value}%` : formatBudgetAmount(s.amountBillion);
                 return (
                   <div 
                     key={s.id} 
@@ -577,8 +591,8 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
                           </span>
                           <span className="text-[10px] font-bold text-slate-800 dark:text-slate-300 font-mono mt-1 w-full truncate text-center">
                             {isPersonal 
-                              ? formatCurrency(getAbsoluteRubleValue(activeSectorObj.value))
-                              : `${(TOTAL_BUDGET * (activeSectorObj.value / 100)).toFixed(2)} трлн ₽`
+                              ? formatCurrency(getAbsoluteRubleValue(activeSectorObj.value, activeSectorObj.amountBillion))
+                              : formatBudgetAmount(activeSectorObj.amountBillion)
                             }
                           </span>
                         </>
@@ -589,8 +603,8 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
                             style={{ color: activeSectorObj.color }}
                           >
                             {isPersonal 
-                              ? formatCurrency(getAbsoluteRubleValue(activeSectorObj.value))
-                              : `${(TOTAL_BUDGET * (activeSectorObj.value / 100)).toFixed(1)} трлн ₽`
+                              ? formatCurrency(getAbsoluteRubleValue(activeSectorObj.value, activeSectorObj.amountBillion))
+                              : formatBudgetAmount(activeSectorObj.amountBillion)
                             }
                           </span>
                           <span className="text-[10px] font-bold text-slate-800 dark:text-slate-300 font-mono mt-1 w-full truncate text-center">
@@ -620,7 +634,7 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
                         </span>
                       ) : (
                         <span className="text-lg font-black font-mono text-[#0F172A] dark:text-white tracking-tight mt-1">
-                          {isPersonal ? formatCurrency(deductionModelAmount) : `${TOTAL_BUDGET.toFixed(3)} трлн ₽`}
+                          {isPersonal ? formatCurrency(deductionModelAmount) : formatBudgetAmount(TOTAL_EXPENSES_BILLION, 3)}
                         </span>
                       )}
                       <span className="text-[8px] font-bold text-[#CC1111] uppercase tracking-wide mt-1.5 animate-pulse">
@@ -662,8 +676,8 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
             </div>
           </div>
           
-          <div className="bg-amber-50 text-amber-900 border border-amber-300 font-black text-[10px] uppercase tracking-wider px-3 py-1 rounded-lg w-max shrink-0">
-            ⚠ Демо-данные, не официальная статистика
+          <div className="text-slate-500 dark:text-slate-400 font-bold text-[10px] uppercase tracking-wider w-max shrink-0">
+            Учебная модель • условные значения
           </div>
         </div>
 
@@ -672,7 +686,7 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
           <div className="bg-amber-50 rounded-xl p-3 border border-amber-200 text-[#0F172A] dark:text-slate-100 flex items-center justify-between gap-2.5">
             <div className="flex items-center gap-2 text-xs font-bold">
               <Star size={15} className="text-amber-500 fill-amber-500 animate-pulse" />
-              <span>Выбран демо-сценарий округа <strong className="text-[#CC1111] font-black">{myDistrict}</strong>. Настройка хранится только в браузере.</span>
+              <span>Выбран учебный сценарий округа <strong className="text-[#CC1111] font-black">{myDistrict}</strong>. Настройка хранится только в браузере.</span>
             </div>
             <button 
               onClick={() => {
@@ -693,7 +707,7 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
             <div className="flex items-center justify-between">
               <span className="text-xs font-black uppercase text-slate-500 tracking-wider flex items-center gap-1.5 leading-none">
                 <Trophy size={14} className="text-[#CC1111]" />
-                Сравнение пяти демонстрационных сценариев
+                Сравнение пяти учебных сценариев
               </span>
               <span className="text-[10px] text-amber-700 font-bold tracking-tight">условные значения</span>
             </div>
@@ -758,7 +772,7 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
             <div>
               <div className="flex justify-between items-start gap-3">
                 <span className="text-[10px] uppercase font-black text-[#CC1111] tracking-widest block mb-1">
-                  ДЕМО-СЦЕНАРИЙ
+                  УЧЕБНЫЙ СЦЕНАРИЙ
                 </span>
                 
                 {/* Pin/Favorite My District button */}

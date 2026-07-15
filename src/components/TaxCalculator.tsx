@@ -6,12 +6,19 @@ import { cn, safeLocalStorage } from '../lib/utils';
 
 interface TaxCalculatorProps {
   activePersona: Persona;
-  onCalculate: () => void;
+  onCalculate: (calculation: TaxCalculation) => void;
   isCompleted: boolean;
+  savedCalculation?: TaxCalculation | null;
   isLoading?: boolean;
 }
 
-export default function TaxCalculator({ activePersona, onCalculate, isCompleted, isLoading }: TaxCalculatorProps) {
+export interface TaxCalculation {
+  education: number;
+  sport: number;
+  deduction: number;
+}
+
+export default function TaxCalculator({ activePersona, onCalculate, isCompleted, savedCalculation, isLoading }: TaxCalculatorProps) {
   // Set slider limits depending on persona
   const isStudent = activePersona === 'Student';
   const idPrefix = useId();
@@ -49,6 +56,17 @@ export default function TaxCalculator({ activePersona, onCalculate, isCompleted,
 
   // Compute live real-time values for instant feedback
   const liveDeduction = Math.round(Math.min(eduCost + sportCost, 150000) * 0.13);
+  const currentCalculation: TaxCalculation = {
+    education: eduCost,
+    sport: sportCost,
+    deduction: liveDeduction,
+  };
+  const isCurrentSaved = Boolean(
+    savedCalculation &&
+    savedCalculation.education === eduCost &&
+    savedCalculation.sport === sportCost &&
+    savedCalculation.deduction === liveDeduction
+  );
 
   // Keep the latest educational estimate for the visualisation module.
   useEffect(() => {
@@ -57,7 +75,8 @@ export default function TaxCalculator({ activePersona, onCalculate, isCompleted,
   }, [liveDeduction]);
 
   const handleCalculate = () => {
-    onCalculate();
+    onCalculate(currentCalculation);
+    safeLocalStorage.setItem('mos_calc_last_model', JSON.stringify(currentCalculation));
   };
 
   const formatCurrency = (val: number) => {
@@ -81,7 +100,7 @@ export default function TaxCalculator({ activePersona, onCalculate, isCompleted,
 
   if (isLoading) {
     return (
-      <div className="bg-white dark:bg-[#1e293b] rounded-2xl p-4 sm:p-8 border border-[#E2E8F0] dark:border-[rgba(255,255,255,0.08)] shadow-md dark:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.35)] flex flex-col flex-1 h-auto md:h-full justify-between min-h-[350px]">
+      <div className="glass-surface rounded-[28px] p-4 sm:p-8 flex flex-col flex-1 h-auto md:h-full justify-between min-h-[350px]">
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 bg-slate-200 dark:bg-slate-800 rounded-xl animate-pulse" />
           <div className="space-y-1.5 flex-1">
@@ -103,15 +122,15 @@ export default function TaxCalculator({ activePersona, onCalculate, isCompleted,
   }
 
   return (
-    <div className="bg-white dark:bg-[#1e293b] rounded-2xl p-4 sm:p-8 border border-[#E2E8F0] dark:border-[rgba(255,255,255,0.08)] shadow-md dark:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.35)] transition-shadow duration-300 flex flex-col flex-1 h-auto md:h-full relative">
+    <div className="glass-surface rounded-[28px] p-4 sm:p-8 transition-shadow duration-300 flex flex-col flex-1 h-auto md:h-full relative">
       
       {/* Upper header */}
       <div className="flex items-center gap-3 mb-6">
-        <div className="bg-[#F8FAFC] dark:bg-slate-900 text-[#CC1111] dark:text-[#E11D48] p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-800">
+        <div className="bg-[#DDF7F1] dark:bg-slate-900 text-[#0F9F91] dark:text-teal-300 p-2.5 rounded-2xl border border-[#BDEDE4] dark:border-slate-800">
           <Calculator size={20} className="stroke-[2.5px]" />
         </div>
         <div>
-          <span className="text-[10px] font-bold text-[#CC1111] dark:text-[#E11D48] uppercase tracking-wider block">
+          <span className="text-[10px] font-bold text-[#0F9F91] dark:text-teal-300 uppercase tracking-wider block">
             Калькулятор 3-НДФЛ
           </span>
           <h2 className="text-lg font-bold text-[#0F172A] dark:text-slate-100 tracking-tight">
@@ -174,7 +193,7 @@ export default function TaxCalculator({ activePersona, onCalculate, isCompleted,
                 <button
                   type="button"
                   onClick={() => setEduCost(prev => Math.min(300000, prev + 5000))}
-                  className="w-12 h-12 flex items-center justify-center bg-white dark:bg-slate-800 rounded-lg border border-[#E2E8F0] dark:border-slate-700 text-[#CC1111] dark:text-[#E11D48] font-bold active:bg-[#CC1111]/5 active:scale-95 transition-all text-xs shadow-xs"
+                  className="w-12 h-12 flex items-center justify-center bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 text-[#0F9F91] dark:text-teal-300 font-bold active:bg-[#DDF7F1] active:scale-95 transition-all text-xs shadow-xs"
                 >
                   +5 тыс.
                 </button>
@@ -182,7 +201,7 @@ export default function TaxCalculator({ activePersona, onCalculate, isCompleted,
               {/* Visual fills tracker only */}
               <div className="w-full h-1.5 bg-neutral-100 dark:bg-slate-800 rounded-lg overflow-hidden border border-neutral-200/50 dark:border-slate-700/50 mt-1">
                 <div 
-                  className="h-full bg-[#CC1111] dark:bg-[#E11D48] rounded-lg transition-all duration-300"
+                  className="h-full bg-[#0F9F91] rounded-lg transition-all duration-300"
                   style={{ width: `${Math.min(100, (eduCost / 300000) * 100)}%` }}
                 />
               </div>
@@ -252,7 +271,7 @@ export default function TaxCalculator({ activePersona, onCalculate, isCompleted,
                 <button
                   type="button"
                   onClick={() => setSportCost(prev => Math.min(200000, prev + 5000))}
-                  className="w-12 h-12 flex items-center justify-center bg-white dark:bg-slate-800 rounded-lg border border-[#E2E8F0] dark:border-slate-700 text-[#CC1111] dark:text-[#E11D48] font-bold active:bg-[#CC1111]/5 active:scale-95 transition-all text-xs shadow-xs"
+                  className="w-12 h-12 flex items-center justify-center bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 text-[#0F9F91] dark:text-teal-300 font-bold active:bg-[#DDF7F1] active:scale-95 transition-all text-xs shadow-xs"
                 >
                   +5 тыс.
                 </button>
@@ -260,7 +279,7 @@ export default function TaxCalculator({ activePersona, onCalculate, isCompleted,
               {/* Visual fills tracker only */}
               <div className="w-full h-1.5 bg-neutral-100 dark:bg-slate-800 rounded-lg overflow-hidden border border-neutral-200/50 dark:border-slate-700/50 mt-1">
                 <div 
-                  className="h-full bg-[#CC1111] dark:bg-[#E11D48] rounded-lg transition-all duration-300"
+                  className="h-full bg-[#0F9F91] rounded-lg transition-all duration-300"
                   style={{ width: `${Math.min(100, (sportCost / 200000) * 100)}%` }}
                 />
               </div>
@@ -304,18 +323,18 @@ export default function TaxCalculator({ activePersona, onCalculate, isCompleted,
 
         {/* Footer actions with Success Banner option instead of dead buttons */}
         <div className="mt-auto pt-4 flex flex-col sm:flex-row gap-4 items-stretch sm:items-center">
-          {isCompleted ? (
+          {isCompleted && isCurrentSaved ? (
             <div className="flex items-center gap-3 bg-[#065f46] text-white px-5 py-4 rounded-xl border border-emerald-800 shadow-md flex-1 animate-fade-in font-bold text-xs sm:text-sm shadow-emerald-900/10">
               <span className="w-5 h-5 flex items-center justify-center rounded-full bg-white dark:bg-[#1e293b]/20 shrink-0 text-xs font-black select-none">✓</span>
-              <span>Учебный расчёт сохранён! Вы получили +100 баллов</span>
+              <span>Учебный расчёт сохранён. Стартовые +100 баллов начисляются один раз.</span>
             </div>
           ) : (
             <button 
               onClick={handleCalculate}
-              className="px-6 py-3.5 font-bold rounded-xl transition-all duration-200 shadow-xs text-xs sm:text-sm flex justify-center items-center gap-2 cursor-pointer uppercase tracking-wider bg-[#CC1111] dark:bg-[#E11D48] hover:bg-[#A30E0E] dark:hover:bg-[#CC1111] active:scale-[0.98] text-white"
+              className="px-6 py-3.5 font-bold rounded-full transition-all duration-200 text-xs sm:text-sm flex justify-center items-center gap-2 cursor-pointer tracking-tight teal-action active:scale-[0.98]"
             >
               <Sparkles size={16} />
-              Сохранить учебный расчёт (+100 баллов)
+              {isCompleted ? 'Сохранить изменения' : 'Сохранить учебный расчёт (+100 баллов)'}
             </button>
           )}
 

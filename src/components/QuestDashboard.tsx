@@ -8,7 +8,9 @@ import {
 } from 'lucide-react';
 import { cn, readStoredStringArray, safeLocalStorage } from '../lib/utils';
 import { BUDGET_QUESTIONS_BANK, BudgetQuestion } from '../data/budgetQuestions';
+import { BUDGET_FACTS, formatBudgetAmount, getBudgetSource, type DataSourceId } from '../data/budgetFacts';
 import { Send, Bot, User as UserIcon, Crown, Map as MapIcon, Coins, Lock } from 'lucide-react';
+import CityRewardsHub from './CityRewardsHub';
 
 interface QuestDashboardProps {
   isCalculatorCompleted: boolean;
@@ -26,6 +28,7 @@ interface QuizQuestion {
   options: string[];
   correct: number;
   explanation: string;
+  sourceId?: DataSourceId;
 }
 
 interface Quiz {
@@ -37,6 +40,14 @@ interface Quiz {
   questions: QuizQuestion[];
 }
 
+interface QuizResult {
+  quiz: Quiz;
+  score: number;
+  points: number;
+  answers: number[];
+  passed: boolean;
+}
+
 const CORE_ACTIVITY_IDS = [
   'quiz-1', 'quiz-2', 'quiz-3', 'quiz-4', 'quiz-5',
   'game-1', 'game-2', 'game-3', 'game-4', 'game-5',
@@ -45,6 +56,37 @@ const CORE_ACTIVITY_IDS = [
 
 const getMoscowDateKey = () =>
   new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Moscow' }).format(new Date());
+
+interface CityRewardEntry {
+  date: string;
+  quizId: string;
+  correctAnswers: number;
+  points: number;
+}
+
+interface CityRewardLedger {
+  streak: number;
+  entries: CityRewardEntry[];
+}
+
+const readCityRewardLedger = (): CityRewardLedger => {
+  const raw = safeLocalStorage.getItem('mos_city_rewards_preview_v1');
+  if (!raw) return { streak: 0, entries: [] };
+  try {
+    const parsed = JSON.parse(raw) as CityRewardLedger;
+    if (Number.isFinite(parsed.streak) && Array.isArray(parsed.entries)) return parsed;
+  } catch {
+    // Ignore stale prototype data.
+  }
+  return { streak: 0, entries: [] };
+};
+
+const getDailyBudgetQuestions = () => {
+  const dateSeed = Number(getMoscowDateKey().replaceAll('-', ''));
+  return Array.from({ length: Math.min(3, BUDGET_QUESTIONS_BANK.length) }, (_, offset) =>
+    BUDGET_QUESTIONS_BANK[(dateSeed + offset * 7) % BUDGET_QUESTIONS_BANK.length],
+  );
+};
 
 const quizzesData: Quiz[] = [
   {
@@ -56,21 +98,24 @@ const quizzesData: Quiz[] = [
     questions: [
       {
         question: "Какой объём доходов предусмотрен бюджетом Москвы на 2026 год?",
-        options: ["Около 5,94 трлн ₽", "Около 3,2 трлн ₽", "Около 447,6 млрд ₽"],
+        options: [formatBudgetAmount(BUDGET_FACTS.income.amountBillion), formatBudgetAmount(BUDGET_FACTS.socialSphere.amountBillion), formatBudgetAmount(BUDGET_FACTS.deficit.amountBillion)],
         correct: 0,
-        explanation: "План доходов — 5 937,4 млрд ₽ по Закону города Москвы № 39 от 01.11.2025."
+        explanation: `План доходов — ${formatBudgetAmount(BUDGET_FACTS.income.amountBillion)} по Закону города Москвы № 39 от 01.11.2025.`,
+        sourceId: BUDGET_FACTS.income.sourceId,
       },
       {
         question: "Какой объём расходов предусмотрен бюджетом Москвы на 2026 год?",
-        options: ["Около 6,39 трлн ₽", "Около 810 млрд ₽", "Около 5,94 млрд ₽"],
+        options: [formatBudgetAmount(BUDGET_FACTS.expenses.amountBillion), formatBudgetAmount(BUDGET_FACTS.socialSupport.amountBillion), formatBudgetAmount(BUDGET_FACTS.income.amountBillion)],
         correct: 0,
-        explanation: "План расходов — 6 385,0 млрд ₽."
+        explanation: `План расходов — ${formatBudgetAmount(BUDGET_FACTS.expenses.amountBillion)}.`,
+        sourceId: BUDGET_FACTS.expenses.sourceId,
       },
       {
         question: "Каков плановый дефицит бюджета Москвы на 2026 год?",
-        options: ["447,6 млрд ₽", "44,8 млрд ₽", "1,29 трлн ₽"],
+        options: [formatBudgetAmount(BUDGET_FACTS.deficit.amountBillion), "44,8 млрд ₽", formatBudgetAmount(BUDGET_FACTS.transport.amountBillion)],
         correct: 0,
-        explanation: "Плановый дефицит составляет 447,6 млрд ₽ — разницу между расходами и доходами."
+        explanation: `Плановый дефицит составляет ${formatBudgetAmount(BUDGET_FACTS.deficit.amountBillion)} — разницу между расходами и доходами.`,
+        sourceId: BUDGET_FACTS.deficit.sourceId,
       }
     ]
   },
@@ -112,19 +157,22 @@ const quizzesData: Quiz[] = [
         question: "Каков совокупный лимит для социальных налоговых вычетов (обучение, спорт, медицина) введен в действие?",
         options: ["120 000 рублей", "150 000 рублей", "250 000 рублей"],
         correct: 1,
-        explanation: "В рамках обновленного законодательства лимит увеличен со 120 тыс. до 150 тыс. рублей."
+        explanation: "В рамках обновленного законодательства лимит увеличен со 120 тыс. до 150 тыс. рублей.",
+        sourceId: 'fnsSocialDeduction',
       },
       {
         question: "Какую максимальную сумму чистыми можно вернуть за год за свое обучение при ставке НДФЛ 13%?",
         options: ["15 600 рублей", "19 500 рублей", "50 000 рублей"],
         correct: 1,
-        explanation: "13% от максимального лимита в 150 000 рублей составляет ровно 19 500 рублей."
+        explanation: "13% от максимального лимита в 150 000 рублей составляет ровно 19 500 рублей.",
+        sourceId: 'fnsSocialDeduction',
       },
       {
         question: "В течение какого срока после окончания года можно подать декларацию 3-НДФЛ на вычет?",
         options: ["В течение 6 месяцев", "В течение 3 лет", "Только до 30 апреля следующего года"],
         correct: 1,
-        explanation: "Налогоплательщик имеет право вернуть излишне уплаченный налог в течение 3 лет с момента понесенных расходов."
+        explanation: "Налогоплательщик имеет право вернуть излишне уплаченный налог в течение 3 лет с момента понесенных расходов.",
+        sourceId: 'fnsSocialDeduction',
       }
     ]
   },
@@ -139,19 +187,22 @@ const quizzesData: Quiz[] = [
         question: "Какая программа занимает лидирующие позиции по объему финансирования в бюджете Москвы?",
         options: ["Развитие транспортной системы", "Развитие культурно-туристической среды", "Стимулирование экономической активности"],
         correct: 0,
-        explanation: "Транспортная система (метро, дороги, МЦД) традиционно является одной из самых капиталоемких госпрограмм столицы."
+        explanation: `Транспортная система — крупнейшая из перечисленных программ: ${formatBudgetAmount(BUDGET_FACTS.transport.amountBillion)} в 2026 году.`,
+        sourceId: BUDGET_FACTS.transport.sourceId,
       },
       {
         question: "На основе какого документа формируется программный бюджет города Москвы?",
         options: ["На основе устных поручений", "На основе 3-летнего Закона о бюджете города Москвы", "На основе годовых отчетов коммерческих банков"],
         correct: 1,
-        explanation: "Бюджет Москвы утверждается Московской городской Думой на очередной финансовый год и плановый период."
+        explanation: "Бюджет Москвы утверждается Московской городской Думой на очередной финансовый год и плановый период.",
+        sourceId: 'budgetLaw2026',
       },
       {
         question: "Какой объём предусмотрен на развитие здравоохранения Москвы в 2026 году?",
-        options: ["615 млрд ₽", "173,3 млрд ₽", "96,7 млрд ₽"],
+        options: [formatBudgetAmount(BUDGET_FACTS.healthcare.amountBillion), formatBudgetAmount(BUDGET_FACTS.sport.amountBillion), "96,7 млрд ₽"],
         correct: 0,
-        explanation: "На развитие здравоохранения предусмотрено 615 млрд ₽ без учёта оплаты медицинской помощи из Фонда ОМС."
+        explanation: `На развитие здравоохранения предусмотрено ${formatBudgetAmount(BUDGET_FACTS.healthcare.amountBillion)} без учёта оплаты медицинской помощи из Фонда ОМС.`,
+        sourceId: BUDGET_FACTS.healthcare.sourceId,
       }
     ]
   },
@@ -166,19 +217,22 @@ const quizzesData: Quiz[] = [
         question: "Какой документ устанавливает ключевые параметры бюджета Москвы на 2026 год?",
         options: ["Закон города Москвы № 39 от 01.11.2025", "Письмо ФНС", "Решение коммерческого банка"],
         correct: 0,
-        explanation: "Доходы, расходы и дефицит установлены Законом города Москвы № 39 от 1 ноября 2025 года."
+        explanation: "Доходы, расходы и дефицит установлены Законом города Москвы № 39 от 1 ноября 2025 года.",
+        sourceId: 'budgetLaw2026',
       },
       {
         question: "Где опубликованы интерактивные данные о бюджете Москвы?",
         options: ["budget.mos.ru", "nalog.gov.ru", "cbr.ru"],
         correct: 0,
-        explanation: "Официальный городской источник — портал «Открытый бюджет Москвы» budget.mos.ru."
+        explanation: "Официальный городской источник — портал «Открытый бюджет Москвы» budget.mos.ru.",
+        sourceId: 'budgetParameters2026',
       },
       {
         question: "На какой период принят Закон города Москвы № 39?",
         options: ["Только на 2026 год", "На 2026 год и плановый период 2027–2028 годов", "До 2030 года"],
         correct: 1,
-        explanation: "Закон устанавливает бюджет на 2026 год и плановые показатели на 2027 и 2028 годы."
+        explanation: "Закон устанавливает бюджет на 2026 год и плановые показатели на 2027 и 2028 годы.",
+        sourceId: 'budgetLaw2026',
       }
     ]
   }
@@ -215,7 +269,7 @@ const getReferenceResponse = (query: string, generateDailyQuiz: () => Quiz): { t
   
   if (normalizedQuery.includes('доход') || normalizedQuery.includes('налог') || normalizedQuery.includes('ндфл') || normalizedQuery.includes('прибыль') || normalizedQuery.includes('сбор') || normalizedQuery.includes('вычет')) {
     return {
-      text: `На 2026 год доходы Москвы запланированы в размере **5 937,4 млрд ₽**, расходы — **6 385,0 млрд ₽**, дефицит — **447,6 млрд ₽**. Общий лимит расходов для большинства социальных вычетов составляет **150 000 ₽**, а на обучение ребёнка — **110 000 ₽** на обоих родителей. Фактический возврат зависит от уплаченного НДФЛ. Источники: Закон Москвы № 39 и ФНС России.`
+      text: `На 2026 год доходы Москвы запланированы в размере **${formatBudgetAmount(BUDGET_FACTS.income.amountBillion)}**, расходы — **${formatBudgetAmount(BUDGET_FACTS.expenses.amountBillion)}**, дефицит — **${formatBudgetAmount(BUDGET_FACTS.deficit.amountBillion)}**. Общий лимит расходов для большинства социальных вычетов составляет **150 000 ₽**, а на обучение ребёнка — **110 000 ₽** на обоих родителей. Фактический возврат зависит от уплаченного НДФЛ. Источники: Закон Москвы № 39 и ФНС России.`
     };
   }
   
@@ -227,37 +281,37 @@ const getReferenceResponse = (query: string, generateDailyQuiz: () => Quiz): { t
   
   if (normalizedQuery.includes('социал') || normalizedQuery.includes('пенси') || normalizedQuery.includes('льгот') || normalizedQuery.includes('выплат') || normalizedQuery.includes('семь') || normalizedQuery.includes('поддержк')) {
     return {
-      text: `На социальную сферу Москвы в 2026 году предусмотрено около **3,2 трлн ₽**, то есть примерно половина расходов. Внутри этого объёма программа социальной поддержки жителей составляет **810 млрд ₽**. Источник: портал «Открытый бюджет Москвы».`
+      text: `На социальную сферу Москвы в 2026 году предусмотрено около **${formatBudgetAmount(BUDGET_FACTS.socialSphere.amountBillion)}**, то есть примерно половина расходов. Внутри этого объёма программа социальной поддержки жителей составляет **${formatBudgetAmount(BUDGET_FACTS.socialSupport.amountBillion)}**. Источник: портал «Открытый бюджет Москвы».`
     };
   }
   
   if (normalizedQuery.includes('школ') || normalizedQuery.includes('колледж') || normalizedQuery.includes('детск') || normalizedQuery.includes('образован') || normalizedQuery.includes('мэш')) {
     return {
-      text: `На развитие образования Москвы в 2026 году предусмотрено **814,6 млрд ₽**. Это около 12,8% всех плановых расходов. Детализацию программы смотрите на **budget.mos.ru**.`
+      text: `На развитие образования Москвы в 2026 году предусмотрено **${formatBudgetAmount(BUDGET_FACTS.education.amountBillion)}**. Это около 12,8% всех плановых расходов. Детализацию программы смотрите на **budget.mos.ru**.`
     };
   }
   
   if (normalizedQuery.includes('больниц') || normalizedQuery.includes('клиник') || normalizedQuery.includes('врач') || normalizedQuery.includes('здоров') || normalizedQuery.includes('медицин') || normalizedQuery.includes('емиас') || normalizedQuery.includes('лекарств')) {
     return {
-      text: `На развитие здравоохранения Москвы в 2026 году предусмотрено **615 млрд ₽** без учёта оплаты медицинской помощи из Фонда ОМС. Детализацию программы и исполнение следует проверять на **budget.mos.ru**.`
+      text: `На развитие здравоохранения Москвы в 2026 году предусмотрено **${formatBudgetAmount(BUDGET_FACTS.healthcare.amountBillion)}** без учёта оплаты медицинской помощи из Фонда ОМС. Детализацию программы и исполнение следует проверять на **budget.mos.ru**.`
     };
   }
   
   if (normalizedQuery.includes('промышлен') || normalizedQuery.includes('инвест') || normalizedQuery.includes('завод') || normalizedQuery.includes('технополис') || normalizedQuery.includes('субсид') || normalizedQuery.includes('бизнес')) {
     return {
-      text: `В плане на 2026 год на программу **«Экономическое развитие и инвестиционная привлекательность»** предусмотрено **226,5 млрд ₽**, а на развитие цифровой среды и инноваций — **243,1 млрд ₽**. Условия конкретных льгот нужно проверять на официальных страницах соответствующих программ.`
+      text: `В плане на 2026 год на программу **«Экономическое развитие и инвестиционная привлекательность»** предусмотрено **226,5 млрд ₽**, а на развитие цифровой среды и инноваций — **${formatBudgetAmount(BUDGET_FACTS.digital.amountBillion)}**. Условия конкретных льгот нужно проверять на официальных страницах соответствующих программ.`
     };
   }
 
   if (normalizedQuery.includes('эколог') || normalizedQuery.includes('парк') || normalizedQuery.includes('озелен') || normalizedQuery.includes('дерев') || normalizedQuery.includes('воздух') || normalizedQuery.includes('река')) {
     return {
-      text: `На программу **«Развитие городской среды»** в 2026 году предусмотрено **263,2 млрд ₽**. В справочнике приводится только верхнеуровневая сумма; состав мероприятий смотрите в официальной программе.`
+      text: `На программу **«Развитие городской среды»** в 2026 году предусмотрено **${formatBudgetAmount(BUDGET_FACTS.urbanEnvironment.amountBillion)}**. В справочнике приводится только верхнеуровневая сумма; состав мероприятий смотрите в официальной программе.`
     };
   }
 
   if (normalizedQuery.includes('спорт') || normalizedQuery.includes('лужники') || normalizedQuery.includes('площадк') || normalizedQuery.includes('тренир') || normalizedQuery.includes('арен')) {
     return {
-      text: `На программу **«Спорт Москвы»** в 2026 году предусмотрено **173,3 млрд ₽**. Это плановый объём из официального обзора бюджета.`
+      text: `На программу **«Спорт Москвы»** в 2026 году предусмотрено **${formatBudgetAmount(BUDGET_FACTS.sport.amountBillion)}**. Это плановый объём из официального обзора бюджета.`
     };
   }
 
@@ -283,6 +337,21 @@ interface MayorDistrict {
   colorClass: string;
   revenueFromNdfMln: number;
   unemploymentRate: string;
+}
+
+interface MayorEventOption {
+  id: string;
+  label: string;
+  description: string;
+  comfortDelta: number;
+  efficiencyDelta: number;
+  deficitDelta: number;
+}
+
+interface MayorEvent {
+  title: string;
+  body: string;
+  options: MayorEventOption[];
 }
 
 const MAYOR_DISTRICTS: MayorDistrict[] = [
@@ -366,6 +435,11 @@ export default function QuestDashboard({
   // Navigation Tabs: quizzes, minigames, specials, mayor, map
   const [activeTab, setActiveTab] = useState<'quizzes' | 'minigames' | 'specials' | 'mayor' | 'map'>('quizzes');
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const [cityRewardLedger, setCityRewardLedger] = useState<CityRewardLedger>(readCityRewardLedger);
+
+  useEffect(() => {
+    safeLocalStorage.setItem('mos_city_rewards_preview_v1', JSON.stringify(cityRewardLedger));
+  }, [cityRewardLedger]);
 
   // NFT collectibles district cards state
   const [unlockedNfts, setUnlockedNfts] = useState<string[]>(() => {
@@ -378,8 +452,8 @@ export default function QuestDashboard({
 
   // Virtual Mayor specific Simulation States
   const [selectedMayorDistrict, setSelectedMayorDistrict] = useState<string>('hamovniki');
-  const [mayorEducation, setMayorEducation] = useState<number>(40);
-  const [mayorTransport, setMayorTransport] = useState<number>(40);
+  const [mayorEducation, setMayorEducation] = useState<number>(35);
+  const [mayorTransport, setMayorTransport] = useState<number>(35);
   const [mayorHealthcare, setMayorHealthcare] = useState<number>(40);
   const [simulationReport, setSimulationReport] = useState<{
     residentComfort: number;
@@ -389,7 +463,17 @@ export default function QuestDashboard({
     status: 'perfect' | 'warning' | 'deficit_danger';
     summaryMsg: string;
     unlockedNft?: string;
+    eventTitle: string;
+    decisionLabel: string;
   } | null>(null);
+  const [mayorEvent, setMayorEvent] = useState<MayorEvent | null>(null);
+  const [mayorEventChoice, setMayorEventChoice] = useState<string | null>(null);
+
+  const clearMayorDecision = () => {
+    setSimulationReport(null);
+    setMayorEvent(null);
+    setMayorEventChoice(null);
+  };
 
   // Map state
   const [selectedMapDistrictId, setSelectedMapDistrictId] = useState<string>('hamovniki');
@@ -404,30 +488,66 @@ export default function QuestDashboard({
     }, 3500);
   };
 
+  const recordCityRewardPreview = (quiz: Quiz, correctAnswers: number) => {
+    if (!quiz.id.startsWith('daily-quiz-')) return;
+    const today = getMoscowDateKey();
+    setCityRewardLedger(current => {
+      if (current.entries.some(entry => entry.date === today)) return current;
+      const previousDate = current.entries.at(-1)?.date;
+      const dayGap = previousDate
+        ? Math.round((Date.parse(`${today}T00:00:00Z`) - Date.parse(`${previousDate}T00:00:00Z`)) / 86_400_000)
+        : null;
+      return {
+        streak: dayGap === 1 ? current.streak + 1 : 1,
+        entries: [
+          ...current.entries,
+          {
+            date: today,
+            quizId: quiz.id,
+            correctAnswers,
+            points: correctAnswers * 5,
+          },
+        ],
+      };
+    });
+  };
+
   const handleCompleteActivity = (id: string, pts: number, text: string) => {
     if (!completedActivities.includes(id)) {
       setCompletedActivities(prev => [...prev, id]);
       setBalance(prev => prev + pts);
       showToast(text, pts);
+      return true;
     }
+    showToast(`${text} Новые баллы не начисляются.`, 0);
+    return false;
   };
 
   // --- QUIZ GAME ENGINE STATE ---
   const [activeQuiz, setActiveQuiz] = useState<Quiz | null>(null);
+  const [quizResult, setQuizResult] = useState<QuizResult | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [score, setScore] = useState<number>(0);
+  const [quizAnswers, setQuizAnswers] = useState<number[]>([]);
 
   const startQuiz = (quiz: Quiz) => {
+    setQuizResult(null);
     setActiveQuiz(quiz);
     setCurrentQuestionIndex(0);
     setSelectedOption(null);
     setScore(0);
+    setQuizAnswers(Array.from({ length: quiz.questions.length }, () => -1));
   };
 
   const handleSelectOption = (idx: number) => {
     if (selectedOption !== null) return; // limit to single click
     setSelectedOption(idx);
+    setQuizAnswers(prev => {
+      const next = [...prev];
+      next[currentQuestionIndex] = idx;
+      return next;
+    });
     if (idx === activeQuiz?.questions[currentQuestionIndex].correct) {
       setScore(prev => prev + 1);
     }
@@ -440,22 +560,51 @@ export default function QuestDashboard({
       setSelectedOption(null);
     } else {
       // Completed Quiz
-      const winPct = (score / activeQuiz.questions.length) * 100;
-      let finalPts = activeQuiz.reward;
-      
-      // Calculate adjusted points
-      if (winPct < 60) {
-        finalPts = Math.round(activeQuiz.reward * 0.5);
+      const finalScore = quizAnswers.reduce(
+        (total, answer, index) => total + (answer === activeQuiz.questions[index]?.correct ? 1 : 0),
+        0
+      );
+      const winPct = (finalScore / activeQuiz.questions.length) * 100;
+      const passed = winPct >= 60;
+      recordCityRewardPreview(activeQuiz, finalScore);
+
+      if (!passed) {
+        showToast(`Результат ${finalScore}/${activeQuiz.questions.length}. Для зачёта нужно не менее 60% правильных ответов.`, 0);
+        setQuizResult({
+          quiz: activeQuiz,
+          score: finalScore,
+          points: 0,
+          answers: quizAnswers,
+          passed: false,
+        });
+        setActiveQuiz(null);
+        return;
       }
-      
-      handleCompleteActivity(
+
+      const finalPts = activeQuiz.reward;
+      const wasAwarded = handleCompleteActivity(
         activeQuiz.id, 
         finalPts, 
-        `Викторина "${activeQuiz.title}" пройдена! Результат: ${score}/${activeQuiz.questions.length}`
+        `Викторина "${activeQuiz.title}" пройдена! Результат: ${finalScore}/${activeQuiz.questions.length}`
       );
+      setQuizResult({
+        quiz: activeQuiz,
+        score: finalScore,
+        points: wasAwarded ? finalPts : 0,
+        answers: quizAnswers,
+        passed: true,
+      });
       setActiveQuiz(null);
     }
   };
+
+  useEffect(() => {
+    if (!activeQuiz) return;
+    const frame = window.requestAnimationFrame(() => {
+      document.getElementById('mos_quiz_session')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [activeQuiz]);
 
 
   // --- DYNAMIC GAMES ENGINE STATE ---
@@ -464,9 +613,9 @@ export default function QuestDashboard({
   /* Game 1: Балансировщик бюджета
      Need to require Social >= 50%
   */
-  const [game1Industry, setGame1Industry] = useState<number>(15);
-  const [game1Social, setGame1Social] = useState<number>(50);
-  const [game1Transport, setGame1Transport] = useState<number>(35);
+  const [game1Industry, setGame1Industry] = useState<number>(25);
+  const [game1Social, setGame1Social] = useState<number>(45);
+  const [game1Transport, setGame1Transport] = useState<number>(30);
   const game1Total = game1Industry + game1Social + game1Transport;
 
   // Game 2: Финансовый Аудитор
@@ -492,9 +641,9 @@ export default function QuestDashboard({
   const resetGameStates = () => {
     setActiveGameId(null);
     // G1
-    setGame1Industry(15);
-    setGame1Social(50);
-    setGame1Transport(35);
+    setGame1Industry(25);
+    setGame1Social(45);
+    setGame1Transport(30);
     // G2
     setGame2SelectedCard(null);
     // G3
@@ -507,6 +656,7 @@ export default function QuestDashboard({
     setGame5Toggle2(false);
     setGame5Toggle3(false);
     // Spec
+    setSpec1Choice(null);
     setSpec2DeductionInput(85000);
     setSpec3CheckedSectors([]);
     setActiveSpec3SubTab('health');
@@ -514,14 +664,17 @@ export default function QuestDashboard({
     setSpec3QuestionAnswer(null);
     
     // Mayor
-    setMayorEducation(40);
-    setMayorTransport(40);
+    setMayorEducation(35);
+    setMayorTransport(35);
     setMayorHealthcare(40);
     setSimulationReport(null);
+    setMayorEvent(null);
+    setMayorEventChoice(null);
   };
 
 
   // --- SPECIAL PROJECTS STATE ---
+  const [spec1Choice, setSpec1Choice] = useState<'local' | 'mosid' | null>(null);
   // Special 2: Fiscal learning scenario
   const [spec2DeductionInput, setSpec2DeductionInput] = useState<number>(85000);
   // Special 3: Аналитический серфинг
@@ -554,7 +707,7 @@ export default function QuestDashboard({
       {
         id: 'welcome',
         sender: 'ai',
-        text: "Привет! Это интерактивный справочник конкурсного прототипа. Он отвечает по заранее подготовленным темам и не является официальным консультантом. Напишите **«викторина»**, чтобы запустить учебный квиз дня.",
+        text: "Привет! Это интерактивный справочник учебного проекта. Он отвечает по заранее подготовленным темам и не является официальным консультантом. Напишите **«викторина»**, чтобы запустить учебный квиз дня.",
         timestamp: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
       }
     ];
@@ -566,37 +719,25 @@ export default function QuestDashboard({
   }, [chatHistory]);
 
   const generateDailyQuiz = (): Quiz => {
-    const selected: BudgetQuestion[] = [];
-    const bank = [...BUDGET_QUESTIONS_BANK];
-    // select 3 unique questions if available
-    for (let i = 0; i < 3 && bank.length > 0; i++) {
-      const idx = Math.floor(Math.random() * bank.length);
-      selected.push(bank[idx]);
-      bank.splice(idx, 1);
-    }
+    const selected: BudgetQuestion[] = getDailyBudgetQuestions();
     return {
       id: `daily-quiz-${getMoscowDateKey()}`,
       title: "Интерактивный квиз дня",
       reward: 150,
-      topic: "Случайная подборка из проверенного банка вопросов",
+      topic: "Единая для всех подборка дня из проверенного банка вопросов",
       difficulty: "Средний",
       questions: selected.map(q => ({
         question: q.question,
         options: q.options,
         correct: q.correct,
-        explanation: q.explanation
+        explanation: q.explanation,
+        sourceId: q.sourceId,
       }))
     };
   };
 
   const startRandomQuiz = () => {
-    const selected: BudgetQuestion[] = [];
-    const bank = [...BUDGET_QUESTIONS_BANK];
-    for (let i = 0; i < 3 && bank.length > 0; i++) {
-      const idx = Math.floor(Math.random() * bank.length);
-      selected.push(bank[idx]);
-      bank.splice(idx, 1);
-    }
+    const selected: BudgetQuestion[] = getDailyBudgetQuestions();
     const randomQuiz: Quiz = {
       id: `daily-quiz-${getMoscowDateKey()}`,
       title: "Финансовый Экспресс-Квиз дня",
@@ -607,7 +748,8 @@ export default function QuestDashboard({
         question: q.question,
         options: q.options,
         correct: q.correct,
-        explanation: q.explanation
+        explanation: q.explanation,
+        sourceId: q.sourceId,
       }))
     };
     startQuiz(randomQuiz);
@@ -630,20 +772,16 @@ export default function QuestDashboard({
     };
 
     setChatHistory(prev => [...prev, userMsg]);
-    setIsTyping(true);
-
-    setTimeout(() => {
-      const aiResponse = getReferenceResponse(queryText, generateDailyQuiz);
-      const aiMsg: ChatMessage = {
-        id: `msg-${Date.now() + 1}`,
-        sender: 'ai',
-        text: aiResponse.text,
-        quiz: aiResponse.quiz,
-        timestamp: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
-      };
-      setChatHistory(prev => [...prev, aiMsg]);
-      setIsTyping(false);
-    }, 1100);
+    const aiResponse = getReferenceResponse(queryText, generateDailyQuiz);
+    const aiMsg: ChatMessage = {
+      id: `msg-${Date.now() + 1}`,
+      sender: 'ai',
+      text: aiResponse.text,
+      quiz: aiResponse.quiz,
+      timestamp: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+    };
+    setChatHistory(prev => [...prev, aiMsg]);
+    setIsTyping(false);
   };
 
   const handleSendMessage = (e: React.FormEvent) => {
@@ -654,9 +792,11 @@ export default function QuestDashboard({
   };
 
   const coreCompletedCount = CORE_ACTIVITY_IDS.filter(id => completedActivities.includes(id)).length;
+  const todayCityReward = cityRewardLedger.entries.find(entry => entry.date === getMoscowDateKey());
+  const cityCandidatePoints = cityRewardLedger.entries.reduce((sum, entry) => sum + entry.points, 0);
 
   return (
-    <div className="bg-[#0F172A] text-[#F8FAFC] rounded-2xl p-4 sm:p-8 border border-[rgba(148,163,184,0.1)] shadow-xs transition-all duration-300 flex flex-col flex-1 h-auto md:h-full select-none" id="mos_game_center">
+    <div className="glass-surface text-[#172033] rounded-[28px] p-4 sm:p-8 transition-all duration-300 flex flex-col flex-1 h-auto md:h-full select-none" id="mos_game_center">
       
       {/* Toast Notification */}
       <AnimatePresence>
@@ -665,7 +805,9 @@ export default function QuestDashboard({
             initial={{ opacity: 0, y: 30, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.95 }}
-            className="fixed bottom-24 right-4 sm:right-8 bg-[#27354f] text-[#f8fafc] p-4 rounded-xl border border-[rgba(255,255,255,0.08)] shadow-[0_12px_40px_rgba(0,0,0,0.4)] z-50 flex items-center gap-4 max-w-sm"
+            className="fixed bottom-24 right-4 sm:right-8 glass-island text-[#172033] p-4 rounded-2xl z-50 flex items-center gap-4 max-w-sm"
+            role="status"
+            aria-live="polite"
           >
             <div className={cn(
               "text-[#f8fafc] w-9 h-9 rounded-lg flex items-center justify-center text-lg font-bold shrink-0",
@@ -687,20 +829,20 @@ export default function QuestDashboard({
       </AnimatePresence>
 
       {/* Main Container Header with Title & Tabs */}
-      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 border-b border-[rgba(148,163,184,0.1)] pb-5 mb-8">
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 border-b border-slate-200/70 pb-5 mb-8">
         <div className="flex items-center gap-3">
-          <div className="bg-[#27354f] text-[#f59e0b] p-3 rounded-2xl border border-[rgba(255,255,255,0.08)]">
+          <div className="bg-[#DDF7F1] text-[#0F9F91] p-3 rounded-2xl border border-[#BDEDE4]">
             <Target size={24} className="stroke-[2.5px]" />
           </div>
           <div>
-            <span className="text-[10px] font-extrabold text-[#10b981] uppercase tracking-widest block mb-0.5">Игровой Центр Развития</span>
-            <h2 className="text-24px font-bold text-[#f8fafc] tracking-tight">МосГорБюджет.Трек</h2>
+            <span className="text-[10px] font-extrabold text-[#0F9F91] uppercase tracking-widest block mb-0.5">Игровой Центр Развития</span>
+            <h2 className="text-24px font-bold text-[#172033] tracking-tight">МосГорБюджет.Трек</h2>
           </div>
         </div>
 
         {/* Sub-Navigation Tabs - Configured to wrap elegantly for 100% visibility on all screens */}
 
-        <div className="flex overflow-x-auto no-scrollbar p-1 bg-[#1e293b] border border-[rgba(148,163,184,0.1)] rounded-xl gap-1 relative scroll-smooth snap-x snap-mandatory flex-nowrap w-full sm:w-auto">
+        <div className="flex overflow-x-auto no-scrollbar p-1 bg-white/60 border border-slate-200/80 rounded-full gap-1 relative scroll-smooth snap-x snap-mandatory flex-nowrap w-full sm:w-auto shadow-[0_6px_20px_rgba(15,23,42,0.04)]">
           {[
             { id: 'quizzes', label: 'Викторины', icon: '📝' },
             { id: 'minigames', label: 'Мини-игры', icon: '⚡' },
@@ -715,17 +857,15 @@ export default function QuestDashboard({
                 onClick={() => {
                   setActiveTab(tab.id as any);
                   setActiveQuiz(null);
+                  setQuizResult(null);
                   resetGameStates();
-                  setTimeout(() => {
-                    const el = document.getElementById('mos_game_center');
-                    el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                  }, 80);
                 }}
+                aria-pressed={isActive}
                 className={cn(
-                  "relative flex-1 sm:flex-initial px-3.5 py-2.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all outline-none whitespace-nowrap cursor-pointer z-10 snap-center shrink-0",
+                  "relative flex-1 sm:flex-initial px-3.5 py-2.5 rounded-full text-xs font-bold flex items-center justify-center gap-1.5 transition-all outline-none whitespace-nowrap cursor-pointer z-10 snap-center shrink-0",
                   isActive 
-                    ? "text-[#f8fafc] font-black -translate-y-[2px]" 
-                    : "text-[#94a3b8] hover:text-[#f8fafc] hover:-translate-y-[1px]"
+                    ? "text-[#0B766E] font-black -translate-y-[1px]"
+                    : "text-[#64748B] hover:text-[#172033] hover:-translate-y-[1px]"
                 )}
               >
                 <span>{tab.icon}</span>
@@ -733,7 +873,7 @@ export default function QuestDashboard({
                 {isActive && (
                   <motion.div
                     layoutId="active_tab_slide_dark"
-                    className="absolute inset-0 bg-gradient-to-b from-[#2b3a53] to-[#1e293b] border-t border-[rgba(255,255,255,0.15)] border-b-2 border-b-[#10b981] border-x border-[rgba(148,163,184,0.15)] rounded-lg -z-10 shadow-[0_-1px_6px_rgba(16,185,129,0.15),0_6px_16px_rgba(0,0,0,0.4)]"
+                    className="absolute inset-0 bg-[#DDF7F1] border border-[#BDEDE4] rounded-full -z-10 shadow-[0_4px_12px_rgba(15,159,145,0.12)]"
                     transition={{ type: "spring", stiffness: 380, damping: 30 }}
                   />
                 )}
@@ -743,198 +883,57 @@ export default function QuestDashboard({
         </div>
       </div>
 
-      {/* ================== PREMIUM GLASSMORPHIC ACHIEVEMENTS HUD ================== */}
-      {(() => {
-        const getLevelInfo = (xp: number) => {
-          if (xp <= 150) {
-            return { level: 1, title: "Налоговый новичок", min: 0, max: 150, progress: (xp / 150) * 100, nextLevelXp: 150 };
-          } else if (xp <= 400) {
-            return { level: 2, title: "Бюджетный эксперт", min: 150, max: 400, progress: ((xp - 150) / 250) * 100, nextLevelXp: 400 };
-          } else if (xp <= 750) {
-            return { level: 3, title: "Финансовый аналитик", min: 400, max: 750, progress: ((xp - 400) / 350) * 100, nextLevelXp: 750 };
-          } else if (xp <= 1200) {
-            return { level: 4, title: "Бюджетный стратег", min: 750, max: 1200, progress: ((xp - 750) / 450) * 100, nextLevelXp: 1200 };
-          } else {
-            return { level: 5, title: "Городской стратег", min: 1200, max: 2500, progress: 100, nextLevelXp: 2500 };
-          }
-        };
+      <div className="mb-6">
+        <CityRewardsHub
+          learningBalance={balance}
+          cityCandidatePoints={cityCandidatePoints}
+          streak={cityRewardLedger.streak}
+          todayPoints={todayCityReward?.points ?? null}
+          onStartDailyQuiz={() => {
+            setActiveTab('quizzes');
+            startRandomQuiz();
+          }}
+        />
+      </div>
 
-        const currentLvl = getLevelInfo(totalXp);
-        const percentXP = Math.round(currentLvl.progress);
-
-        // Calculate badges status
-        const isFisExpertUnlocked = completedActivities.includes('special-2') || totalXp >= 350;
-        const isInvestorUnlocked = unlockedNfts.length > 0 || completedActivities.includes('game-1');
-        const isMasterGpsUnlocked = completedActivities.includes('special-3') || completedActivities.includes('quiz-4');
-
-        const badgeList = [
-          { name: "Фискальный эксперт", desc: "Спецпроект 3-НДФЛ или 350+ XP", unlocked: isFisExpertUnlocked, progressText: "Рассчитайте вычет" },
-          { name: "Инвестор района", desc: "Сбалансируйте район в Мэре", unlocked: isInvestorUnlocked, progressText: "Запустите симулятор" },
-          { name: "Мастер госпрограмм", desc: "Викторина 04 или Спецраздел", unlocked: isMasterGpsUnlocked, progressText: "Пройдите 'Госпрограммы'" },
-        ];
-
-        const districtNftCards = [
-          { id: 'hamovniki', name: 'Хамовники', emoji: '🏰' },
-          { id: 'sokolniki', name: 'Сокольники', emoji: '🌲' },
-          { id: 'tverskoy', name: 'Тверской', emoji: '🔔' },
-          { id: 'krylatskoe', name: 'Крылатское', emoji: '🚴' },
-          { id: 'vyhino', name: 'Выхино', emoji: '🚉' },
-        ];
-
-        return (
-          <div className="space-y-8 mb-10 w-full">
-            
-            {/* Block A. Profile Header */}
-            <div className="bg-[#27354f] rounded-2xl p-5 md:p-6 border border-[rgba(255,255,255,0.08)] shadow-[0_8px_32px_-4px_rgba(0,0,0,0.35)]">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                <div className="flex flex-wrap items-center gap-3">
-                  <span className="text-[12px] uppercase font-bold bg-[#10b981] text-[#f8fafc] px-3.5 py-1.5 rounded-full tracking-wider shrink-0 whitespace-nowrap shadow-xs">
-                    Уровень {currentLvl.level}
-                  </span>
-                  <span className="text-[18px] font-bold text-[#f8fafc] leading-tight">
-                    {currentLvl.title}
-                  </span>
-                </div>
-                {/* Score balance representation */}
-                <div className="hidden sm:flex items-center gap-2">
-                  <span className="text-[11px] uppercase tracking-widest text-[#94a3b8] font-bold">Баланс:</span>
-                  <span className="text-[#f59e0b] font-bold text-[18px]">{balance} Б</span>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-3">
-                <span className="text-[12px] font-bold uppercase text-[#94a3b8] tracking-[0.05em] block">Измеритель XP</span>
-                <div className="flex items-center gap-3 sm:gap-4">
-                  
-                  <div className="relative flex-1 h-3 bg-[#151f32]/80 rounded-full overflow-hidden">
-                    <div 
-                      className="absolute left-0 top-0 h-full rounded-full transition-all duration-500 ease-out"
-                      style={{ width: `${percentXP}%`, background: 'linear-gradient(90deg, #f59e0b 0%, #10b981 100%)' }}
-                    />
-                    {/* Ticks 25%, 50%, 75% inside the track - sleek and subtle */}
-                    {[25, 50, 75].map(tick => (
-                      <div 
-                        key={tick} 
-                        className="absolute top-0 bottom-0 w-[1px] bg-[rgba(248,250,252,0.15)] pointer-events-none"
-                        style={{ left: `${tick}%` }}
-                      />
-                    ))}
-                  </div>
-
-                  <div className="shrink-0 w-10 h-10 rounded-full bg-[#151f32] border border-[rgba(148,163,184,0.2)] flex items-center justify-center shadow-inner">
-                    <span className="text-[#10b981] font-bold text-[13px]">{percentXP}%</span>
-                  </div>
-                </div>
-
-                <div className="flex justify-between items-center text-[12px] text-[#94a3b8] mt-1.5 font-semibold">
-                  <span className="shrink-0 font-mono text-[13px] text-[#f8fafc]">{totalXp} XP</span>
-                  <span className="text-center bg-[#10b981]/10 text-[#10b981] px-2.5 py-0.5 rounded-full text-[11px] sm:text-[12px] whitespace-nowrap">
-                    +{currentLvl.nextLevelXp - totalXp} до уровня {currentLvl.level + 1}
-                  </span>
-                  <span className="shrink-0 font-mono text-[13px] text-[#f8fafc]">{currentLvl.nextLevelXp} XP</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Block B. Achievements Grid */}
-            <div className="space-y-4">
-              <h3 className="text-[14px] font-bold text-[#f59e0b] tracking-wider flex items-center gap-2">
-                <Award size={18} />
-                Достижения
-              </h3>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {badgeList.map((badge, idx) => (
-                  <div 
-                    key={idx}
-                    className="bg-[#27354f] rounded-xl p-4 sm:p-5 border border-[rgba(255,255,255,0.08)] flex flex-col justify-between hover:-translate-y-1 hover:shadow-lg transition-all shadow-[0_8px_30px_rgba(0,0,0,0.25)] min-h-[145px]"
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className={cn(
-                        "w-10 h-10 rounded-full flex items-center justify-center shrink-0 shadow-sm",
-                        badge.unlocked 
-                          ? "bg-[#f59e0b] text-[#f8fafc]" 
-                          : "bg-[#151f32]/80 text-[#475569] border border-[rgba(148,163,184,0.15)]"
-                      )}>
-                        {badge.unlocked ? <Award size={20} /> : <Lock size={18} />}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="text-[16px] font-bold text-[#f8fafc] mb-1 leading-snug truncate">{badge.name}</h4>
-                        <p className="text-[13px] text-[#94a3b8] leading-relaxed line-clamp-2">
-                          {badge.desc}
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex justify-end mt-4 pt-3 border-t border-[rgba(148,163,184,0.05)]">
-                      {badge.unlocked ? (
-                        <span className="bg-[#10b981]/20 text-[#34d399] px-3 py-1 rounded-full text-[12px] font-bold tracking-wide">
-                          ✓ Выполнено
-                        </span>
-                      ) : (
-                        <span className="bg-[#151f32] text-[#94a3b8] px-3 py-1 rounded-full text-[12px] font-medium tracking-wide flex items-center gap-1.5 border border-[rgba(148,163,184,0.1)]">
-                          <Lock size={12} />
-                          Заблокировано
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Block C. District Signs */}
-            <div className="space-y-4">
-              <h3 className="text-[14px] uppercase font-bold text-[#f59e0b] tracking-wider flex items-center gap-2">
-                <MapIcon size={18} />
-                Знаки отличия районов 
-                <span className="ml-1 text-[#94a3b8] font-normal">({unlockedNfts.length}/5)</span>
-              </h3>
-
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                {districtNftCards.map((nft) => {
-                  const isUnlocked = unlockedNfts.includes(nft.id);
-                  return (
-                    <div 
-                      key={nft.id}
-                      className="bg-[#27354f] border border-[rgba(255,255,255,0.08)] rounded-xl aspect-square flex flex-col items-center justify-center relative overflow-hidden group hover:-translate-y-1 hover:shadow-lg transition-all shadow-[0_8px_30px_rgba(0,0,0,0.25)]"
-                    >
-                      <MapIcon 
-                        size={80} 
-                        className={cn(
-                          "absolute opacity-10 -z-10 group-hover:scale-110 transition-transform", 
-                          isUnlocked ? "text-[#f59e0b] opacity-20" : "text-[#475569]"
-                        )} 
-                        strokeWidth={1}
-                      />
-                      
-                      <div className="flex items-center justify-center w-12 h-12 mb-3 z-10">
-                        {isUnlocked ? (
-                          <div className="text-[#f59e0b]">
-                            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                          </div>
-                        ) : (
-                          <div className="bg-[#151f32] p-3 rounded-full border border-[rgba(255,255,255,0.05)]">
-                            <Lock size={20} className="text-[#475569]" />
-                          </div>
-                        )}
-                      </div>
-                      
-                      <span className={cn(
-                        "text-[15px] font-bold z-10 px-2 text-center tracking-wide leading-tight",
-                        isUnlocked ? "text-[#fbbf24] drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" : "text-[#cbd5e1]"
-                      )}>
-                        {nft.name}
-                      </span>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-
+      {/* A compact route replaces the old achievement wall: show the next meaningful action first. */}
+      <div className="mb-6 rounded-[24px] border border-white/80 bg-white/60 p-4 sm:p-5 shadow-[0_10px_28px_rgba(15,23,42,0.05)]">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <span className="text-[10px] uppercase tracking-widest font-black text-[#10b981]">Ваш маршрут</span>
+            <h3 className="text-base sm:text-lg font-black text-[#172033] mt-1">От личного расчёта — к решению для города</h3>
+            <p className="text-xs text-[#64748B] mt-1">Каждый шаг оставляет понятный результат, а не просто баллы.</p>
           </div>
-        );
-      })()}
+          <div className="text-left sm:text-right shrink-0">
+            <span className="block text-[10px] uppercase tracking-wider font-bold text-[#64748B]">Пройдено</span>
+            <span className="font-mono text-lg font-black text-[#0F9F91]">{coreCompletedCount}/{CORE_ACTIVITY_IDS.length}</span>
+          </div>
+        </div>
+        <div className="mt-4 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+          <div className="h-full rounded-full bg-gradient-to-r from-[#14B8A6] to-[#0B766E] transition-all duration-500" style={{ width: `${(coreCompletedCount / CORE_ACTIVITY_IDS.length) * 100}%` }} />
+        </div>
+        <div className="grid grid-cols-3 gap-2 mt-4">
+          {[
+            { id: 'calc', label: '1. Моя ситуация', done: isCalculatorCompleted, action: () => window.dispatchEvent(new CustomEvent('focus_mos_calculator')) },
+            { id: 'mayor', label: '2. Решение', done: completedActivities.some(id => id.startsWith('mayor-success-')), action: () => setActiveTab('mayor') },
+            { id: 'quizzes', label: '3. Проверка', done: completedActivities.some(id => id.startsWith('quiz-')), action: () => setActiveTab('quizzes') },
+          ].map((step) => (
+            <button
+              key={step.id}
+              type="button"
+              onClick={step.action}
+              aria-current={activeTab === step.id ? 'step' : undefined}
+              className={cn(
+                "rounded-xl border px-3 py-2 text-left text-xs font-bold transition-colors",
+                activeTab === step.id ? "border-[#0F9F91]/45 bg-[#DDF7F1] text-[#0B766E]" : "border-slate-200/80 bg-white/55 text-[#64748B] hover:text-[#172033]",
+                step.done && "text-[#0B766E]"
+              )}
+            >
+              <span className="mr-1.5">{step.done ? '✓' : '○'}</span>{step.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
 
 
@@ -954,40 +953,40 @@ export default function QuestDashboard({
         {activeTab === 'quizzes' && (
           <div className="space-y-4">
             
-            {!activeQuiz ? (
+            {!activeQuiz && !quizResult ? (
               // Quiz Grid Listing
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* DYNAMIC RANDOM BUDGET GENERATOR FOR HIGH INTERACTIVITY */}
-                <div className="md:col-span-2 bg-[#27354f] p-6 rounded-2xl border border-[rgba(255,255,255,0.08)] shadow-[0_8px_32px_-4px_rgba(0,0,0,0.35)] flex flex-col md:flex-row items-center justify-between gap-5 relative overflow-hidden group">
+                {/* One deterministic daily task supports fair rewards and repeat protection. */}
+                <div className="md:col-span-2 bg-gradient-to-br from-[#E9FBF7] via-white/80 to-[#F7FAFF] p-6 rounded-[26px] border border-white/90 shadow-[0_14px_34px_rgba(15,23,42,0.06)] flex flex-col md:flex-row items-center justify-between gap-5 relative overflow-hidden group">
                   {/* Micro-Illustration */}
                   <div className="absolute inset-0 pointer-events-none opacity-5">
                     <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
                       <pattern id="net" width="40" height="40" patternUnits="userSpaceOnUse">
-                        <path d="M0 40V0H40" fill="none" stroke="#f8fafc" strokeWidth="1"/>
-                        <circle cx="40" cy="40" r="1.5" fill="#f8fafc" />
-                        <circle cx="0" cy="0" r="1.5" fill="#f8fafc" />
+                        <path d="M0 40V0H40" fill="none" stroke="#0F9F91" strokeWidth="1"/>
+                        <circle cx="40" cy="40" r="1.5" fill="#0F9F91" />
+                        <circle cx="0" cy="0" r="1.5" fill="#0F9F91" />
                       </pattern>
                       <rect width="100%" height="100%" fill="url(#net)" />
                     </svg>
                   </div>
                   
                   <div className="flex items-center gap-4 z-10 w-full md:w-auto">
-                    <div className="w-12 h-12 rounded-full bg-[#f59e0b] flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(245,158,11,0.3)]">
-                      <Sparkles size={24} className="text-[#f8fafc]" />
+                    <div className="w-12 h-12 rounded-full bg-[#0F9F91] flex items-center justify-center shrink-0 shadow-[0_10px_22px_rgba(15,159,145,0.25)]">
+                      <Sparkles size={24} className="text-white" />
                     </div>
                     <div>
-                      <h3 className="text-[18px] font-bold text-[#f8fafc] mb-1">Случайный Финансовый Квиз</h3>
-                      <p className="text-[#94a3b8] text-[14px]">
-                        Соберите моментальный квиз дня из 52 уникальных фактов о Законе о бюджете Москвы на 2026 год. Каждый тест уникален!
+                      <h3 className="text-[18px] font-bold text-[#172033] mb-1">Финансовый квиз дня</h3>
+                      <p className="text-[#64748B] text-[14px]">
+                        Три вопроса из банка {BUDGET_QUESTIONS_BANK.length} проверенных заданий. Подборка едина на весь день; 5 городских баллов-кандидатов за правильный ответ начисляются один раз.
                       </p>
                     </div>
                   </div>
                   
                   <button 
                     onClick={startRandomQuiz}
-                    className="bg-[#ef4444] text-[#f8fafc] hover:bg-[#f87171] px-6 py-3 rounded-lg text-[14px] font-bold shadow-[0_2px_4px_-1px_rgba(239,68,68,0.3)] select-none cursor-pointer duration-200 hover:-translate-y-0.5 active:translate-y-0 shrink-0 z-10 w-full md:w-auto text-center"
+                    className="teal-action px-6 py-3 rounded-full text-[14px] font-bold select-none cursor-pointer duration-200 hover:-translate-y-0.5 active:translate-y-0 shrink-0 z-10 w-full md:w-auto text-center"
                   >
-                    Сгенерировать & Начать (+150 Б)
+                    {todayCityReward ? 'Открыть повторно' : 'Начать задание дня'}
                   </button>
                 </div>
 
@@ -1031,7 +1030,7 @@ export default function QuestDashboard({
                         }
                       }}
                       className={cn(
-                        "p-5 rounded-xl border-y border-r border-[rgba(255,255,255,0.08)] bg-[#27354f] transition-all duration-200 flex flex-col justify-between group border-l-4 shadow-[0_8px_30px_rgba(0,0,0,0.25)] hover:-translate-y-1 hover:shadow-lg",
+                        "p-5 rounded-[22px] border-y border-r border-slate-200/80 bg-white/72 transition-all duration-200 flex flex-col justify-between group border-l-4 shadow-[0_10px_26px_rgba(15,23,42,0.06)] hover:-translate-y-1 hover:shadow-lg",
                         difficultyBorder,
                         isCompleted ? "opacity-80" : "",
                         isLocked ? "opacity-50 pointer-events-none" : ""
@@ -1053,29 +1052,29 @@ export default function QuestDashboard({
                           </span>
                         </div>
 
-                        <h3 className="text-[18px] font-bold text-[#f8fafc] leading-snug mb-1 pr-12">
+                          <h3 className="text-[18px] font-bold text-[#172033] leading-snug mb-1 pr-12">
                           {quiz.title}
                         </h3>
-                        <p className="text-[#94a3b8] text-[14px] leading-relaxed line-clamp-2">
+                        <p className="text-[#64748B] text-[14px] leading-relaxed line-clamp-2">
                           {quiz.topic}
                         </p>
                       </div>
 
                       {/* Overriding display for Locked state (Audit #9 Unlock conditions) */}
                       {isLocked ? (
-                        <div className="mt-4 pt-4 border-t border-[rgba(148,163,184,0.1)] flex flex-col gap-1.5">
-                          <div className="flex items-center gap-1.5 text-[12px] font-bold text-[#94a3b8]">
+                        <div className="mt-4 pt-4 border-t border-slate-200/70 flex flex-col gap-1.5">
+                          <div className="flex items-center gap-1.5 text-[12px] font-bold text-[#64748B]">
                             <span>🔒 Заблокировано</span>
                           </div>
-                          <p className="text-[12px] font-medium text-[#475569]">
+                          <p className="text-[12px] font-medium text-[#64748B]">
                             {lockReason}
                           </p>
                         </div>
                       ) : (
                         /* Play Action Container */
-                        <div className="mt-4 pt-4 border-t border-[rgba(148,163,184,0.1)] flex items-center justify-between">
+                        <div className="mt-4 pt-4 border-t border-slate-200/70 flex items-center justify-between">
                           {isCompleted ? (
-                            <div className="flex items-center gap-1.5 text-[#10b981] text-[12px] font-bold">
+                            <div className="flex items-center gap-1.5 text-[#0F9F91] text-[12px] font-bold">
                               <CheckCircle2 size={16} />
                               <span>Пройдено</span>
                             </div>
@@ -1092,10 +1091,10 @@ export default function QuestDashboard({
                               startQuiz(quiz);
                             }}
                             className={cn(
-                              "px-4 py-2 rounded-md text-[14px] font-bold transition-all duration-150 cursor-pointer flex items-center gap-1.5",
+                              "px-4 py-2 rounded-full text-[14px] font-bold transition-all duration-150 cursor-pointer flex items-center gap-1.5",
                               isCompleted 
-                                ? "bg-[#334155] text-[#94a3b8] hover:bg-[#475569] hover:text-[#f8fafc]" 
-                                : "bg-[#334155] text-[#f8fafc] hover:bg-[#475569]"
+                                ? "bg-slate-100 text-[#64748B] hover:bg-slate-200"
+                                : "bg-[#DDF7F1] text-[#0B766E] hover:bg-[#BDEDE4]"
                             )}
                           >
                             <span>{isCompleted ? "Повторить" : "Начать"}</span>
@@ -1107,43 +1106,136 @@ export default function QuestDashboard({
                   );
                 })}
               </div>
+            ) : quizResult ? (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-white/75 border border-white/90 p-6 md:p-8 rounded-[26px] shadow-[0_14px_34px_rgba(15,23,42,0.06)] space-y-6"
+              >
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 border-b border-slate-200/70 pb-5">
+                  <div>
+                    <span className="text-[10px] uppercase font-black tracking-widest text-[#10b981]">Разбор завершён</span>
+                    <h3 className="text-xl font-black text-[#172033] mt-1">{quizResult.quiz.title}</h3>
+                    <p className="text-sm text-[#64748B] mt-1">{quizResult.score} из {quizResult.quiz.questions.length} правильных ответов</p>
+                  </div>
+                  <div className={cn(
+                    "rounded-xl px-4 py-3 text-center border",
+                    quizResult.passed ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300" : "bg-amber-500/10 border-amber-500/30 text-amber-200"
+                  )}>
+                    <span className="block text-[10px] uppercase font-bold tracking-wider">
+                      {!quizResult.passed ? 'Нужно повторить' : quizResult.points > 0 ? 'Начислено' : 'Повторное прохождение'}
+                    </span>
+                    <span className="font-black text-lg">{quizResult.points > 0 ? `+${quizResult.points} Б` : '0 Б'}</span>
+                  </div>
+                </div>
+
+                {quizResult.quiz.id.startsWith('daily-quiz-') && (
+                  <div className="rounded-[20px] border border-[#BDEDE4] bg-[#EAF9F6] px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <span className="block text-[10px] font-black uppercase tracking-wider text-[#0B766E]">Пилот городских наград</span>
+                      <p className="text-xs font-semibold text-[#334155] mt-0.5">{quizResult.score} правильных ответа × 5 = <strong>{quizResult.score * 5} баллов-кандидатов</strong></p>
+                    </div>
+                    <span className="text-[10px] font-bold text-[#64748B]">Один зачёт в сутки · без реального начисления</span>
+                  </div>
+                )}
+
+                <div className="space-y-3">
+                  {quizResult.quiz.questions.map((question, index) => {
+                    const answer = quizResult.answers[index];
+                    const isCorrect = answer === question.correct;
+                    return (
+                      <div key={`${quizResult.quiz.id}-${index}`} className="rounded-[20px] border border-slate-200/80 bg-white/65 p-4">
+                        <div className="flex items-start gap-3">
+                          <span className={cn(
+                            "mt-0.5 w-6 h-6 rounded-full flex items-center justify-center text-xs font-black shrink-0",
+                            isCorrect ? "bg-emerald-500/20 text-emerald-300" : "bg-rose-500/20 text-rose-300"
+                          )}>{isCorrect ? '✓' : '!'}</span>
+                          <div className="min-w-0">
+                            <p className="text-sm font-bold text-[#172033] leading-relaxed">{question.question}</p>
+                            <p className="text-xs text-[#64748B] mt-1.5 leading-relaxed">
+                              Ответ: <span className={isCorrect ? "text-emerald-300" : "text-rose-300"}>{question.options[question.correct]}</span>
+                              {!isCorrect && answer >= 0 && <span> · Вы выбрали: {question.options[answer]}</span>}
+                            </p>
+                            <p className="text-xs text-[#475569] mt-2 leading-relaxed">{question.explanation}</p>
+                            {question.sourceId && (
+                              <a
+                                href={getBudgetSource(question.sourceId).url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex mt-2 text-[11px] font-bold text-[#0B766E] hover:underline"
+                              >
+                                Первоисточник · проверено 15.07.2026 ↗
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="rounded-xl border border-[rgba(56,189,248,0.2)] bg-sky-500/5 px-4 py-3 text-xs text-[#cbd5e1]">
+                  Сверить первичные данные: <a href="https://budget.mos.ru" target="_blank" rel="noopener noreferrer" className="font-bold text-sky-300 hover:underline">Открытый бюджет Москвы</a>
+                  <span className="mx-1.5">•</span>
+                  <a href="https://www.nalog.gov.ru/rn77/taxation/taxes/ndfl/nalog_vichet/soc_nv/soc_nv_ob/" target="_blank" rel="noopener noreferrer" className="font-bold text-sky-300 hover:underline">ФНС о социальных вычетах</a>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-3 sm:justify-end">
+                  <button
+                    onClick={() => setQuizResult(null)}
+                    className="px-4 py-2.5 rounded-full bg-slate-100 text-[#475569] hover:bg-slate-200 text-sm font-bold transition-colors"
+                  >
+                    К списку квизов
+                  </button>
+                  <button
+                    onClick={() => startQuiz(quizResult.quiz)}
+                    className="px-4 py-2.5 rounded-xl bg-[#CC1111] text-white hover:bg-[#A30E0E] text-sm font-bold transition-colors"
+                  >
+                    Пройти ещё раз
+                  </button>
+                </div>
+              </motion.div>
             ) : (
               // ACTIVE QUIZ INTERFACE Screen
               <motion.div 
                 initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="bg-[#27354f] border border-[rgba(255,255,255,0.08)] p-6 md:p-8 rounded-2xl shadow-[0_8px_32px_-4px_rgba(0,0,0,0.35)]"
+                id="mos_quiz_session"
+                className="bg-white/75 border border-white/90 p-6 md:p-8 rounded-[26px] shadow-[0_14px_34px_rgba(15,23,42,0.06)]"
               >
                 {/* Header info */}
-                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center border-b border-[rgba(148,163,184,0.1)] pb-4 mb-6 gap-3 sm:gap-0">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center border-b border-slate-200/70 pb-4 mb-6 gap-3 sm:gap-0">
                   <div>
-                    <span className="text-[12px] font-bold uppercase text-[#94a3b8] tracking-widest block mb-1">активная сессия</span>
-                    <h3 className="text-[18px] md:text-[20px] font-bold text-[#f8fafc] tracking-tight">{activeQuiz.title}</h3>
+                    <span className="text-[12px] font-bold uppercase text-[#64748B] tracking-widest block mb-1">активная сессия</span>
+                    <h3 className="text-[18px] md:text-[20px] font-bold text-[#172033] tracking-tight">{activeQuiz.title}</h3>
                   </div>
                   <button 
-                    onClick={() => setActiveQuiz(null)}
-                    className="text-[14px] font-bold text-[#94a3b8] hover:text-[#f8fafc] bg-[#334155] hover:bg-[#475569] px-4 py-2 rounded-lg w-max transition-colors"
+                    onClick={() => {
+                      setActiveQuiz(null);
+                      setQuizResult(null);
+                    }}
+                    className="text-[14px] font-bold text-[#64748B] hover:text-[#172033] bg-slate-100 hover:bg-slate-200 px-4 py-2 rounded-full w-max transition-colors"
                   >
                     Вернуться к списку
                   </button>
                 </div>
 
                 {/* Progress Indicators */}
-                <div className="flex items-center justify-between text-[14px] font-bold text-[#94a3b8] mb-3">
+                <div className="flex items-center justify-between text-[14px] font-bold text-[#64748B] mb-3">
                   <span>Вопрос {currentQuestionIndex + 1} из {activeQuiz.questions.length}</span>
-                  <span>Правильно: <span className="text-[#f8fafc]">{score}</span></span>
+                  <span>Правильно: <span className="text-[#172033]">{score}</span></span>
                 </div>
                 
                 {/* Bar */}
-                <div className="w-full bg-[#334155] h-2 rounded-full overflow-hidden mb-8">
+                <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden mb-8">
                   <div 
-                    className="bg-[#10b981] h-full transition-all duration-300" 
+                    className="bg-[#0F9F91] h-full transition-all duration-300"
                     style={{ width: `${((currentQuestionIndex + 1) / activeQuiz.questions.length) * 100}%` }}
                   />
                 </div>
 
                 {/* Question */}
-                <p className="text-[18px] md:text-[20px] font-semibold text-[#f8fafc] leading-snug mb-6">
+                <p className="text-[18px] md:text-[20px] font-semibold text-[#172033] leading-snug mb-6">
                   {activeQuiz.questions[currentQuestionIndex].question}
                 </p>
 
@@ -1160,16 +1252,16 @@ export default function QuestDashboard({
                         disabled={isAnySelected}
                         onClick={() => handleSelectOption(oIdx)}
                         className={cn(
-                          "w-full text-left p-4 rounded-xl border text-[16px] font-medium transition-all duration-150 outline-none flex items-center justify-between",
+                          "w-full text-left p-4 rounded-[20px] border text-[16px] font-medium transition-all duration-150 outline-none flex items-center justify-between",
                           !isAnySelected 
-                            ? "bg-[#334155] border-[rgba(148,163,184,0.1)] text-[#f8fafc] hover:border-[rgba(148,163,184,0.3)] hover:bg-[#475569]" 
+                            ? "bg-white/70 border-slate-200 text-[#172033] hover:border-[#0F9F91]/40 hover:bg-[#DDF7F1]/40"
                             : isClicked && isCorrect
-                              ? "bg-[#10b981]/20 border-[#10b981] text-[#f8fafc]"
+                              ? "bg-[#DDF7F1] border-[#0F9F91] text-[#0B766E]"
                               : isClicked && !isCorrect
-                                ? "bg-[#ef4444]/20 border-[#ef4444] text-[#f8fafc]"
+                                ? "bg-red-50 border-red-300 text-red-800"
                                 : isCorrect
-                                  ? "bg-[#10b981]/10 border-[#10b981]/50 text-[#f8fafc]"
-                                  : "bg-[#334155] border-[rgba(148,163,184,0.1)] text-[#94a3b8] opacity-50"
+                                  ? "bg-[#DDF7F1]/60 border-[#0F9F91]/50 text-[#0B766E]"
+                                  : "bg-slate-100 border-slate-200 text-[#64748B] opacity-60"
                         )}
                       >
                         <span className="max-w-[90%] leading-relaxed">{opt}</span>
@@ -1192,14 +1284,24 @@ export default function QuestDashboard({
                   <motion.div 
                     initial={{ opacity: 0, y: 5 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="p-5 bg-[#334155] border border-[rgba(148,163,184,0.1)] rounded-xl mb-6 flex items-start gap-3"
+                    className="p-5 bg-[#F0FBFA] border border-[#BDEDE4] rounded-[20px] mb-6 flex items-start gap-3"
                   >
-                    <Info size={20} className="text-[#38bdf8] shrink-0 mt-0.5" />
+                    <Info size={20} className="text-[#0F9F91] shrink-0 mt-0.5" />
                     <div>
-                      <span className="text-[12px] uppercase font-bold text-[#38bdf8] tracking-widest block mb-1">Обоснование</span>
-                      <p className="text-[14px] text-[#f8fafc] leading-relaxed">
+                      <span className="text-[12px] uppercase font-bold text-[#0F9F91] tracking-widest block mb-1">Обоснование</span>
+                      <p className="text-[14px] text-[#172033] leading-relaxed">
                         {activeQuiz.questions[currentQuestionIndex].explanation}
                       </p>
+                      {activeQuiz.questions[currentQuestionIndex].sourceId && (
+                        <a
+                          href={getBudgetSource(activeQuiz.questions[currentQuestionIndex].sourceId!).url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex mt-2 text-[11px] font-bold text-[#0B766E] hover:underline"
+                        >
+                          Открыть официальный источник ↗
+                        </a>
+                      )}
                     </div>
                   </motion.div>
                 )}
@@ -1209,7 +1311,7 @@ export default function QuestDashboard({
                   <div className="flex justify-end">
                     <button
                       onClick={handleNextQuestion}
-                      className="px-6 py-3 bg-[#ef4444] hover:bg-[#f87171] text-[#f8fafc] font-bold rounded-lg text-[14px] flex items-center gap-2 transition-all shadow-[0_2px_4px_-1px_rgba(239,68,68,0.3)]"
+                      className="teal-action px-6 py-3 font-bold rounded-full text-[14px] flex items-center gap-2 transition-all"
                     >
                       <span>{currentQuestionIndex + 1 === activeQuiz.questions.length ? "Завершить тест" : "Следующий вопрос"}</span>
                       <ArrowRight size={16} />
@@ -1239,11 +1341,11 @@ export default function QuestDashboard({
                   <div>
                     <div className="flex justify-between items-center gap-2 mb-2">
                       <span className="text-[9px] uppercase font-extrabold tracking-widest text-[#B45309] bg-amber-50 border border-amber-200 px-2 py-0.5 rounded">Симулятор балансировки</span>
-                      <span className="text-[11px] font-bold font-mono text-[#CC1111]">+150 Б</span>
+                      <span className="text-[11px] font-bold font-mono text-blue-700">Учебная модель</span>
                     </div>
                     <h3 className="text-sm sm:text-base font-bold text-[#0F172A] dark:text-slate-100">Балансировщик бюджета</h3>
                     <p className="text-xs text-[#475569] font-medium leading-relaxed mt-1">
-                      Распределите доли бюджета между расходами. Главная плановая цель — социальная сфера не менее 50%!
+                      Распределите доли бюджета между расходами. Условие этого сценария — не менее 50% на социальную сферу.
                     </p>
                   </div>
                   <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
@@ -1266,7 +1368,7 @@ export default function QuestDashboard({
                 )}>
                   <div>
                     <div className="flex justify-between items-center gap-2 mb-2">
-                      <span className="text-[9px] uppercase font-extrabold tracking-widest text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded">фискальная инспекция</span>
+                        <span className="text-[9px] uppercase font-extrabold tracking-widest text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded">фискальная инспекция</span>
                       <span className="text-[11px] font-bold font-mono text-[#CC1111]">+150 Б</span>
                     </div>
                     <h3 className="text-sm sm:text-base font-bold text-[#0F172A] dark:text-slate-100">Финансовый Аудитор</h3>
@@ -1294,7 +1396,7 @@ export default function QuestDashboard({
                 )}>
                   <div>
                     <div className="flex justify-between items-center gap-2 mb-2">
-                      <span className="text-[9px] uppercase font-extrabold tracking-widest text-[#065F46] bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">Стратегический выбор</span>
+                        <span className="text-[9px] uppercase font-extrabold tracking-widest text-[#065F46] bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">Стратегический выбор</span>
                       <span className="text-[11px] font-bold font-mono text-[#CC1111]">+150 Б</span>
                     </div>
                     <h3 className="text-sm sm:text-base font-bold text-[#0F172A] dark:text-slate-100">Инвест-Стратег</h3>
@@ -1375,8 +1477,8 @@ export default function QuestDashboard({
                 <div className="p-5 rounded-xl border-2 border-amber-300 bg-[#FFFDF5] transition-all flex flex-col justify-between hover:border-amber-400 hover:shadow-[0_4px_20px_rgba(245,158,11,0.15)]">
                   <div>
                     <div className="flex justify-between items-center gap-2 mb-2">
-                      <span className="text-[9px] uppercase font-extrabold tracking-widest text-amber-800 bg-amber-100 border border-amber-200 px-2 py-0.5 rounded">Районный симулятор</span>
-                      <span className="text-[11px] font-bold font-mono text-[#CC1111]">+150 Б</span>
+                        <span className="text-[9px] uppercase font-extrabold tracking-widest text-amber-800 bg-amber-100 border border-amber-200 px-2 py-0.5 rounded">Районный симулятор</span>
+                      <span className="text-[11px] font-bold font-mono text-blue-700">Без отдельной награды</span>
                     </div>
                     <h3 className="text-sm sm:text-base font-bold text-amber-950 flex items-center gap-1.5">
                       <span>👑</span> Интерактивный мэр округа
@@ -1391,6 +1493,7 @@ export default function QuestDashboard({
                       onClick={() => {
                         setActiveTab('mayor');
                         setActiveQuiz(null);
+                        setQuizResult(null);
                         resetGameStates();
                       }}
                       className="px-3.5 py-1.5 text-xs font-bold bg-[#CC1111] hover:bg-[#A30E0E] text-white rounded-lg transition-all cursor-pointer"
@@ -1404,14 +1507,14 @@ export default function QuestDashboard({
                 <div className="p-5 rounded-xl border-2 border-blue-300 bg-[#F4F9FF] transition-all flex flex-col justify-between hover:border-blue-400 hover:shadow-[0_4px_20px_rgba(59,130,246,0.15)]">
                   <div>
                     <div className="flex justify-between items-center gap-2 mb-2">
-                      <span className="text-[9px] uppercase font-extrabold tracking-widest text-blue-800 bg-blue-100 border border-blue-200 px-2 py-0.5 rounded">Векторная карта</span>
-                      <span className="text-[11px] font-bold font-mono text-[#CC1111]">+150 Б</span>
+                        <span className="text-[9px] uppercase font-extrabold tracking-widest text-blue-800 bg-blue-100 border border-blue-200 px-2 py-0.5 rounded">Векторная карта</span>
+                      <span className="text-[11px] font-bold font-mono text-blue-700">Без отдельной награды</span>
                     </div>
                     <h3 className="text-sm sm:text-base font-bold text-blue-950 flex items-center gap-1.5">
                       <span>🗺️</span> Интерактивная карта
                     </h3>
                     <p className="text-xs text-blue-900 font-medium leading-relaxed mt-1">
-                      Исследуйте условные сценарии социальных объектов на демонстрационной векторной карте.
+                      Исследуйте условные сценарии социальных объектов на учебной векторной карте.
                     </p>
                   </div>
                   <div className="mt-4 pt-3 border-t border-blue-200 flex items-center justify-between">
@@ -1420,6 +1523,7 @@ export default function QuestDashboard({
                       onClick={() => {
                         setActiveTab('map');
                         setActiveQuiz(null);
+                        setQuizResult(null);
                         resetGameStates();
                       }}
                       className="px-3.5 py-1.5 text-xs font-bold bg-[#CC1111] hover:bg-[#A30E0E] text-white rounded-lg transition-all cursor-pointer"
@@ -1463,7 +1567,7 @@ export default function QuestDashboard({
                   <div className="space-y-6">
                     <p className="text-xs sm:text-sm font-semibold text-slate-700 leading-relaxed mb-4">
                       Сбалансируйте доли так, чтобы их сумма составила <span className="text-emerald-700 font-bold">ровно 100%</span>. 
-                      Законодательное требование развития столичной социальной поддержки: выделите на <span className="font-bold text-emerald-700">Социальную сферу не менее 50%</span>!
+                      В этом учебном сценарии социальная сфера должна получить <span className="font-bold text-emerald-700">не менее 50%</span> — это условие игры, а не отдельная норма закона.
                     </p>
 
                     <div className="space-y-4 bg-white dark:bg-[#1e293b] p-5 rounded-2xl border border-slate-200 dark:border-slate-700/50">
@@ -1576,10 +1680,10 @@ export default function QuestDashboard({
                         },
                         { 
                           id: 3, 
-                          title: "Выделение бюджетных средств на покупку криптовалюты для резервов ГРБС — 80 млн ₽",
-                          subTitle: "Получатель: Техно-Пул. Решение: Покупка токенизированных активов и мем-коинов в резервную казну департамента.",
+                          title: "Возмещение стоимости оборудования до приёмки — 80 млн ₽",
+                          subTitle: "Получатель: Техно-Пул. В заявке есть договор, но нет актов приёмки, подтверждения фактических расходов и решения комиссии.",
                           valid: false,
-                          details: "Грубое правонарушение! Бюджетный кодекс запрещает вложения бюджетных средств в криптовалюты, криптоактивы и спекулятивные необеспеченные цифровые инструменты."
+                          details: "Расход нельзя признать подтверждённым: до перечисления субсидии нужны документы, предусмотренные порядком отбора и соглашением. Решение — вернуть заявку на доработку, а не объявлять получателя нарушителем заранее."
                         }
                       ].map((card) => {
                         const isSelected = game2SelectedCard === card.id;
@@ -1592,7 +1696,7 @@ export default function QuestDashboard({
                             onClick={() => {
                               setGame2SelectedCard(card.id);
                               if (!card.valid) {
-                                handleCompleteActivity('game-2', 150, "Ордер №3 проверен! Обнаружено нецелевое использование валютной статьи на криптовалюту.");
+                                handleCompleteActivity('game-2', 150, "Ордер №3 проверен: пакет документов не подтверждает право на выплату до приёмки оборудования.");
                               }
                             }}
                             className={cn(
@@ -1723,26 +1827,28 @@ export default function QuestDashboard({
                     </p>
 
                     <div className="flex flex-wrap gap-2 mb-4">
-                      <button
-                        onClick={() => setGame4List(prev => [...prev, 50000])}
-                        className="px-4 py-2 border border-slate-200 dark:border-slate-700/50 hover:border-slate-400 bg-white dark:bg-[#1e293b] rounded-lg text-xs font-bold cursor-pointer transition"
-                      >
-                        + Обучение в Вузе (50к)
-                      </button>
-
-                      <button
-                        onClick={() => setGame4List(prev => [...prev, 30000])}
-                        className="px-4 py-2 border border-slate-200 dark:border-slate-700/50 hover:border-slate-400 bg-white dark:bg-[#1e293b] rounded-lg text-xs font-bold cursor-pointer transition"
-                      >
-                        + Спортивный абонемент (30к)
-                      </button>
-
-                      <button
-                        onClick={() => setGame4List(prev => [...prev, 80000])}
-                        className="px-4 py-2 border border-slate-200 dark:border-slate-700/50 hover:border-slate-400 bg-white dark:bg-[#1e293b] rounded-lg text-xs font-bold cursor-pointer transition"
-                      >
-                        + Лечение / Стоматология (80к)
-                      </button>
+                      {[
+                        { label: 'Обучение в вузе', value: 50000 },
+                        { label: 'Спортивный абонемент', value: 30000 },
+                        { label: 'Лечение / стоматология', value: 80000 },
+                      ].map((expense) => {
+                        const isAdded = game4List.includes(expense.value);
+                        return (
+                          <button
+                            key={expense.value}
+                            disabled={isAdded}
+                            onClick={() => setGame4List(prev => [...prev, expense.value])}
+                            className={cn(
+                              "px-4 py-2 border rounded-lg text-xs font-bold transition",
+                              isAdded
+                                ? "border-emerald-200 bg-emerald-50 text-emerald-800 cursor-default"
+                                : "border-slate-200 dark:border-slate-700/50 hover:border-slate-400 bg-white dark:bg-[#1e293b] cursor-pointer"
+                            )}
+                          >
+                            {isAdded ? '✓' : '+'} {expense.label} ({expense.value / 1000}к)
+                          </button>
+                        );
+                      })}
 
                       <button
                         onClick={() => setGame4List([])}
@@ -1765,7 +1871,7 @@ export default function QuestDashboard({
                         ) : (
                           game4List.map((val, idx) => (
                             <div key={idx} className="flex justify-between font-mono">
-                              <span>Пункт {idx + 1}: Социальные расходы</span>
+                              <span>{val === 50000 ? 'Обучение в вузе' : val === 30000 ? 'Спортивный абонемент' : 'Лечение / стоматология'}</span>
                               <span>+{val.toLocaleString('ru-RU')} ₽</span>
                             </div>
                           ))
@@ -1957,17 +2063,49 @@ export default function QuestDashboard({
                     <span>Учебный сценарий пройден. Запросов во внешние государственные системы не выполнялось.</span>
                   </div>
                 ) : (
-                  <div className="mt-4 pt-4 border-t border-dashed border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="mt-4 pt-4 border-t border-dashed border-slate-200 dark:border-slate-700 space-y-3">
                     <p className="text-xs text-slate-600 dark:text-slate-300 font-medium">
-                      В рабочей версии роль можно выбирать вручную. Интеграция с Mos.ID — только возможное направление развития после согласований.
+                      Выберите безопасный способ персонализации для конкурсной версии: роль хранится локально, а подключение Mos.ID требует отдельного согласования.
                     </p>
-                    <button
-                      type="button"
-                      onClick={() => handleCompleteActivity('special-1', 80, "Учебный сценарий персонализации завершён без ввода персональных данных.")}
-                      className="px-4 py-2 bg-[#CC1111] hover:bg-[#A30E0E] text-white font-bold rounded-lg text-xs uppercase cursor-pointer shrink-0"
-                    >
-                      Пройти сценарий
-                    </button>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setSpec1Choice('local')}
+                        aria-pressed={spec1Choice === 'local'}
+                        className={cn(
+                          "rounded-xl border px-3 py-2.5 text-left text-xs font-bold transition-colors",
+                          spec1Choice === 'local' ? "border-emerald-500 bg-emerald-50 text-emerald-900" : "border-slate-200 dark:border-slate-700 hover:border-emerald-300"
+                        )}
+                      >
+                        Локальный профиль
+                        <span className="block text-[10px] font-medium mt-0.5 opacity-70">Без передачи персональных данных</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSpec1Choice('mosid')}
+                        aria-pressed={spec1Choice === 'mosid'}
+                        className={cn(
+                          "rounded-xl border px-3 py-2.5 text-left text-xs font-bold transition-colors",
+                          spec1Choice === 'mosid' ? "border-amber-500 bg-amber-50 text-amber-900" : "border-slate-200 dark:border-slate-700 hover:border-amber-300"
+                        )}
+                      >
+                        Mos.ID
+                        <span className="block text-[10px] font-medium mt-0.5 opacity-70">Только после официального согласования</span>
+                      </button>
+                    </div>
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        disabled={spec1Choice !== 'local'}
+                        onClick={() => handleCompleteActivity('special-1', 80, "Учебный сценарий персонализации завершён без ввода персональных данных.")}
+                        className={cn(
+                          "px-4 py-2 rounded-lg text-xs uppercase font-bold transition-colors",
+                          spec1Choice === 'local' ? "bg-[#CC1111] hover:bg-[#A30E0E] text-white" : "bg-slate-200 text-slate-400 cursor-not-allowed"
+                        )}
+                      >
+                        Подтвердить выбор
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -2163,7 +2301,7 @@ export default function QuestDashboard({
                                   : "border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:bg-slate-800/50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-300"
                               )}
                             >
-                              {opt.id === 'opt_a' ? '🟢' : '⚪'} {opt.text}
+                                {spec3QuestionAnswer === opt.id ? '●' : '○'} {opt.text}
                             </button>
                           ))}
                         </div>
@@ -2245,56 +2383,87 @@ export default function QuestDashboard({
               : 'deficit_danger';
 
           const runSimForecast = () => {
-            let statusText = '';
-            let isWin = false;
+            const event = budgetStatus === 'deficit_danger'
+              ? {
+                  title: 'Срочное заседание: растёт дефицит',
+                  body: `В заявке не хватает ${deficitMln} млн ₽. Выберите, чем пожертвовать сейчас: скоростью проекта или резервом следующего квартала.`,
+                  options: [
+                    { id: 'reserve', label: 'Сохранить резерв', description: 'Снизить нагрузку на бюджет и объяснить перенос части работ.', comfortDelta: -4, efficiencyDelta: 8, deficitDelta: -4 },
+                    { id: 'speed', label: 'Ускорить проект', description: 'Сохранить темп работ, приняв более высокий риск дефицита.', comfortDelta: 8, efficiencyDelta: -8, deficitDelta: 3 },
+                  ],
+                }
+              : residentComfort < 55
+                ? {
+                    title: 'Обратная связь жителей: нужен понятный приоритет',
+                    body: `Индекс комфорта сейчас ${residentComfort}%. Перед утверждением бюджета выберите, как ответить на запрос «${d.primaryDemand}».`,
+                    options: [
+                      { id: 'listen', label: 'Провести слушания', description: 'Добавить адресные меры и объяснить жителям компромисс.', comfortDelta: 8, efficiencyDelta: -3, deficitDelta: 0 },
+                      { id: 'pace', label: 'Сохранить темп инвестиций', description: 'Удержать темп инфраструктурных работ, оставив коммуникацию на потом.', comfortDelta: 2, efficiencyDelta: 7, deficitDelta: 0 },
+                    ],
+                  }
+                : {
+                    title: 'Открытая повестка: как закрепить результат',
+                    body: `Оба индекса выше проходного ориентира. Выберите публичное действие перед публикацией решения по району ${d.name}.`,
+                    options: [
+                      { id: 'open', label: 'Открыть данные', description: 'Опубликовать понятное объяснение приоритетов и ограничений.', comfortDelta: 6, efficiencyDelta: -2, deficitDelta: 0 },
+                      { id: 'reserve', label: 'Сохранить резерв', description: 'Оставить запас на следующий квартал и снизить риск пересмотра.', comfortDelta: -2, efficiencyDelta: 8, deficitDelta: -1 },
+                    ],
+                  };
 
-            if (budgetStatus === 'deficit_danger') {
-              statusText = `В учебной модели дефицит слишком высок (${deficitPercent}%). Перераспределите условные средства и повторите расчёт.`;
-            } else if (residentComfort < 55) {
-              statusText = `Бюджет сбалансирован, но условный индекс комфорта снизился до ${residentComfort}%. Повысьте финансирование дефицитных направлений.`;
-            } else {
-              isWin = true;
-              statusText = `Симуляция для района ${d.name} успешно пройдена: учтён приоритет «${d.primaryDemand}» и сохранён баланс условных средств.`;
-            }
+            setMayorEvent(event);
+            setMayorEventChoice(null);
+            setSimulationReport(null);
+          };
+
+          const confirmMayorEvent = () => {
+            if (!mayorEvent || !mayorEventChoice) return;
+            const option = mayorEvent.options.find(item => item.id === mayorEventChoice);
+            if (!option) return;
+
+            const finalComfort = Math.min(100, Math.max(0, residentComfort + option.comfortDelta));
+            const finalEfficiency = Math.min(100, Math.max(0, economicEfficiency + option.efficiencyDelta));
+            const finalDeficit = Math.min(100, Math.max(0, deficitPercent + option.deficitDelta));
+            const finalDeficitMln = Math.round((finalDeficit / 100) * d.budget);
+            const isWin = finalDeficit <= 8 && finalComfort >= 55 && finalEfficiency >= 55;
+            const statusText = isWin
+              ? `Решение принято: район ${d.name} получил понятный приоритет «${d.primaryDemand}», а резерв бюджета сохранён.`
+              : `Решение требует доработки: один из индексов или дефицит вышли за учебный ориентир. Вернитесь к распределению и попробуйте другой компромисс.`;
 
             setSimulationReport({
-              residentComfort,
-              economicEfficiency,
-              budgetDeficit: deficitPercent,
-              deficitMln,
-              status: budgetStatus,
+              residentComfort: finalComfort,
+              economicEfficiency: finalEfficiency,
+              budgetDeficit: finalDeficit,
+              deficitMln: finalDeficitMln,
+              status: finalDeficit === 0 ? 'perfect' : finalDeficit <= 8 ? 'warning' : 'deficit_danger',
               summaryMsg: statusText,
-              unlockedNft: isWin ? d.id : undefined
+              unlockedNft: isWin ? d.id : undefined,
+              eventTitle: mayorEvent.title,
+              decisionLabel: option.label,
             });
+            setMayorEvent(null);
+            setMayorEventChoice(null);
 
-            // If win, unlock the NFT card persistently!
             if (isWin) {
-              if (!unlockedNfts.includes(d.id)) {
-                setUnlockedNfts(prev => [...prev, d.id]);
-              }
+              if (!unlockedNfts.includes(d.id)) setUnlockedNfts(prev => [...prev, d.id]);
               const rewardKey = 'mayor-success-' + d.id;
-              if (!completedActivities.includes(rewardKey)) {
-                handleCompleteActivity(rewardKey, 150, `Учебный сценарий района ${d.name} успешно сбалансирован. Получена коллекционная карточка.`);
-              } else {
-                showToast(`Проведена успешная симуляция для района ${d.name}!`, 20);
-              }
+              handleCompleteActivity(rewardKey, 150, `Учебный сценарий района ${d.name} успешно сбалансирован. Получена коллекционная карточка.`);
             }
           };
 
           return (
             <div className="space-y-6" id="mayor_simulator_panel">
               {/* Promo Banner */}
-              <div className="bg-linear-to-r from-slate-900 to-slate-800 p-6 rounded-2xl border border-white/5 text-white flex flex-col md:flex-row justify-between items-center gap-6">
+              <div className="bg-gradient-to-br from-[#0E5552] via-[#0F766E] to-[#123B52] p-6 rounded-[26px] border border-white/30 text-white flex flex-col md:flex-row justify-between items-center gap-6 shadow-[0_16px_34px_rgba(15,118,110,0.2)]">
                 <div className="space-y-1">
-                  <span className="inline-flex items-center gap-1.5 uppercase font-bold tracking-wider text-[9px] bg-[#CC1111] text-white px-2.5 py-1 rounded">
-                    👑 Симулятор государственного управления
+                  <span className="inline-flex items-center gap-1.5 uppercase font-bold tracking-wider text-[9px] bg-white/15 text-white px-2.5 py-1 rounded-full border border-white/20">
+                    👑 Учебный симулятор решений
                   </span>
                   <h3 className="text-lg font-black tracking-tight mt-1">Виртуальный Мэр Москвы</h3>
-                  <p className="text-slate-300 text-xs font-medium leading-relaxed max-w-2xl">
-                    Управляйте финансами столичных районов в роли Мэра! Выберите административный округ и распределите целевые средства по ключевым госпрограммам. Цель — максимизировать индекс комфорта жителей и инвестиционную привлекательность, уложившись в установленный годовой лимит.
+                  <p className="text-white/75 text-xs font-medium leading-relaxed max-w-2xl">
+                    Выберите район, распределите условный лимит между тремя направлениями и проведите заседание. После расчёта появится событие с компромиссом — как в настоящем бюджетном цикле.
                   </p>
                 </div>
-                <div className="bg-white dark:bg-[#1e293b]/10 p-3 rounded-2xl border border-white/10 shrink-0 text-amber-300 text-3xl animate-bounce">
+                <div className="bg-white/12 p-3 rounded-2xl border border-white/20 shrink-0 text-amber-200 text-3xl">
                   👑
                 </div>
               </div>
@@ -2303,11 +2472,11 @@ export default function QuestDashboard({
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 
                 {/* Column Left (ID: 7): Parameters Selection & Sliders */}
-                <div className="lg:col-span-7 bg-white dark:bg-[#1e293b] p-5 rounded-2xl border border-[#E2E8F0] dark:border-slate-800 space-y-6">
+                <div className="lg:col-span-7 bg-white/72 p-5 rounded-[24px] border border-white/90 shadow-[0_10px_26px_rgba(15,23,42,0.05)] space-y-6">
                   
                   {/* District Selection Tabs */}
                   <div className="space-y-2">
-                    <label className="text-[10px] font-extrabold text-[#CC1111] uppercase tracking-wider block">1. Выбор района управления</label>
+                    <label className="text-[10px] font-extrabold text-[#0F9F91] uppercase tracking-wider block">1. Выбор района управления</label>
                     <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                       {MAYOR_DISTRICTS.map((item) => (
                         <button
@@ -2315,13 +2484,14 @@ export default function QuestDashboard({
                           id={`btn_mayor_dst_${item.id}`}
                           onClick={() => {
                             setSelectedMayorDistrict(item.id);
-                            setSimulationReport(null);
+                            clearMayorDecision();
                           }}
+                          aria-pressed={selectedMayorDistrict === item.id}
                           className={cn(
                             "py-2 px-1.5 rounded-xl border text-xs font-bold transition-all flex flex-col items-center justify-center gap-1 cursor-pointer",
                             selectedMayorDistrict === item.id
-                              ? "bg-slate-900 border-slate-900 text-white shadow-md scale-[1.03]"
-                              : "bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700/50 text-slate-700 hover:bg-slate-100 dark:bg-slate-800"
+                              ? "bg-[#0F9F91] border-[#0F9F91] text-white shadow-[0_8px_18px_rgba(15,159,145,0.2)] scale-[1.03]"
+                              : "bg-white/70 border-slate-200/80 text-slate-700 hover:bg-[#DDF7F1]/50"
                           )}
                         >
                           <span className="text-base leading-none">{item.coatOfArms}</span>
@@ -2332,12 +2502,12 @@ export default function QuestDashboard({
                   </div>
 
                   {/* Choosen District Context Card */}
-                  <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700/50/60 relative overflow-hidden">
+                  <div className="p-4 bg-[#F5FBFA] rounded-[20px] border border-[#D7F0EC] relative overflow-hidden">
                     <div className="absolute top-1.5 right-2 px-1 rounded bg-slate-200/50 text-[7px] font-mono font-black text-slate-500 uppercase tracking-widest leading-none py-0.5">ID: {d.id.toUpperCase()}-2026</div>
                     
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mt-1.5 sm:mt-0">
                       <div className="flex items-center gap-3 w-full sm:w-auto">
-                        <span className="text-2xl shrink-0 p-2.5 bg-white dark:bg-[#1e293b] rounded-xl border shadow-xs leading-none">{d.coatOfArms}</span>
+                        <span className="text-2xl shrink-0 p-2.5 bg-white rounded-2xl border border-white shadow-xs leading-none">{d.coatOfArms}</span>
                         <div className="sm:hidden flex-1 min-w-0">
                           <span className="text-[9px] uppercase font-black tracking-wider text-[#CC1111] leading-none block">Паспорт района</span>
                           <h4 className="font-extrabold text-sm text-slate-900 dark:text-slate-100 truncate leading-snug">Район {d.name}</h4>
@@ -2345,16 +2515,16 @@ export default function QuestDashboard({
                       </div>
                       
                       <div className="min-w-0 flex-1 w-full space-y-1">
-                        <h4 className="hidden sm:flex items-center justify-between gap-3 font-extrabold text-sm text-slate-900 dark:text-slate-100 leading-tight">
+                        <h4 className="hidden sm:flex items-center justify-between gap-3 font-extrabold text-sm text-slate-900 leading-tight">
                           <span>Администрирование: Район {d.name}</span>
-                          <span className="text-[10px] font-black text-[#CC1111] bg-[#CC1111]/10 px-2.5 py-0.5 rounded border border-[#CC1111]/10 shrink-0 font-mono">
+                          <span className="text-[10px] font-black text-[#0B766E] bg-[#DDF7F1] px-2.5 py-0.5 rounded-full border border-[#BDEDE4] shrink-0 font-mono">
                             Лимит {d.budget} млн ₽
                           </span>
                         </h4>
 
-                        <div className="sm:hidden flex items-center justify-between gap-2 bg-white dark:bg-[#1e293b]/80 p-2 rounded-lg border border-slate-100/80">
+                        <div className="sm:hidden flex items-center justify-between gap-2 bg-white/80 p-2 rounded-full border border-white/90">
                           <span className="text-[9px] uppercase font-bold text-slate-400">Лимит бюджета:</span>
-                          <span className="text-xs font-black text-[#CC1111] font-mono">{d.budget} млн ₽</span>
+                          <span className="text-xs font-black text-[#0B766E] font-mono">{d.budget} млн ₽</span>
                         </div>
                         
                         <p className="text-xs text-slate-600 font-medium leading-relaxed">{d.description}</p>
@@ -2362,11 +2532,11 @@ export default function QuestDashboard({
                     </div>
 
                     <div className="mt-4 pt-3.5 border-t border-slate-200 dark:border-slate-700/50/85 grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
-                      <div className="bg-white dark:bg-[#1e293b]/85 p-3 rounded-xl border border-slate-100">
+                      <div className="bg-white/80 p-3 rounded-2xl border border-white/90">
                         <span className="text-slate-400 font-bold uppercase block text-[8px] tracking-wider mb-0.5">Главный запрос жителей</span>
                         <span className="font-bold text-slate-800 dark:text-slate-100 text-xs leading-normal block">{d.primaryDemand}</span>
                       </div>
-                      <div className="bg-white dark:bg-[#1e293b]/85 p-3 rounded-xl border border-slate-100">
+                      <div className="bg-white/80 p-3 rounded-2xl border border-white/90">
                         <span className="text-slate-400 font-bold uppercase block text-[8px] tracking-wider mb-0.5">Основной проект-хорда</span>
                         <span className="font-bold text-slate-800 dark:text-slate-100 text-xs leading-normal block">{d.mainProject}</span>
                       </div>
@@ -2376,10 +2546,10 @@ export default function QuestDashboard({
                   {/* Sliders allocation mechanism */}
                   <div className="space-y-5">
                     <div className="flex justify-between items-center pb-2 border-b border-slate-100">
-                      <label className="text-[10px] font-extrabold text-[#CC1111] uppercase tracking-wider">
+                      <label className="text-[10px] font-extrabold text-[#0F9F91] uppercase tracking-wider">
                         2. Распределение субсидий (млн руб.)
                       </label>
-                      <span className="text-xxs font-bold text-slate-400">Минимум: 5 млн, Максимум: 100 млн на сферу</span>
+                      <span className="text-[10px] font-bold text-slate-400 text-right">Минимум: 5 млн, максимум: 100 млн на сферу</span>
                     </div>
 
                     {/* Slider 1: Education */}
@@ -2389,18 +2559,19 @@ export default function QuestDashboard({
                           <span>🎒</span>
                           <span>Новый стандарт образования (школы)</span>
                         </span>
-                        <span className="font-mono text-[#CC1111] bg-[#CC1111]/5 border border-[#CC1111]/10 px-2.5 py-0.5 rounded-lg text-xs">
+                        <span className="font-mono text-[#0B766E] bg-[#DDF7F1] border border-[#BDEDE4] px-2.5 py-0.5 rounded-full text-xs">
                           {mayorEducation} млн ₽
                         </span>
                       </div>
                       <input 
+                        aria-label="Бюджет на образование"
                         type="range" min="5" max="100" step="5"
                         value={mayorEducation}
                         onChange={(e) => {
                           setMayorEducation(Number(e.target.value));
-                          setSimulationReport(null);
+                          clearMayorDecision();
                         }}
-                        className="w-full accent-[#CC1111] h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full appearance-none cursor-pointer"
+                        className="w-full accent-[#0F9F91] h-1.5 bg-slate-100 rounded-full appearance-none cursor-pointer"
                       />
                       <p className="text-[9px] text-slate-400 font-medium">Множитель удовлетворенности района: <strong className="text-slate-600 font-bold">x{d.preferenceMultiplier.education}</strong></p>
                     </div>
@@ -2412,18 +2583,19 @@ export default function QuestDashboard({
                           <span>🚇</span>
                           <span>Электробусы и развязки ТПУ</span>
                         </span>
-                        <span className="font-mono text-[#CC1111] bg-[#CC1111]/5 border border-[#CC1111]/10 px-2.5 py-0.5 rounded-lg text-xs">
+                        <span className="font-mono text-[#0B766E] bg-[#DDF7F1] border border-[#BDEDE4] px-2.5 py-0.5 rounded-full text-xs">
                           {mayorTransport} млн ₽
                         </span>
                       </div>
                       <input 
+                        aria-label="Бюджет на транспорт"
                         type="range" min="5" max="100" step="5"
                         value={mayorTransport}
                         onChange={(e) => {
                           setMayorTransport(Number(e.target.value));
-                          setSimulationReport(null);
+                          clearMayorDecision();
                         }}
-                        className="w-full accent-[#CC1111] h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full appearance-none cursor-pointer"
+                        className="w-full accent-[#0F9F91] h-1.5 bg-slate-100 rounded-full appearance-none cursor-pointer"
                       />
                       <p className="text-[9px] text-slate-400 font-medium">Множитель удовлетворенности района: <strong className="text-slate-600 font-bold">x{d.preferenceMultiplier.transport}</strong></p>
                     </div>
@@ -2435,18 +2607,19 @@ export default function QuestDashboard({
                           <span>🏥</span>
                           <span>Поликлиники, Спорт и Мой Район</span>
                         </span>
-                        <span className="font-mono text-[#CC1111] bg-[#CC1111]/5 border border-[#CC1111]/10 px-2.5 py-0.5 rounded-lg text-xs">
+                        <span className="font-mono text-[#0B766E] bg-[#DDF7F1] border border-[#BDEDE4] px-2.5 py-0.5 rounded-full text-xs">
                           {mayorHealthcare} млн ₽
                         </span>
                       </div>
                       <input 
+                        aria-label="Бюджет на здравоохранение и спорт"
                         type="range" min="5" max="100" step="5"
                         value={mayorHealthcare}
                         onChange={(e) => {
                           setMayorHealthcare(Number(e.target.value));
-                          setSimulationReport(null);
+                          clearMayorDecision();
                         }}
-                        className="w-full accent-[#CC1111] h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full appearance-none cursor-pointer"
+                        className="w-full accent-[#0F9F91] h-1.5 bg-slate-100 rounded-full appearance-none cursor-pointer"
                       />
                       <p className="text-[9px] text-slate-400 font-medium">Множитель удовлетворенности района: <strong className="text-slate-600 font-bold">x{d.preferenceMultiplier.healthcare}</strong></p>
                     </div>
@@ -2459,11 +2632,14 @@ export default function QuestDashboard({
                 <div className="lg:col-span-5 flex flex-col gap-6">
 
                   {/* Real-time Indicator Gauges */}
-                  <div className="bg-white dark:bg-[#1e293b] p-5 rounded-2xl border border-[#E2E8F0] dark:border-slate-800 space-y-4 flex-1 flex flex-col justify-between">
+                  <div className="bg-white/72 p-5 rounded-[24px] border border-white/90 shadow-[0_10px_26px_rgba(15,23,42,0.05)] space-y-4 flex-1 flex flex-col justify-between">
                     <div>
                       <h4 className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-4">
                         3. Индикаторы моделирования бюджета
                       </h4>
+                      <p className="text-[10px] text-[#64748B] leading-relaxed mb-4 rounded-xl bg-[#F5FBFA] border border-[#D7F0EC] px-3 py-2">
+                        Проходной ориентир учебной модели: комфорт ≥ 55%, эффективность ≥ 55%, дефицит ≤ 8%. Коэффициенты не являются районной статистикой.
+                      </p>
 
                       <div className="space-y-4">
                         
@@ -2542,20 +2718,81 @@ export default function QuestDashboard({
                       id="btn_trigger_mayor_forecast"
                       onClick={runSimForecast}
                       className={cn(
-                        "w-full py-3.5 rounded-xl text-xs font-black uppercase text-white shadow-xs tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2",
-                        budgetStatus === 'deficit_danger' 
-                          ? "bg-slate-400 hover:bg-slate-50 dark:bg-slate-800/500" 
-                          : "bg-gradient-to-r from-[#CC1111] to-[#E11D48] hover:scale-[1.01] hover:shadow-md"
+                        "w-full py-3.5 rounded-full text-xs font-black tracking-tight transition-all cursor-pointer flex items-center justify-center gap-2",
+                        "teal-action hover:scale-[1.01] hover:shadow-md"
                       )}
                     >
-                      <span>🔄</span>
-                      <span>Провести заседание & Утвердить Бюджет Закон</span>
+                      <span>✦</span>
+                      <span>{mayorEvent ? 'Вернуться к событию' : 'Провести заседание'}</span>
                     </button>
                   </div>
 
                 </div>
 
               </div>
+
+              {/* Consequence step: the decision is not a one-click win. */}
+              <AnimatePresence>
+                {mayorEvent && (
+                  <motion.section
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 8 }}
+                    className="bg-[#F0FBFA] border border-[#BDEDE4] rounded-[24px] p-5 sm:p-6 shadow-[0_12px_28px_rgba(15,159,145,0.1)]"
+                    aria-labelledby="mayor-event-title"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-5">
+                      <div>
+                        <span className="text-[10px] uppercase tracking-widest font-black text-[#0F9F91]">4. Событие бюджетного цикла</span>
+                        <h4 id="mayor-event-title" className="text-lg font-black text-[#172033] mt-1">{mayorEvent.title}</h4>
+                        <p className="text-sm text-[#475569] mt-1 max-w-3xl leading-relaxed">{mayorEvent.body}</p>
+                      </div>
+                      <span className="rounded-full bg-white/80 border border-white px-3 py-1 text-[10px] font-bold text-[#64748B] shrink-0">Учебная модель</span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {mayorEvent.options.map(option => {
+                        const selected = mayorEventChoice === option.id;
+                        return (
+                          <button
+                            key={option.id}
+                            type="button"
+                            aria-pressed={selected}
+                            onClick={() => setMayorEventChoice(option.id)}
+                            className={cn(
+                              "text-left rounded-[20px] border p-4 transition-all cursor-pointer",
+                              selected
+                                ? "bg-white border-[#0F9F91] ring-2 ring-[#0F9F91]/15 shadow-[0_8px_18px_rgba(15,159,145,0.12)]"
+                                : "bg-white/65 border-white hover:border-[#BDEDE4] hover:bg-white"
+                            )}
+                          >
+                            <span className="flex items-center justify-between gap-2 text-sm font-black text-[#172033]">
+                              {option.label}
+                              <span className={cn("w-5 h-5 rounded-full border flex items-center justify-center text-[10px]", selected ? "border-[#0F9F91] bg-[#0F9F91] text-white" : "border-slate-300 text-transparent")}>✓</span>
+                            </span>
+                            <span className="block text-xs text-[#64748B] mt-1.5 leading-relaxed">{option.description}</span>
+                            <span className="flex flex-wrap gap-1.5 mt-3 text-[10px] font-mono font-bold">
+                              <span className="rounded-full bg-[#DDF7F1] text-[#0B766E] px-2 py-1">комфорт {option.comfortDelta > 0 ? '+' : ''}{option.comfortDelta}</span>
+                              <span className="rounded-full bg-slate-100 text-[#475569] px-2 py-1">эффект {option.efficiencyDelta > 0 ? '+' : ''}{option.efficiencyDelta}</span>
+                              {option.deficitDelta !== 0 && <span className="rounded-full bg-amber-50 text-amber-700 px-2 py-1">дефицит {option.deficitDelta > 0 ? '+' : ''}{option.deficitDelta} п.п.</span>}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-5 pt-4 border-t border-[#BDEDE4]">
+                      <p className="text-[11px] text-[#64748B]">Сначала сравните компромиссы, затем зафиксируйте решение в отчёте.</p>
+                      <button
+                        type="button"
+                        onClick={confirmMayorEvent}
+                        disabled={!mayorEventChoice}
+                        className={cn("rounded-full px-5 py-2.5 text-xs font-black transition-all", mayorEventChoice ? "teal-action cursor-pointer" : "bg-slate-200 text-slate-400 cursor-not-allowed")}
+                      >
+                        Зафиксировать решение
+                      </button>
+                    </div>
+                  </motion.section>
+                )}
+              </AnimatePresence>
 
               {/* Simulation Result Report overlay/modal block */}
               <AnimatePresence>
@@ -2564,29 +2801,32 @@ export default function QuestDashboard({
                     initial={{ opacity: 0, scale: 0.98, y: 15 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.98, y: 10 }}
-                    className="p-5 rounded-2xl border border-slate-200 dark:border-slate-700/50/80 bg-[#1E293B] text-white shadow-2xl relative overflow-hidden"
+                    className="p-5 rounded-[24px] border border-white/90 bg-white/80 text-[#172033] shadow-[0_14px_34px_rgba(15,23,42,0.08)] relative overflow-hidden"
                     id="sim_report_canvas"
+                    role="status"
+                    aria-live="polite"
                   >
-                    <div className="absolute top-0 right-0 w-80 h-full bg-radial from-slate-800/80 to-transparent pointer-events-none" />
+                    <div className="absolute top-0 right-0 w-80 h-full bg-radial from-[#DDF7F1]/80 to-transparent pointer-events-none" />
                     
-                    <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pb-4 border-b border-white/10 relative z-10">
+                    <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pb-4 border-b border-slate-200/70 relative z-10">
                       <div>
-                        <span className="text-[10px] font-black uppercase text-amber-300 tracking-wider">Заключение Контрольно-Счётной Палаты Москвы</span>
-                        <h4 className="text-base font-extrabold text-white mt-0.5">Экспертный отчёт по проекту бюджета округа {d.name}</h4>
+                        <span className="text-[10px] font-black uppercase text-[#0F9F91] tracking-wider">Учебный паспорт решения</span>
+                        <h4 className="text-base font-extrabold text-[#172033] mt-0.5">Итог по проекту бюджета района {d.name}</h4>
+                        <p className="text-[11px] text-[#64748B] mt-1">Событие: {simulationReport.eventTitle} · выбор: {simulationReport.decisionLabel}</p>
                       </div>
                       <div className="shrink-0 flex gap-2">
                         {simulationReport.unlockedNft ? (
-                          <span className="bg-emerald-500/20 text-emerald-400 font-black text-[10px] border border-emerald-500/30 py-1 px-3 rounded-lg leading-tight">
+                            <span className="bg-[#DDF7F1] text-[#0B766E] font-black text-[10px] border border-[#BDEDE4] py-1 px-3 rounded-full leading-tight">
                             ✓ УСПЕШНО ОДОБРЕНО
                           </span>
                         ) : (
-                          <span className="bg-rose-500/20 text-rose-400 font-black text-[10px] border border-rose-500/30 py-1 px-3 rounded-lg leading-tight">
+                            <span className="bg-rose-50 text-rose-700 font-black text-[10px] border border-rose-200 py-1 px-3 rounded-full leading-tight">
                             ✗ ОТКЛОНЕНО МЭРИЕЙ
                           </span>
                         )}
                         <button 
                           onClick={() => setSimulationReport(null)}
-                          className="text-white/40 hover:text-white/80 font-bold bg-white dark:bg-[#1e293b]/10 hover:bg-white dark:bg-[#1e293b]/15 px-2 py-1 rounded text-xs select-none cursor-pointer"
+                          className="text-slate-400 hover:text-slate-700 font-bold bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded-full text-xs select-none cursor-pointer"
                         >
                           ✕
                         </button>
@@ -2600,30 +2840,30 @@ export default function QuestDashboard({
                         <p className={cn(
                           "text-xs font-semibold leading-relaxed p-3.5 rounded-xl border",
                           simulationReport.unlockedNft 
-                            ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-100" 
-                            : "bg-rose-500/10 border-rose-500/20 text-rose-100"
+                            ? "bg-[#DDF7F1] border-[#BDEDE4] text-[#0B766E]"
+                            : "bg-rose-50 border-rose-200 text-rose-800"
                         )}>
                           {simulationReport.summaryMsg}
                         </p>
 
                         <div className="grid grid-cols-3 gap-3 text-center">
-                          <div className="p-3 bg-slate-800/80 rounded-xl border border-white/5">
+                          <div className="p-3 bg-white/75 rounded-xl border border-slate-200/80">
                             <span className="block text-slate-400 text-[8px] uppercase font-bold">Комфорт жителей</span>
-                            <span className="text-sm font-black text-amber-300">{simulationReport.residentComfort}%</span>
+                            <span className="text-sm font-black text-[#0F9F91]">{simulationReport.residentComfort}%</span>
                           </div>
-                          <div className="p-3 bg-slate-800/80 rounded-xl border border-white/5">
+                          <div className="p-3 bg-white/75 rounded-xl border border-slate-200/80">
                             <span className="block text-slate-400 text-[8px] uppercase font-bold">Эффективность</span>
-                            <span className="text-sm font-black text-emerald-400">{simulationReport.economicEfficiency}%</span>
+                            <span className="text-sm font-black text-[#0B766E]">{simulationReport.economicEfficiency}%</span>
                           </div>
-                          <div className="p-3 bg-slate-800/80 rounded-xl border border-white/5">
+                          <div className="p-3 bg-white/75 rounded-xl border border-slate-200/80">
                             <span className="block text-slate-400 text-[8px] uppercase font-bold">Дефицит бюджета</span>
-                            <span className="text-sm font-black text-rose-400">{simulationReport.budgetDeficit}%</span>
+                            <span className="text-sm font-black text-rose-600">{simulationReport.budgetDeficit}%</span>
                           </div>
                         </div>
                       </div>
 
                       {/* Collectible district premium card preview */}
-                      <div className="md:col-span-4 flex flex-col items-center justify-center p-4 bg-slate-900/60 rounded-xl border border-white/10 text-center">
+                      <div className="md:col-span-4 flex flex-col items-center justify-center p-4 bg-[#F5FBFA] rounded-xl border border-[#D7F0EC] text-center">
                         {simulationReport.unlockedNft ? (
                           <div className="space-y-2 group">
                             <div className="w-16 h-20 bg-linear-to-b from-amber-500/20 via-slate-800 to-black rounded-lg border border-amber-500/50 shadow-lg mx-auto flex flex-col items-center justify-center p-1 relative overflow-hidden animate-pulse">
@@ -2631,16 +2871,16 @@ export default function QuestDashboard({
                               <span className="text-[7px] text-amber-300 font-extrabold uppercase mt-1 tracking-wider">ЗНАК ОТКРЫТ</span>
                             </div>
                             <div>
-                              <p className="text-[11px] font-black text-white">Успех! Получено:</p>
-                              <p className="text-[10px] font-bold text-amber-400 leading-tight">Знак: «Инвестор {d.name}»</p>
-                              <span className="text-[9px] text-emerald-400 font-bold font-mono">+150 XP & +150 Б</span>
+                              <p className="text-[11px] font-black text-[#172033]">Успех! Получено:</p>
+                              <p className="text-[10px] font-bold text-amber-700 leading-tight">Знак: «Инвестор {d.name}»</p>
+                              <span className="text-[9px] text-[#0B766E] font-bold font-mono">+150 XP & +150 Б</span>
                             </div>
                           </div>
                         ) : (
                           <div className="space-y-1.5 opacity-45">
                             <span className="text-3xl block filter grayscale">🔒</span>
-                            <p className="text-[10px] text-slate-400 font-bold leading-tight">Наградной знак закрыт</p>
-                            <p className="text-[8px] text-slate-500 leading-none">Сбалансируйте годовой бюджет района до нормы дефицита (до 8%)!</p>
+                            <p className="text-[10px] text-slate-500 font-bold leading-tight">Наградной знак закрыт</p>
+                            <p className="text-[8px] text-slate-500 leading-none">Сбалансируйте бюджет и поднимите оба индекса выше проходного ориентира.</p>
                           </div>
                         )}
                       </div>
@@ -2665,7 +2905,7 @@ export default function QuestDashboard({
               <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700/50/60 text-xs">
                 <span className="font-extrabold text-[#CC1111] uppercase select-none block text-[10px] tracking-wider">🗺️ Мониторинг Финансовых Округов Москвы</span>
                 <p className="text-[#475569] font-medium leading-relaxed max-w-4xl mt-0.5">
-                  Нажмите на округ, чтобы открыть демонстрационный сценарий. Значения на карте условные и не являются официальной районной статистикой.
+                  Нажмите на округ, чтобы открыть учебный сценарий. Значения на карте условные и не являются официальной районной статистикой.
                 </p>
               </div>
 
@@ -2887,7 +3127,7 @@ export default function QuestDashboard({
                 {
                   id: 'welcome',
                   sender: 'ai' as const,
-                  text: "Привет! Это интерактивный справочник конкурсного прототипа. Он отвечает по заранее подготовленным темам и не является официальным консультантом. Напишите **«викторина»**, чтобы запустить учебный квиз дня.",
+                  text: "Привет! Это интерактивный справочник учебного проекта. Он отвечает по заранее подготовленным темам и не является официальным консультантом. Напишите **«викторина»**, чтобы запустить учебный квиз дня.",
                   timestamp: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
                 }
               ];

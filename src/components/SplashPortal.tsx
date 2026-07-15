@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Landmark, TrendingUp, Users, Building2, ArrowRight, ShieldCheck } from 'lucide-react';
+import { TrendingUp, Users, Building2, ArrowRight, ShieldCheck } from 'lucide-react';
 
 interface SplashPortalProps {
   onEnter: () => void;
@@ -187,7 +187,7 @@ export default function SplashPortal({ onEnter }: SplashPortalProps) {
     setIsEntering(true);
     setTimeout(() => {
       onEnter();
-    }, 800);
+    }, 320);
   };
 
   return (
@@ -208,19 +208,6 @@ export default function SplashPortal({ onEnter }: SplashPortalProps) {
             transition={{ duration: 0.8 }}
             className="relative z-10 flex flex-col items-center justify-center px-4 max-w-4xl w-full"
           >
-            {/* Top badge */}
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2, duration: 0.6 }}
-              className="mb-6"
-            >
-              <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-xs font-bold text-[#94a3b8] uppercase tracking-widest">
-                <Landmark size={14} className="text-[#CC1111]" />
-                Конкурсный образовательный прототип
-              </span>
-            </motion.div>
-
             {/* Main title */}
             <motion.h1
               initial={{ opacity: 0, y: 30 }}
@@ -287,9 +274,9 @@ export default function SplashPortal({ onEnter }: SplashPortalProps) {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 1.8, duration: 0.6 }}
-              className="mt-6 text-[10px] sm:text-xs text-[#475569] font-medium text-center"
+              className="fixed bottom-5 left-4 right-4 text-[10px] sm:text-xs text-[#64748B] font-medium text-center max-w-3xl mx-auto"
             >
-              Базовые показатели — по Закону города Москвы № 39 от 01.11.2025 • Проект не является официальным городским сервисом
+              Учебный конкурсный прототип на открытых данных • неофициальный городской сервис • базовые показатели — по Закону города Москвы № 39 от 01.11.2025
             </motion.p>
           </motion.div>
         )}
@@ -302,13 +289,13 @@ export default function SplashPortal({ onEnter }: SplashPortalProps) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.5 }}
+            transition={{ duration: 0.25 }}
             className="fixed inset-0 bg-[#0F172A] z-[10000] pointer-events-none flex items-center justify-center"
           >
             <motion.div 
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1.2, opacity: 1 }}
-              transition={{ duration: 0.4 }}
+              transition={{ duration: 0.25 }}
               className="w-16 h-16 rounded-full border-2 border-[#CC1111]/50 flex items-center justify-center"
             >
               <div className="w-6 h-6 rounded-full bg-[#CC1111] animate-ping" />
