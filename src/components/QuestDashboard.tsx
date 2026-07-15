@@ -957,7 +957,7 @@ export default function QuestDashboard({
               // Quiz Grid Listing
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* One deterministic daily task supports fair rewards and repeat protection. */}
-                <div className="md:col-span-2 bg-gradient-to-br from-[#E9FBF7] via-white/80 to-[#F7FAFF] p-6 rounded-[26px] border border-white/90 shadow-[0_14px_34px_rgba(15,23,42,0.06)] flex flex-col md:flex-row items-center justify-between gap-5 relative overflow-hidden group">
+                <div className="md:col-span-2 bg-gradient-to-br from-[#E9FBF7] via-white/80 to-[#F7FAFF] dark:from-[#12313A] dark:via-[#1A3540] dark:to-[#1A3040] p-6 rounded-[26px] border border-white/90 dark:border-[#3A5967] shadow-[0_14px_34px_rgba(15,23,42,0.06)] dark:shadow-[0_14px_34px_rgba(0,0,0,0.26)] flex flex-col md:flex-row items-center justify-between gap-5 relative overflow-hidden group">
                   {/* Micro-Illustration */}
                   <div className="absolute inset-0 pointer-events-none opacity-5">
                     <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
