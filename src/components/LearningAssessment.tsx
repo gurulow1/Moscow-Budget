@@ -86,7 +86,7 @@ const POST_QUESTIONS: AssessmentQuestion[] = [
   },
   {
     competency: 'Работа с источником',
-    question: 'Как отличить официальную цифру от учебной модели внутри проекта?',
+    question: 'Как отличить официальный показатель от сценарного расчёта внутри проекта?',
     options: ['По количеству эмодзи', 'По статусу и прямой ссылке на первоисточник', 'Никак'],
     correct: 1,
     sourceId: 'budgetParameters2026',
@@ -234,7 +234,7 @@ export default function LearningAssessment({ postUnlocked }: { postUnlocked: boo
         <div>
           <span className="text-[10px] font-black uppercase tracking-[0.18em] text-[#0F9F91]">Образовательный результат зафиксирован</span>
           <h2 id="assessment-result-title" className="text-lg font-black text-[#172033] mt-1">Вход {prePercent}% → итог {postPercent}%</h2>
-          <p className="text-sm text-[#64748B] mt-1">Прирост: <strong className={delta >= 0 ? 'text-[#0B766E]' : 'text-amber-700'}>{delta > 0 ? '+' : ''}{delta} п.п.</strong> Результат хранится локально в конкурсном прототипе.</p>
+          <p className="text-sm text-[#64748B] mt-1">Прирост: <strong className={delta >= 0 ? 'text-[#0B766E]' : 'text-amber-700'}>{delta > 0 ? '+' : ''}{delta} п.п.</strong> Результат сохранён в профиле.</p>
         </div>
         <div className="rounded-[20px] bg-[#E8F7F4] border border-[#BDEDE4] px-5 py-3 text-center shrink-0">
           <span className="block text-[10px] uppercase font-black tracking-wider text-[#0B766E]">эффект обучения</span>

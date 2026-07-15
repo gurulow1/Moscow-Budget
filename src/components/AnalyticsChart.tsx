@@ -51,7 +51,7 @@ const DISTRICTS = [
   { id: 'ЦАО', label: 'ЦАО', fund: '540 млрд ₽', fundValue: 540, perCapita: '143 500 ₽/чел', value: 540, obj: 'Развитие ИТ-кластера на Китай-Городе и благоустройство пешеходных улиц.', share: '24%', rank: 1, color: '#1E3A8A' },
   { id: 'САО', label: 'САО', fund: '410 млрд ₽', fundValue: 410, perCapita: '131 000 ₽/чел', value: 410, obj: 'Реконструкция транспортных узлов, ТПУ и благоустройство парка Северного Речного Вокзала.', share: '18%', rank: 2, color: '#312E81' },
   { id: 'ЗАО', label: 'ЗАО', fund: '420 млрд ₽', fundValue: 420, perCapita: '128 000 ₽/чел', value: 420, obj: 'Субсидирование научно-технических лабораторий МГУ и запуск инкубаторов Раменках.', share: '19%', rank: 3, color: '#0F172A' },
-  { id: 'ТиНАО', label: 'ТиНАО', fund: '490 млрд ₽', fundValue: 490, perCapita: '122 000 ₽/чел', value: 490, obj: 'Строительство новых центров притяжения, школ, больниц и проведение скоростного трамвая.', share: '22%', rank: 4, color: '#CC1111' },
+  { id: 'ТиНАО', label: 'ТиНАО', fund: '490 млрд ₽', fundValue: 490, perCapita: '122 000 ₽/чел', value: 490, obj: 'Строительство новых центров притяжения, школ, больниц и проведение скоростного трамвая.', share: '22%', rank: 4, color: '#0F9F91' },
   { id: 'ВАО', label: 'ВАО', fund: '380 млрд ₽', fundValue: 380, perCapita: '112 000 ₽/чел', value: 380, obj: 'Экологическая модернизация производств в промзонах и озеленение Измайловского парка.', share: '17%', rank: 5, color: '#0284C7' },
 ];
 
@@ -225,9 +225,9 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
               Интерактивная карта распределения расходов
             </h2>
             <p className="text-[#475569] text-xs sm:text-sm leading-relaxed mt-0.5">
-              Изучите округлённую структуру расходов Москвы на 2026 год. Верхнеуровневые суммы взяты из официального плана; детализация внутри направлений и округовые сценарии ниже являются учебной моделью. На социальную сферу в целом предусмотрено около 3,2 трлн ₽.
+              Изучите структуру расходов Москвы на 2026 год. Верхнеуровневые суммы взяты из плана, а ниже их можно рассмотреть в разрезе направлений и городских сценариев. На социальную сферу в целом предусмотрено около 3,2 трлн ₽.
             </p>
-            <a href="https://budget.mos.ru/news/14617" target="_blank" rel="noopener noreferrer" className="inline-block mt-1 text-[11px] font-bold text-[#CC1111] hover:underline">
+            <a href="https://budget.mos.ru/news/14617" target="_blank" rel="noopener noreferrer" className="inline-block mt-1 text-[11px] font-bold text-[#0B766E] hover:underline">
               Официальный источник данных →
             </a>
           </div>
@@ -236,12 +236,12 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
         {/* Display switches */}
         <div className="flex flex-wrap items-center gap-3 shrink-0">
           {/* % / ₽ Unit Switcher (Audit #5) */}
-          <div className="inline-flex bg-[#F1F5F9] p-1 rounded-xl border border-[#E2E8F0] dark:border-slate-800 relative">
+          <div className="inline-flex bg-white/60 p-1 rounded-full border border-white/90 shadow-sm dark:border-slate-800 relative">
             <button
               onClick={() => setDisplayUnit('percent')}
               className={cn(
-                "px-3 py-1.5 rounded-lg text-xs font-black transition-all select-none outline-none",
-                displayUnit === 'percent' ? "bg-white dark:bg-[#1e293b] text-[#CC1111] shadow-xs" : "text-[#475569] hover:text-[#0F172A] dark:text-slate-100"
+                "px-3.5 py-1.5 rounded-full text-xs font-black transition-all select-none outline-none",
+                displayUnit === 'percent' ? "bg-white dark:bg-[#1e293b] text-[#0B766E] shadow-sm" : "text-[#475569] hover:text-[#0F172A] dark:text-slate-100"
               )}
             >
               %
@@ -249,8 +249,8 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
             <button
               onClick={() => setDisplayUnit('currency')}
               className={cn(
-                "px-3 py-1.5 rounded-lg text-xs font-black transition-all select-none outline-none",
-                displayUnit === 'currency' ? "bg-white dark:bg-[#1e293b] text-[#CC1111] shadow-xs" : "text-[#475569] hover:text-[#0F172A] dark:text-slate-100"
+                "px-3.5 py-1.5 rounded-full text-xs font-black transition-all select-none outline-none",
+                displayUnit === 'currency' ? "bg-white dark:bg-[#1e293b] text-[#0B766E] shadow-sm" : "text-[#475569] hover:text-[#0F172A] dark:text-slate-100"
               )}
             >
               ₽
@@ -258,11 +258,11 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
           </div>
 
           {/* Premium Segmented Control Selector */}
-          <div className="inline-flex bg-[#F1F5F9] p-1 rounded-xl border border-[#E2E8F0] dark:border-slate-800 relative">
+          <div className="inline-flex bg-white/60 p-1 rounded-full border border-white/90 shadow-sm dark:border-slate-800 relative">
             <button
               onClick={() => setIsPersonal(false)}
               className={cn(
-                "relative flex justify-center items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black transition-colors duration-200 z-10 outline-none select-none",
+                "relative flex justify-center items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-black transition-colors duration-200 z-10 outline-none select-none",
                 !isPersonal ? "text-[#0F172A] dark:text-slate-100" : "text-[#64748B] hover:text-[#0F172A] dark:text-slate-100"
               )}
             >
@@ -271,7 +271,7 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
               {!isPersonal && (
                 <motion.div
                   layoutId="active_analytic_toggle"
-                  className="absolute inset-0 bg-white dark:bg-[#1e293b] rounded-lg shadow-xs ring-1 ring-black/5 -z-10"
+                  className="absolute inset-0 bg-white dark:bg-[#1e293b] rounded-full shadow-sm ring-1 ring-[#0F9F91]/10 -z-10"
                   transition={{ type: "spring", stiffness: 385, damping: 30 }}
                 />
               )}
@@ -279,7 +279,7 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
             <button
               onClick={() => setIsPersonal(true)}
               className={cn(
-                "relative flex justify-center items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black transition-colors duration-200 z-10 outline-none select-none",
+                "relative flex justify-center items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-black transition-colors duration-200 z-10 outline-none select-none",
                 isPersonal ? "text-white" : "text-[#64748B] hover:text-[#0F172A] dark:text-slate-100"
               )}
             >
@@ -288,7 +288,7 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
               {isPersonal && (
                 <motion.div
                   layoutId="active_analytic_toggle"
-                  className="absolute inset-0 bg-[#0F172A] rounded-lg shadow-xs -z-10"
+                  className="absolute inset-0 bg-[#0F9F91] rounded-full shadow-sm -z-10"
                   transition={{ type: "spring", stiffness: 385, damping: 30 }}
                 />
               )}
@@ -302,7 +302,7 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
         <motion.div 
           initial={{ opacity: 0, y: 5 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-xl flex items-start gap-3 -mt-3.5"
+          className="glass-inset p-4 rounded-[20px] flex items-start gap-3 -mt-3.5"
         >
           <div className="p-2 bg-emerald-50 dark:bg-emerald-950/45 text-emerald-600 dark:text-emerald-400 rounded-lg shrink-0">
             <Wallet size={16} />
@@ -310,7 +310,7 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
           <div className="text-xs sm:text-sm">
             <h4 className="font-extrabold text-[#0F172A] dark:text-slate-100">Что показывает эта модель?</h4>
             <p className="text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-              Для сравнения масштаба ориентировочная сумма возврата <span className="font-mono text-[#0F172A] dark:text-slate-200 font-extrabold">{formatCurrency(deductionModelAmount)}</span> условно распределяется по округлённым долям расходов. Например, 13% модели приходится на образование — <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold">{formatCurrency(deductionModelAmount * 0.13)}</span>. Это не распределение вашего НДФЛ и не расчёт личного вклада в бюджет.
+              Для сравнения масштаба сумма возврата <span className="font-mono text-[#0F172A] dark:text-slate-200 font-extrabold">{formatCurrency(deductionModelAmount)}</span> распределена по долям расходов. Например, 13% приходится на образование — <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold">{formatCurrency(deductionModelAmount * 0.13)}</span>.
             </p>
           </div>
         </motion.div>
@@ -323,13 +323,13 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
         <div className="lg:col-span-12 xl:col-span-7 flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-black text-[#0F172A] dark:text-slate-100 uppercase tracking-wide flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#CC1111]" />
+              <span className="w-2.5 h-2.5 rounded-full bg-[#0F9F91]" />
               Отраслевые группы расходов
             </h3>
             {selectedSector && (
               <button 
                 onClick={() => setSelectedSector(null)}
-                className="text-xs font-bold text-[#CC1111] hover:text-[#A30E0E] transition-colors"
+                className="text-xs font-bold text-[#0B766E] hover:text-[#0F9F91] transition-colors"
               >
                 ← Вернуться в общий бюджет
               </button>
@@ -352,12 +352,12 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
                   onMouseEnter={() => setHoveredSector(item.id)}
                   onMouseLeave={() => setHoveredSector(null)}
                   className={cn(
-                    "border rounded-2xl overflow-hidden shadow-xs hover:shadow-md transition-all duration-300 cursor-pointer select-none flex flex-col border-slate-200 dark:border-slate-700/50",
-                    isSelected 
-                      ? "bg-slate-50 dark:bg-slate-800/50 border-[#CC1111] ring-4 ring-[#CC1111]/5 sm:col-span-2" 
+                    "glass-panel border rounded-2xl overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer select-none flex flex-col border-slate-200/60 dark:border-slate-700/50",
+                    isSelected
+                      ? "bg-[#EAF9F6] dark:bg-slate-800/50 border-[#0F9F91] ring-4 ring-[#0F9F91]/10 sm:col-span-2"
                       : isAnySelected 
-                        ? "opacity-55 hover:opacity-100 bg-white dark:bg-[#1e293b]" 
-                        : "bg-white dark:bg-[#1e293b] hover:border-slate-300"
+                        ? "opacity-55 hover:opacity-100"
+                        : "hover:border-[#0F9F91]/35"
                   )}
                 >
                   <div className="flex flex-1">
@@ -404,7 +404,7 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
                           onClick={(event) => event.stopPropagation()}
                           className="w-fit text-[10px] font-bold text-[#0B766E] hover:underline"
                         >
-                          {item.status === 'official' ? 'Официальная цифра' : 'Расчётный остаток'} · источник ↗
+                                {item.status === 'official' ? 'Официальный показатель' : 'Расчётный показатель'} · источник ↗
                         </a>
                       )}
 
@@ -417,9 +417,9 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
                             exit={{ opacity: 0, height: 0 }}
                             className="border-t border-slate-200 dark:border-slate-700/50 mt-3 pt-3 space-y-3"
                           >
-                            <div className="flex justify-between items-center bg-[#CC1111]/5 px-3 py-1.5 rounded-lg border border-[#CC1111]/15">
-                              <span className="text-[10px] uppercase font-black text-[#CC1111] tracking-wider leading-none">
-                                Учебная модель подкатегорий:
+                            <div className="flex justify-between items-center bg-[#DDF7F1] px-3 py-1.5 rounded-lg border border-[#BDEDE4]">
+                              <span className="text-[10px] uppercase font-black text-[#0B766E] tracking-wider leading-none">
+                                Детализация направления:
                               </span>
                               <span className="text-[9px] font-black text-slate-500 uppercase">
                                 кликните для скрытия
@@ -434,10 +434,10 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
                                   : formatBudgetAmount(item.amountBillion * (sub.value / 100));
                                 
                                 return (
-                                  <div key={sIdx} className="bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700/50 rounded-xl p-3 flex flex-col gap-2">
+                                  <div key={sIdx} className="glass-inset rounded-[18px] p-3 flex flex-col gap-2">
                                     <div className="flex justify-between items-start gap-2">
                                       <span className="text-xs font-bold text-[#0F172A] dark:text-slate-100">{sub.name}</span>
-                                      <span className="text-xs font-black font-mono text-[#CC1111]">{sub.value}%</span>
+                                      <span className="text-xs font-black font-mono text-[#0B766E]">{sub.value}%</span>
                                     </div>
                                     <div className="flex justify-between items-center text-[10px] text-slate-400">
                                       <span>Итого от всего бюджета: <strong className="text-slate-700 font-bold">{subPercentOfBudget}%</strong></span>
@@ -465,9 +465,9 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
         </div>
 
         {/* Right Aspect: Interactive SVG Donut on Desktop, beautifully adapted Stacked cards on Mobile */}
-        <div className="lg:col-span-12 xl:col-span-5 flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-6 border border-slate-200 dark:border-slate-700/50">
+        <div className="lg:col-span-12 xl:col-span-5 flex flex-col items-center justify-center glass-panel rounded-[24px] p-6 border border-slate-200/60 dark:border-slate-700/50">
           <div className="w-full text-center mb-4">
-            <span className="text-[10px] font-black uppercase text-[#CC1111] tracking-widest block">визуальный дашборд</span>
+            <span className="text-[10px] font-black uppercase text-[#0F9F91] tracking-widest block">визуальный дашборд</span>
             <h4 className="text-sm font-black text-[#0F172A] dark:text-slate-100 mt-0.5">
               {isMobile ? "Карта распределения" : "Круговой секторный обзор"}
             </h4>
@@ -477,7 +477,7 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
             /* MOBILE STACKED VERICAL PROGRESS-BARS (Audit #5: donut chart unreadable under 320px) */
             <div className="w-full space-y-3.5">
               <p className="text-[11px] text-[#475569] leading-relaxed font-semibold italic flex items-center gap-1">
-                <Info size={13} className="text-[#CC1111]" />
+                <Info size={13} className="text-[#0F9F91]" />
                 Показана оптимизированная таблица распределения инвестиций
               </p>
               {currentData.map((s) => {
@@ -488,8 +488,8 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
                     key={s.id} 
                     onClick={() => setSelectedSector(isSelected ? null : s.id)} 
                     className={cn(
-                      "bg-white dark:bg-[#1e293b] p-3 rounded-xl border transition-all duration-200 cursor-pointer",
-                      isSelected ? "border-[#CC1111] ring-3 ring-[#CC1111]/5" : "border-slate-200 dark:border-slate-700/50"
+                      "glass-row p-3 rounded-[18px] border transition-all duration-200 cursor-pointer",
+                      isSelected ? "border-[#0F9F91] ring-3 ring-[#0F9F91]/10" : "border-slate-200 dark:border-slate-700/50"
                     )}
                   >
                     <div className="flex items-center justify-between gap-2 mb-1.5">
@@ -503,7 +503,7 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
                       <div className="h-full rounded-full" style={{ width: `${s.value}%`, backgroundColor: s.color }} />
                     </div>
                     {isSelected && (
-                      <div className="mt-2 text-[10px] font-bold text-[#CC1111] flex items-center justify-between">
+                      <div className="mt-2 text-[10px] font-bold text-[#0B766E] flex items-center justify-between">
                         <span>Раскрыта детализация подкатегорий во второй панели</span>
                         <span>{s.value}%</span>
                       </div>
@@ -637,7 +637,7 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
                           {isPersonal ? formatCurrency(deductionModelAmount) : formatBudgetAmount(TOTAL_EXPENSES_BILLION, 3)}
                         </span>
                       )}
-                      <span className="text-[8px] font-bold text-[#CC1111] uppercase tracking-wide mt-1.5 animate-pulse">
+                      <span className="text-[8px] font-bold text-[#0F9F91] uppercase tracking-wide mt-1.5 animate-pulse">
                         выберите сектор
                       </span>
                     </motion.div>
@@ -667,33 +667,33 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
         
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="bg-[#CC1111]/10 text-[#CC1111] p-2 rounded-xl border border-[#CC1111]/20">
+            <div className="bg-[#DDF7F1] text-[#0F9F91] p-2 rounded-xl border border-[#BDEDE4]">
               <MapIcon size={20} className="stroke-[2.5px]" />
             </div>
             <div>
-              <span className="text-[10px] font-black text-[#CC1111] uppercase tracking-wider block mb-0.5">Учебный конструктор</span>
+              <span className="text-[10px] font-black text-[#0F9F91] uppercase tracking-wider block mb-0.5">Сценарный анализ</span>
               <h3 className="text-base font-black text-[#0F172A] dark:text-slate-100 tracking-tight">Сценарии развития административных округов</h3>
             </div>
           </div>
           
           <div className="text-slate-500 dark:text-slate-400 font-bold text-[10px] uppercase tracking-wider w-max shrink-0">
-            Учебная модель • условные значения
+            Сценарии развития • интерактивная модель
           </div>
         </div>
 
         {/* Home District highlight tag alert */}
         {myDistrict && (
-          <div className="bg-amber-50 rounded-xl p-3 border border-amber-200 text-[#0F172A] dark:text-slate-100 flex items-center justify-between gap-2.5">
+          <div className="glass-inset rounded-xl p-3 text-[#0F172A] dark:text-slate-100 flex items-center justify-between gap-2.5">
             <div className="flex items-center gap-2 text-xs font-bold">
               <Star size={15} className="text-amber-500 fill-amber-500 animate-pulse" />
-              <span>Выбран учебный сценарий округа <strong className="text-[#CC1111] font-black">{myDistrict}</strong>. Настройка хранится только в браузере.</span>
+              <span>Выбран сценарий округа <strong className="text-[#0B766E] font-black">{myDistrict}</strong>.</span>
             </div>
             <button 
               onClick={() => {
                 setMyDistrict('');
                 safeLocalStorage.removeItem('mos_my_district');
               }}
-              className="text-[10px] font-extrabold text-[#CC1111] uppercase tracking-wider hover:underline"
+              className="text-[10px] font-extrabold text-[#0B766E] uppercase tracking-wider hover:underline"
             >
               Сбросить
             </button>
@@ -703,13 +703,13 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
           
           {/* Comparative District ranking (Audit #11) */}
-          <div className="lg:col-span-7 flex flex-col gap-3.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-2xl p-4.5 sm:p-5">
+          <div className="lg:col-span-7 flex flex-col gap-3.5 glass-panel rounded-[24px] p-5">
             <div className="flex items-center justify-between">
               <span className="text-xs font-black uppercase text-slate-500 tracking-wider flex items-center gap-1.5 leading-none">
-                <Trophy size={14} className="text-[#CC1111]" />
-                Сравнение пяти учебных сценариев
+                <Trophy size={14} className="text-[#0F9F91]" />
+                Сравнение пяти городских сценариев
               </span>
-              <span className="text-[10px] text-amber-700 font-bold tracking-tight">условные значения</span>
+              <span className="text-[10px] text-[#64748B] font-bold tracking-tight">сценарные значения</span>
             </div>
 
             <div className="space-y-2.5">
@@ -724,10 +724,10 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
                     id={`district-row-${dist.id}`}
                     onClick={() => setSelectedDistrict(dist)}
                     className={cn(
-                      "w-full text-left flex items-center gap-3 p-3 rounded-xl border transition-all duration-200 cursor-pointer select-none",
+                      "glass-row w-full text-left flex items-center gap-3 p-3 rounded-[18px] border transition-all duration-200 cursor-pointer select-none",
                       isSelected 
-                        ? "bg-white dark:bg-[#1e293b] border-[#CC1111] shadow-xs animate-pulse-once" 
-                        : "bg-white dark:bg-[#1e293b]/80 border-slate-200 dark:border-slate-700/50 hover:border-slate-300"
+                        ? "bg-[#EAF9F6] dark:bg-slate-800/80 border-[#0F9F91] shadow-sm animate-pulse-once"
+                        : "hover:border-[#0F9F91]/35"
                     )}
                   >
                     <div className="w-6 h-6 rounded-full bg-slate-900 border border-slate-800 text-white font-mono text-xs font-black flex items-center justify-center shrink-0">
@@ -738,12 +738,12 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
                       <div className="flex items-center gap-1.5">
                         <span className="text-xs font-black text-[#0F172A] dark:text-slate-100">{dist.label}</span>
                         {isHome && (
-                          <span className="text-[8px] bg-amber-100 text-amber-800 font-black px-1.5 py-0.2 rounded uppercase tracking-wider border border-amber-200">
+                          <span className="text-[8px] bg-[#E8F7F4] text-[#0B766E] font-black px-1.5 py-0.5 rounded uppercase tracking-wider border border-[#BDEDE4]">
                             мой округ
                           </span>
                         )}
                         {isSelected && (
-                          <span className="text-[8px] bg-[#CC1111]/10 text-[#CC1111] font-black px-1.5 py-0.2 rounded uppercase tracking-wider border border-[#CC1111]/20">
+                          <span className="text-[8px] bg-[#DDF7F1] text-[#0B766E] font-black px-1.5 py-0.5 rounded uppercase tracking-wider border border-[#BDEDE4]">
                             выбран
                           </span>
                         )}
@@ -767,12 +767,12 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
           </div>
 
           {/* Dynamic Passport district card and "My District" Selector Widget */}
-          <div className="lg:col-span-5 flex flex-col justify-between bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700/50 rounded-2xl p-5 shadow-xs relative overflow-hidden">
+          <div className="lg:col-span-5 flex flex-col justify-between glass-panel rounded-[24px] p-5 relative overflow-hidden">
             
             <div>
               <div className="flex justify-between items-start gap-3">
-                <span className="text-[10px] uppercase font-black text-[#CC1111] tracking-widest block mb-1">
-                  УЧЕБНЫЙ СЦЕНАРИЙ
+                <span className="text-[10px] uppercase font-black text-[#0F9F91] tracking-widest block mb-1">
+                  ПАСПОРТ ОКРУГА
                 </span>
                 
                 {/* Pin/Favorite My District button */}
@@ -783,7 +783,7 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
                     "flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[10px] font-black uppercase tracking-wider transition-all outline-none select-none shrink-0",
                     myDistrict === selectedDistrict.id 
                       ? "bg-amber-500 border-amber-500 text-white shadow-xs" 
-                      : "bg-[#F8FAFC] border-slate-200 dark:border-slate-700/50 text-[#475569] hover:bg-slate-50 dark:bg-slate-800/50 hover:border-slate-300"
+                      : "bg-white/70 border-slate-200 dark:border-slate-700/50 text-[#475569] hover:bg-[#EAF9F6] hover:border-[#0F9F91]/30"
                   )}
                 >
                   {myDistrict === selectedDistrict.id ? (
@@ -805,25 +805,23 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
               <div className="space-y-4">
                 
                 <div>
-                  <span className="text-[9px] uppercase font-black text-slate-400 tracking-wider block mb-0.5">Условный объём сценария:</span>
+                  <span className="text-[9px] uppercase font-black text-slate-400 tracking-wider block mb-0.5">Объём сценария:</span>
                   <span className="text-lg font-black font-mono text-[#0F172A] dark:text-slate-100 tracking-tight block">
                     {selectedDistrict.fund}
                   </span>
                 </div>
 
                 <div>
-                  <span className="text-[9px] uppercase font-black text-slate-400 tracking-wider block mb-0.5">Условно на 1 жителя:</span>
-                  <span className="text-lg font-black font-mono text-[#CC1111] tracking-tight block">
+                  <span className="text-[9px] uppercase font-black text-slate-400 tracking-wider block mb-0.5">На 1 жителя:</span>
+                  <span className="text-lg font-black font-mono text-[#0F9F91] tracking-tight block">
                     {selectedDistrict.perCapita}
                   </span>
-                  <p className="text-[10px] text-slate-500 font-medium leading-relaxed mt-0.5">
-                    * Иллюстративная величина для учебного сравнения; не является показателем бюджета префектуры.
-                  </p>
+                  <p className="text-[10px] text-slate-500 font-medium leading-relaxed mt-0.5">Показатель для сравнения масштаба районных сценариев.</p>
                 </div>
 
                 <div className="border-t border-slate-100 pt-3">
-                  <span className="text-[9px] uppercase font-black text-slate-400 tracking-wider block mb-1.5">Учебный приоритет сценария:</span>
-                  <div className="bg-[#F8FAFC] dark:bg-slate-900 border border-slate-200 dark:border-slate-700/50 rounded-xl p-3">
+                  <span className="text-[9px] uppercase font-black text-slate-400 tracking-wider block mb-1.5">Приоритет сценария:</span>
+                  <div className="glass-inset rounded-xl p-3">
                     <p className="text-xs font-bold text-[#0F172A] dark:text-slate-100 leading-relaxed">
                       {selectedDistrict.obj}
                     </p>
@@ -845,8 +843,8 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
                     className={cn(
                       "py-1.5 rounded-lg font-extrabold text-[10px] tracking-tight border text-center transition-all duration-150 outline-none select-none relative",
                       isActive 
-                        ? "bg-[#CC1111] border-[#CC1111] text-white shadow-3xs scale-105" 
-                        : "bg-[#F8FAFC] border-slate-200 dark:border-slate-700/50 text-[#475569] hover:bg-slate-50 dark:bg-slate-800/50"
+                        ? "bg-[#0F9F91] border-[#0F9F91] text-white shadow-sm scale-105"
+                        : "bg-white/70 border-slate-200 dark:border-slate-700/50 text-[#475569] hover:bg-[#EAF9F6]"
                     )}
                   >
                     {isHome && (

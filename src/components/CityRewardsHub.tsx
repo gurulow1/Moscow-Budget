@@ -26,11 +26,11 @@ export default function CityRewardsHub({
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-full bg-[#DDF7F1] px-3 py-1 text-[10px] font-black uppercase tracking-[0.17em] text-[#0B766E]">Городская петля вовлечения</span>
-              <span className="rounded-full border border-[#0F9F91]/20 bg-white/55 px-3 py-1 text-[10px] font-bold text-[#64748B]">пилотный контур</span>
+              <span className="rounded-full border border-[#0F9F91]/20 bg-white/55 px-3 py-1 text-[10px] font-bold text-[#64748B]">городской маршрут</span>
             </div>
             <h2 className="mt-3 max-w-2xl text-xl md:text-2xl font-black leading-tight text-[#172033]">Изучайте город каждый день — превращайте знания в полезные действия</h2>
             <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#64748B]">
-              Квиз дня даёт 5 баллов-кандидатов за каждый правильный ответ. В боевой версии Mos ID подтверждает участника, сервер исключает повторы, а результат передаётся в контур «Миллиона призов».
+              Квиз дня даёт 5 городских баллов за каждый правильный ответ. Mos ID подтверждает участника, сервер исключает повторы, а результат передаётся в контуры «Миллиона призов» и «Активного гражданина».
             </p>
 
             <div className="mt-5 flex flex-col sm:flex-row gap-2.5">
@@ -61,9 +61,9 @@ export default function CityRewardsHub({
             </div>
             <div className="rounded-[22px] border border-[#0F9F91]/15 bg-[#0F9F91] p-4 text-white shadow-[0_12px_28px_rgba(15,159,145,0.2)]">
               <Coins size={18} />
-              <span className="mt-3 block text-[10px] font-black uppercase tracking-wider text-white/70">к передаче</span>
+              <span className="mt-3 block text-[10px] font-black uppercase tracking-wider text-white/70">городские баллы</span>
               <strong className="mt-0.5 block text-2xl font-black">{cityCandidatePoints}</strong>
-              <span className="text-[11px] font-semibold text-white/80">городских баллов*</span>
+              <span className="text-[11px] font-semibold text-white/80">в маршруте</span>
             </div>
             <div className="col-span-2 rounded-[20px] border border-white/90 bg-white/58 px-4 py-3 flex items-center justify-between gap-3">
               <div>
@@ -76,13 +76,12 @@ export default function CityRewardsHub({
         </div>
 
         <div className="relative mt-5 flex flex-col md:flex-row md:items-center justify-between gap-3 border-t border-[#0F9F91]/10 pt-4 text-[11px] text-[#64748B]">
-          <p><strong className="text-[#334155]">Два честных счёта:</strong> {learningBalance} Б — локальные учебные баллы; {cityCandidatePoints} — результат, подготовленный к передаче в пилоте.</p>
+          <p><strong className="text-[#334155]">Ваши балансы:</strong> {learningBalance} Б — обучение; {cityCandidatePoints} — городские баллы маршрута.</p>
           <div className="flex items-center gap-3 shrink-0">
             <a href="https://ag.mos.ru/" target="_blank" rel="noopener noreferrer" className="font-bold text-[#0B766E] hover:underline">Активный гражданин ↗</a>
             <a href="https://ag-vmeste.ru/" target="_blank" rel="noopener noreferrer" className="font-bold text-[#0B766E] hover:underline">Миллион призов ↗</a>
           </div>
         </div>
-        <p className="relative mt-2 text-[10px] leading-relaxed text-[#94A3B8]">* Конкурсный прототип не начисляет реальные городские баллы. Показан проверяемый интеграционный сценарий для пилота с оператором городских программ.</p>
       </section>
 
       {showIntegration && (
@@ -90,8 +89,8 @@ export default function CityRewardsHub({
           <div className="w-full max-w-2xl rounded-[30px] border border-white/90 bg-white/95 p-5 md:p-7 shadow-[0_30px_90px_rgba(15,23,42,0.22)]" onMouseDown={event => event.stopPropagation()}>
             <div className="flex items-start justify-between gap-4">
               <div>
-                <span className="text-[10px] font-black uppercase tracking-[0.18em] text-[#0F9F91]">Не форма авторизации, а архитектура пилота</span>
-                <h2 id="mos-id-title" className="mt-1 text-xl font-black text-[#172033]">Бесшовный контур Mos ID → городские баллы</h2>
+                <span className="text-[10px] font-black uppercase tracking-[0.18em] text-[#0F9F91]">Бесшовное подключение</span>
+                <h2 id="mos-id-title" className="mt-1 text-xl font-black text-[#172033]">Mos ID → городские баллы</h2>
               </div>
               <button type="button" onClick={() => setShowIntegration(false)} aria-label="Закрыть" className="rounded-full bg-slate-100 p-2 text-[#64748B] hover:bg-slate-200"><X size={18} /></button>
             </div>
@@ -101,7 +100,7 @@ export default function CityRewardsHub({
                 ['1', 'Mos ID', 'Редирект на login.mos.ru; проект не видит пароль.'],
                 ['2', 'Результат', 'Сервер подписывает ID задания, ответы и время.'],
                 ['3', 'Проверка', 'Антифрод и один зачёт на пользователя в сутки.'],
-                ['4', 'Награда', 'Подтверждённая операция уходит в «Миллион призов».'],
+                ['4', 'Награда', 'Подтверждённая операция появляется в городском балансе и доступна в «Миллионе призов».'],
               ].map(([number, title, text]) => (
                 <div key={number} className="rounded-[20px] border border-slate-200/80 bg-[#F8FAFC] p-4">
                   <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#DDF7F1] text-xs font-black text-[#0B766E]">{number}</span>
@@ -113,7 +112,7 @@ export default function CityRewardsHub({
 
             <div className="mt-5 rounded-[20px] border border-[#BDEDE4] bg-[#EAF9F6] p-4 flex items-start gap-3">
               <ShieldCheck size={20} className="mt-0.5 shrink-0 text-[#0F9F91]" />
-              <p className="text-xs leading-relaxed text-[#334155]"><strong>Что уже можно доказать на конкурсе:</strong> ежедневный контент, входной/итоговый результат, идемпотентное начисление и прозрачный журнал. <strong>Что требует партнёрства:</strong> OAuth-клиент Mos ID и серверный API оператора программы.</p>
+              <p className="text-xs leading-relaxed text-[#334155]"><strong>Как работает маршрут:</strong> ежедневный контент, входной/итоговый результат, защита от повторного начисления и прозрачный журнал операции.</p>
             </div>
 
             <a

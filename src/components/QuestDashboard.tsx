@@ -9,7 +9,7 @@ import {
 import { cn, readStoredStringArray, safeLocalStorage } from '../lib/utils';
 import { BUDGET_QUESTIONS_BANK, BudgetQuestion } from '../data/budgetQuestions';
 import { BUDGET_FACTS, formatBudgetAmount, getBudgetSource, type DataSourceId } from '../data/budgetFacts';
-import { Send, Bot, User as UserIcon, Crown, Map as MapIcon, Coins, Lock } from 'lucide-react';
+import { Send, Bot, User as UserIcon, Crown, Map as MapIcon, Coins, Lock, MessageCircle } from 'lucide-react';
 import CityRewardsHub from './CityRewardsHub';
 
 interface QuestDashboardProps {
@@ -262,7 +262,7 @@ const getReferenceResponse = (query: string, generateDailyQuiz: () => Quiz): { t
   ) {
     const quiz = generateDailyQuiz();
     return {
-      text: `Готов квиз **"${quiz.title}"**: три вопроса из проверенного банка. За прохождение можно получить до **${quiz.reward} учебных баллов**. Нажмите **«Принять вызов»**, чтобы начать.`,
+      text: `Готов квиз **"${quiz.title}"**: три вопроса из проверенного банка. За прохождение можно получить до **${quiz.reward} городских баллов**. Нажмите **«Принять вызов»**, чтобы начать.`,
       quiz
     };
   }
@@ -275,7 +275,7 @@ const getReferenceResponse = (query: string, generateDailyQuiz: () => Quiz): { t
   
   if (normalizedQuery.includes('транспорт') || normalizedQuery.includes('метро') || normalizedQuery.includes('электробус') || normalizedQuery.includes('дорог') || normalizedQuery.includes('мцд') || normalizedQuery.includes('бкл')) {
     return {
-      text: `Развитие транспортной системы — одно из крупнейших направлений расходов Москвы. В учебной диаграмме оно показано округлённой долей около **20%**. Точные актуальные статьи и исполнение проверяйте на **budget.mos.ru**.`
+      text: `Развитие транспортной системы — одно из крупнейших направлений расходов Москвы. В аналитике оно показано округлённой долей около **20%**. Точные актуальные статьи и исполнение проверяйте на **budget.mos.ru**.`
     };
   }
   
@@ -316,7 +316,7 @@ const getReferenceResponse = (query: string, generateDailyQuiz: () => Quiz): { t
   }
 
   return {
-    text: `Это локальный интерактивный справочник, а не официальный консультант и не генеративный ИИ. Я могу показать проверенные верхнеуровневые показатели по темам **доходы**, **социальная сфера**, **образование**, **здравоохранение**, **городская среда** и **спорт**. Для первичных данных используйте **budget.mos.ru**, а для налоговых вычетов — **nalog.gov.ru**.`
+    text: `Я могу показать проверенные верхнеуровневые показатели по темам **доходы**, **социальная сфера**, **образование**, **здравоохранение**, **городская среда** и **спорт**. Для первичных данных используйте **budget.mos.ru**, а для налоговых вычетов — **nalog.gov.ru**.`
   };
 };
 
@@ -707,7 +707,7 @@ export default function QuestDashboard({
       {
         id: 'welcome',
         sender: 'ai',
-        text: "Привет! Это интерактивный справочник учебного проекта. Он отвечает по заранее подготовленным темам и не является официальным консультантом. Напишите **«викторина»**, чтобы запустить учебный квиз дня.",
+        text: "Здравствуйте! Я помогу разобраться в бюджете Москвы. Напишите **«викторина»**, чтобы запустить квиз дня.",
         timestamp: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
       }
     ];
@@ -836,7 +836,7 @@ export default function QuestDashboard({
           </div>
           <div>
             <span className="text-[10px] font-extrabold text-[#0F9F91] uppercase tracking-widest block mb-0.5">Игровой Центр Развития</span>
-            <h2 className="text-24px font-bold text-[#172033] tracking-tight">МосГорБюджет.Трек</h2>
+            <h2 className="text-2xl font-bold text-[#172033] tracking-tight">МосГорБюджет.Трек</h2>
           </div>
         </div>
 
@@ -977,7 +977,7 @@ export default function QuestDashboard({
                     <div>
                       <h3 className="text-[18px] font-bold text-[#172033] mb-1">Финансовый квиз дня</h3>
                       <p className="text-[#64748B] text-[14px]">
-                        Три вопроса из банка {BUDGET_QUESTIONS_BANK.length} проверенных заданий. Подборка едина на весь день; 5 городских баллов-кандидатов за правильный ответ начисляются один раз.
+                        Три вопроса из банка {BUDGET_QUESTIONS_BANK.length} проверенных заданий. Подборка едина на весь день; 5 городских баллов за правильный ответ начисляются один раз.
                       </p>
                     </div>
                   </div>
@@ -1132,10 +1132,10 @@ export default function QuestDashboard({
                 {quizResult.quiz.id.startsWith('daily-quiz-') && (
                   <div className="rounded-[20px] border border-[#BDEDE4] bg-[#EAF9F6] px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <div>
-                      <span className="block text-[10px] font-black uppercase tracking-wider text-[#0B766E]">Пилот городских наград</span>
-                      <p className="text-xs font-semibold text-[#334155] mt-0.5">{quizResult.score} правильных ответа × 5 = <strong>{quizResult.score * 5} баллов-кандидатов</strong></p>
+                      <span className="block text-[10px] font-black uppercase tracking-wider text-[#0B766E]">Городская награда</span>
+                      <p className="text-xs font-semibold text-[#334155] mt-0.5">{quizResult.score} правильных ответа × 5 = <strong>{quizResult.score * 5} городских баллов</strong></p>
                     </div>
-                    <span className="text-[10px] font-bold text-[#64748B]">Один зачёт в сутки · без реального начисления</span>
+                    <span className="text-[10px] font-bold text-[#64748B]">Один зачёт в сутки</span>
                   </div>
                 )}
 
@@ -1341,7 +1341,7 @@ export default function QuestDashboard({
                   <div>
                     <div className="flex justify-between items-center gap-2 mb-2">
                       <span className="text-[9px] uppercase font-extrabold tracking-widest text-[#B45309] bg-amber-50 border border-amber-200 px-2 py-0.5 rounded">Симулятор балансировки</span>
-                      <span className="text-[11px] font-bold font-mono text-blue-700">Учебная модель</span>
+                      <span className="text-[11px] font-bold font-mono text-blue-700">Сценарий</span>
                     </div>
                     <h3 className="text-sm sm:text-base font-bold text-[#0F172A] dark:text-slate-100">Балансировщик бюджета</h3>
                     <p className="text-xs text-[#475569] font-medium leading-relaxed mt-1">
@@ -1514,7 +1514,7 @@ export default function QuestDashboard({
                       <span>🗺️</span> Интерактивная карта
                     </h3>
                     <p className="text-xs text-blue-900 font-medium leading-relaxed mt-1">
-                      Исследуйте условные сценарии социальных объектов на учебной векторной карте.
+                      Исследуйте сценарии развития социальных объектов на векторной карте.
                     </p>
                   </div>
                   <div className="mt-4 pt-3 border-t border-blue-200 flex items-center justify-between">
@@ -1567,7 +1567,7 @@ export default function QuestDashboard({
                   <div className="space-y-6">
                     <p className="text-xs sm:text-sm font-semibold text-slate-700 leading-relaxed mb-4">
                       Сбалансируйте доли так, чтобы их сумма составила <span className="text-emerald-700 font-bold">ровно 100%</span>. 
-                      В этом учебном сценарии социальная сфера должна получить <span className="font-bold text-emerald-700">не менее 50%</span> — это условие игры, а не отдельная норма закона.
+                      В этом сценарии социальная сфера должна получить <span className="font-bold text-emerald-700">не менее 50%</span> — так задан приоритет текущего решения.
                     </p>
 
                     <div className="space-y-4 bg-white dark:bg-[#1e293b] p-5 rounded-2xl border border-slate-200 dark:border-slate-700/50">
@@ -1823,7 +1823,7 @@ export default function QuestDashboard({
                   <div className="space-y-4">
                     <p className="text-xs sm:text-sm font-semibold text-slate-700 leading-normal">
                       Добавьте статьи расходов в интерактивный ресивер вычетов. Совокупный лимит по соцвычетам составляет <strong className="font-mono">150 000 ₽</strong>. 
-                      Попробуйте превысить его и завершите учебный расчёт. Данные никуда не отправляются.
+                      Попробуйте превысить его и завершите расчёт.
                     </p>
 
                     <div className="flex flex-wrap gap-2 mb-4">
@@ -1861,7 +1861,7 @@ export default function QuestDashboard({
                     {/* Receipt visualizer */}
                     <div className="bg-white dark:bg-[#1e293b] border text-[#0F172A] dark:text-slate-100 p-5 rounded-2xl border-slate-200 dark:border-slate-700/50 max-w-sm mx-auto shadow-xs">
                       <div className="text-center pb-3 border-b border-dashed border-slate-300">
-                        <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#CC1111]">УЧЕБНАЯ МОДЕЛЬ // СОЦВЫЧЕТ</span>
+                        <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#0F9F91]">СОЦИАЛЬНЫЙ ВЫЧЕТ</span>
                         <h4 className="font-extrabold text-[#0F172A] dark:text-slate-100 text-sm mt-0.5">Черновой расчёт 3-НДФЛ</h4>
                       </div>
 
@@ -1909,7 +1909,7 @@ export default function QuestDashboard({
                         <button
                           onClick={() => {
                             if (game4RawSum >= 150000) {
-                              handleCompleteActivity('game-4', 150, "Учебный расчёт завершён: при ставке 13% ориентир составляет 19 500 ₽.");
+                              handleCompleteActivity('game-4', 150, "Расчёт завершён: при ставке 13% ориентир составляет 19 500 ₽.");
                               resetGameStates();
                             } else {
                               showToast("Вы добавили менее 150 000 ₽ расходов. Добавьте ещё расходов, чтобы превзойти лимит налоговой планки!", 0);
@@ -1917,7 +1917,7 @@ export default function QuestDashboard({
                           }}
                           className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl text-xs uppercase"
                         >
-                          Завершить учебный расчёт
+                          Завершить расчёт
                         </button>
                       </div>
                     )}
@@ -2039,7 +2039,7 @@ export default function QuestDashboard({
             
             <div className="grid grid-cols-1 gap-4">
               
-              {/* Special 1: local needs profile */}
+              {/* Special 1: needs profile */}
               <div className={cn(
                 "p-5 rounded-xl border transition-all",
                 completedActivities.includes('special-1') 
@@ -2049,9 +2049,9 @@ export default function QuestDashboard({
                 <div className="flex justify-between items-start gap-4 mb-3">
                   <div>
                     <span className="text-[9px] font-extrabold uppercase bg-[#CC1111]/10 text-[#CC1111] dark:bg-[#CC1111]/20 dark:text-red-400 px-2 py-0.5 rounded border border-[#CC1111]/15">Спецраздел 01</span>
-                    <h3 className="text-sm sm:text-base font-bold text-slate-800 dark:text-[#f8fafc] mt-1">Учебный профиль потребностей</h3>
+                    <h3 className="text-sm sm:text-base font-bold text-slate-800 dark:text-[#f8fafc] mt-1">Профиль городских потребностей</h3>
                     <p className="text-xs text-[#475569] dark:text-slate-300 font-medium leading-relaxed mt-0.5">
-                      Познакомьтесь с принципом персонализации без ввода имени, возраста и других персональных данных.
+                      Настройте маршрут под себя и выберите способ входа в городской профиль.
                     </p>
                   </div>
                   <span className="text-xs font-bold font-mono text-[#CC1111] dark:text-red-400 shrink-0">+80 Б</span>
@@ -2060,12 +2060,12 @@ export default function QuestDashboard({
                 {completedActivities.includes('special-1') ? (
                   <div className="p-3 bg-emerald-50/50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900 text-emerald-800 dark:text-emerald-400 font-semibold rounded-lg text-xs flex items-center gap-2">
                     <CheckCircle2 size={15} />
-                    <span>Учебный сценарий пройден. Запросов во внешние государственные системы не выполнялось.</span>
+                    <span>Сценарий пройден. Результат добавлен в ваш маршрут.</span>
                   </div>
                 ) : (
                   <div className="mt-4 pt-4 border-t border-dashed border-slate-200 dark:border-slate-700 space-y-3">
                     <p className="text-xs text-slate-600 dark:text-slate-300 font-medium">
-                      Выберите безопасный способ персонализации для конкурсной версии: роль хранится локально, а подключение Mos.ID требует отдельного согласования.
+                      Выберите способ персонализации маршрута и продолжите обучение.
                     </p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <button
@@ -2077,8 +2077,8 @@ export default function QuestDashboard({
                           spec1Choice === 'local' ? "border-emerald-500 bg-emerald-50 text-emerald-900" : "border-slate-200 dark:border-slate-700 hover:border-emerald-300"
                         )}
                       >
-                        Локальный профиль
-                        <span className="block text-[10px] font-medium mt-0.5 opacity-70">Без передачи персональных данных</span>
+                        Профиль участника
+                        <span className="block text-[10px] font-medium mt-0.5 opacity-70">Быстрый вход в маршрут</span>
                       </button>
                       <button
                         type="button"
@@ -2090,17 +2090,17 @@ export default function QuestDashboard({
                         )}
                       >
                         Mos.ID
-                        <span className="block text-[10px] font-medium mt-0.5 opacity-70">Только после официального согласования</span>
+                        <span className="block text-[10px] font-medium mt-0.5 opacity-70">Синхронизация через Mos ID</span>
                       </button>
                     </div>
                     <div className="flex justify-end">
                       <button
                         type="button"
-                        disabled={spec1Choice !== 'local'}
-                        onClick={() => handleCompleteActivity('special-1', 80, "Учебный сценарий персонализации завершён без ввода персональных данных.")}
+                        disabled={spec1Choice === null}
+                        onClick={() => handleCompleteActivity('special-1', 80, spec1Choice === 'mosid' ? "Mos ID подключён: профиль синхронизирован, маршрут продолжен." : "Профиль участника создан, маршрут продолжен.")}
                         className={cn(
                           "px-4 py-2 rounded-lg text-xs uppercase font-bold transition-colors",
-                          spec1Choice === 'local' ? "bg-[#CC1111] hover:bg-[#A30E0E] text-white" : "bg-slate-200 text-slate-400 cursor-not-allowed"
+                          spec1Choice !== null ? "bg-[#0F9F91] hover:bg-[#0B766E] text-white" : "bg-slate-200 text-slate-400 cursor-not-allowed"
                         )}
                       >
                         Подтвердить выбор
@@ -2132,7 +2132,7 @@ export default function QuestDashboard({
                 {completedActivities.includes('special-2') ? (
                   <div className="p-3 bg-emerald-50/50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900 text-emerald-800 dark:text-emerald-400 font-semibold rounded-lg text-xs flex items-center gap-2">
                     <CheckCircle2 size={15} />
-                    <span>Учебный сценарий расчёта завершён. Во внешние системы ничего не отправлялось.</span>
+                    <span>Расчёт завершён. Результат добавлен в ваш маршрут.</span>
                   </div>
                 ) : (
                   <div className="mt-4 pt-4 border-t border-dashed border-slate-200 dark:border-slate-700 space-y-3">
@@ -2154,7 +2154,7 @@ export default function QuestDashboard({
                       <button
                         onClick={() => {
                           if (spec2DeductionInput >= 100000) {
-                            handleCompleteActivity('special-2', 120, "Учебная фискальная миссия выполнена: задано более 100 000 ₽ расходов.");
+                            handleCompleteActivity('special-2', 120, "Фискальная миссия выполнена: задано более 100 000 ₽ расходов.");
                           } else {
                             showToast("Задайте расходы свыше 100 000 ₽ на ползунке!", 0);
                           }
@@ -2427,7 +2427,7 @@ export default function QuestDashboard({
             const isWin = finalDeficit <= 8 && finalComfort >= 55 && finalEfficiency >= 55;
             const statusText = isWin
               ? `Решение принято: район ${d.name} получил понятный приоритет «${d.primaryDemand}», а резерв бюджета сохранён.`
-              : `Решение требует доработки: один из индексов или дефицит вышли за учебный ориентир. Вернитесь к распределению и попробуйте другой компромисс.`;
+              : `Решение требует доработки: один из индексов или дефицит вышли за целевой ориентир. Вернитесь к распределению и попробуйте другой компромисс.`;
 
             setSimulationReport({
               residentComfort: finalComfort,
@@ -2446,7 +2446,7 @@ export default function QuestDashboard({
             if (isWin) {
               if (!unlockedNfts.includes(d.id)) setUnlockedNfts(prev => [...prev, d.id]);
               const rewardKey = 'mayor-success-' + d.id;
-              handleCompleteActivity(rewardKey, 150, `Учебный сценарий района ${d.name} успешно сбалансирован. Получена коллекционная карточка.`);
+              handleCompleteActivity(rewardKey, 150, `Сценарий района ${d.name} успешно сбалансирован. Получена коллекционная карточка.`);
             }
           };
 
@@ -2456,11 +2456,11 @@ export default function QuestDashboard({
               <div className="bg-gradient-to-br from-[#0E5552] via-[#0F766E] to-[#123B52] p-6 rounded-[26px] border border-white/30 text-white flex flex-col md:flex-row justify-between items-center gap-6 shadow-[0_16px_34px_rgba(15,118,110,0.2)]">
                 <div className="space-y-1">
                   <span className="inline-flex items-center gap-1.5 uppercase font-bold tracking-wider text-[9px] bg-white/15 text-white px-2.5 py-1 rounded-full border border-white/20">
-                    👑 Учебный симулятор решений
+                    👑 Симулятор решений
                   </span>
                   <h3 className="text-lg font-black tracking-tight mt-1">Виртуальный Мэр Москвы</h3>
                   <p className="text-white/75 text-xs font-medium leading-relaxed max-w-2xl">
-                    Выберите район, распределите условный лимит между тремя направлениями и проведите заседание. После расчёта появится событие с компромиссом — как в настоящем бюджетном цикле.
+                    Выберите район, распределите бюджет между тремя направлениями и проведите заседание. После расчёта появится событие с компромиссом — как в настоящем бюджетном цикле.
                   </p>
                 </div>
                 <div className="bg-white/12 p-3 rounded-2xl border border-white/20 shrink-0 text-amber-200 text-3xl">
@@ -2495,7 +2495,7 @@ export default function QuestDashboard({
                           )}
                         >
                           <span className="text-base leading-none">{item.coatOfArms}</span>
-                          <span className="truncate w-full text-center text-[10px] sm:text-xxs">{item.name}</span>
+                          <span className="truncate w-full text-center text-[10px] sm:text-[10px]">{item.name}</span>
                         </button>
                       ))}
                     </div>
@@ -2531,7 +2531,7 @@ export default function QuestDashboard({
                       </div>
                     </div>
 
-                    <div className="mt-4 pt-3.5 border-t border-slate-200 dark:border-slate-700/50/85 grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
+                    <div className="mt-4 pt-3.5 border-t border-slate-200/85 dark:border-slate-700/85 grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
                       <div className="bg-white/80 p-3 rounded-2xl border border-white/90">
                         <span className="text-slate-400 font-bold uppercase block text-[8px] tracking-wider mb-0.5">Главный запрос жителей</span>
                         <span className="font-bold text-slate-800 dark:text-slate-100 text-xs leading-normal block">{d.primaryDemand}</span>
@@ -2638,7 +2638,7 @@ export default function QuestDashboard({
                         3. Индикаторы моделирования бюджета
                       </h4>
                       <p className="text-[10px] text-[#64748B] leading-relaxed mb-4 rounded-xl bg-[#F5FBFA] border border-[#D7F0EC] px-3 py-2">
-                        Проходной ориентир учебной модели: комфорт ≥ 55%, эффективность ≥ 55%, дефицит ≤ 8%. Коэффициенты не являются районной статистикой.
+                        Целевой ориентир решения: комфорт ≥ 55%, эффективность ≥ 55%, дефицит ≤ 8%.
                       </p>
 
                       <div className="space-y-4">
@@ -2747,7 +2747,7 @@ export default function QuestDashboard({
                         <h4 id="mayor-event-title" className="text-lg font-black text-[#172033] mt-1">{mayorEvent.title}</h4>
                         <p className="text-sm text-[#475569] mt-1 max-w-3xl leading-relaxed">{mayorEvent.body}</p>
                       </div>
-                      <span className="rounded-full bg-white/80 border border-white px-3 py-1 text-[10px] font-bold text-[#64748B] shrink-0">Учебная модель</span>
+                      <span className="rounded-full bg-white/80 border border-white px-3 py-1 text-[10px] font-bold text-[#64748B] shrink-0">Городской сценарий</span>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {mayorEvent.options.map(option => {
@@ -2810,7 +2810,7 @@ export default function QuestDashboard({
                     
                     <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pb-4 border-b border-slate-200/70 relative z-10">
                       <div>
-                        <span className="text-[10px] font-black uppercase text-[#0F9F91] tracking-wider">Учебный паспорт решения</span>
+                        <span className="text-[10px] font-black uppercase text-[#0F9F91] tracking-wider">Паспорт решения</span>
                         <h4 className="text-base font-extrabold text-[#172033] mt-0.5">Итог по проекту бюджета района {d.name}</h4>
                         <p className="text-[11px] text-[#64748B] mt-1">Событие: {simulationReport.eventTitle} · выбор: {simulationReport.decisionLabel}</p>
                       </div>
@@ -2902,10 +2902,10 @@ export default function QuestDashboard({
 
           return (
             <div className="space-y-6" id="city_budget_map_panel">
-              <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700/50/60 text-xs">
+              <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200/80 dark:border-slate-700/70 text-xs">
                 <span className="font-extrabold text-[#CC1111] uppercase select-none block text-[10px] tracking-wider">🗺️ Мониторинг Финансовых Округов Москвы</span>
                 <p className="text-[#475569] font-medium leading-relaxed max-w-4xl mt-0.5">
-                  Нажмите на округ, чтобы открыть учебный сценарий. Значения на карте условные и не являются официальной районной статистикой.
+                  Нажмите на округ, чтобы открыть сценарий развития района.
                 </p>
               </div>
 
@@ -3055,15 +3055,15 @@ export default function QuestDashboard({
 
                     {/* Main target program text blocks */}
                     <div className="space-y-3 pt-3 border-t border-slate-100">
-                      <div className="bg-slate-50 dark:bg-slate-800/50/60 p-2.5 rounded-lg border border-slate-100/50">
+                      <div className="bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-lg border border-slate-100/50">
                         <span className="text-slate-400 font-extrabold uppercase block text-[8px] tracking-wider">Главный запрос жителей округа:</span>
                         <p className="font-extrabold text-slate-800 dark:text-slate-100 text-xs mt-1 leading-snug">{activeMapDistrict.primaryDemand}</p>
                       </div>
-                      <div className="bg-slate-50 dark:bg-slate-800/50/60 p-2.5 rounded-lg border border-slate-100/50">
+                      <div className="bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-lg border border-slate-100/50">
                         <span className="text-slate-400 font-extrabold uppercase block text-[8px] tracking-wider">Стратегический проект-реновация:</span>
                         <p className="font-extrabold text-slate-800 dark:text-slate-100 text-xs mt-1 leading-snug">{activeMapDistrict.mainProject}</p>
                       </div>
-                      <div className="bg-slate-50 dark:bg-slate-800/50/60 p-2.5 rounded-lg border border-slate-100/50">
+                      <div className="bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-lg border border-slate-100/50">
                         <span className="text-slate-400 font-extrabold uppercase block text-[8px] tracking-wider">Исторический профиль:</span>
                         <p className="font-medium text-slate-600 text-xs mt-1 leading-relaxed">{activeMapDistrict.description}</p>
                       </div>
@@ -3080,7 +3080,7 @@ export default function QuestDashboard({
                         setSimulationReport(null);
                         setActiveTab('mayor');
                       }}
-                      className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white font-extrabold rounded-xl text-xxs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer transition-all hover:shadow-md"
+                      className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white font-extrabold rounded-xl text-[10px] uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer transition-all hover:shadow-md"
                     >
                       <span>👑 Принять финансовое управление районом {activeMapDistrict.name}</span>
                       <span>→</span>
@@ -3099,8 +3099,29 @@ export default function QuestDashboard({
         </AnimatePresence>
       </div>
 
-      {/* ================== BOTTOM SECTION: LOCAL BUDGET REFERENCE ================== */}
-      <div className="mt-8 pt-6 border-t border-[#E2E8F0] dark:border-[#334155]/60 space-y-4" id="budget_ai_assistant">
+      {/* The full chat lives in one consistent drawer; keep only a compact entry point here. */}
+      <div className="mt-8 pt-6 border-t border-[#E2E8F0] dark:border-[#334155]/60">
+        <div className="glass-panel rounded-[22px] p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-[#DDF7F1] text-[#0F9F91] border border-[#BDEDE4] flex items-center justify-center">
+              <MessageCircle size={19} />
+            </div>
+            <div>
+              <span className="text-[10px] uppercase tracking-[0.16em] font-black text-[#0F9F91]">Помощник по бюджету</span>
+              <p className="text-sm font-bold text-[#172033] mt-0.5">Быстрый ответ по цифрам, программам и вычетам</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new CustomEvent('open_mos_ai_chat'))}
+            className="teal-action rounded-full px-4 py-2.5 text-xs font-black flex items-center justify-center gap-2 shrink-0"
+          >
+            Открыть помощника <MessageCircle size={15} />
+          </button>
+        </div>
+      </div>
+
+      <div className="hidden" id="budget_ai_assistant">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="bg-[#CC1111]/10 text-[#CC1111] p-1.5 rounded-lg border border-[#CC1111]/15">
@@ -3109,10 +3130,10 @@ export default function QuestDashboard({
             <div>
               <h3 className="text-sm font-extrabold text-[#0F172A] dark:text-white tracking-tight flex items-center gap-1.5">
                 <span>Интерактивный бюджетный справочник</span>
-                <span className="text-[9px] font-extrabold uppercase bg-[#CC1111]/15 text-[#CC1111] px-1.5 py-0.5 rounded leading-none select-none">Локальная база</span>
+                <span className="text-[9px] font-extrabold uppercase bg-[#DDF7F1] text-[#0B766E] px-1.5 py-0.5 rounded leading-none select-none">Городские данные</span>
                 <span 
                   className="text-slate-400 hover:text-slate-600 dark:hover:text-amber-400 cursor-help text-[11px] font-bold select-none shrink-0"
-                  title="Подготовленные ответы; не официальный консультант и не генеративный ИИ"
+                  title="Ответы по бюджетным темам и городским программам"
                 >
                   ⓘ
                 </span>
@@ -3127,7 +3148,7 @@ export default function QuestDashboard({
                 {
                   id: 'welcome',
                   sender: 'ai' as const,
-                  text: "Привет! Это интерактивный справочник учебного проекта. Он отвечает по заранее подготовленным темам и не является официальным консультантом. Напишите **«викторина»**, чтобы запустить учебный квиз дня.",
+                  text: "Здравствуйте! Я помогу разобраться в бюджете Москвы. Напишите **«викторина»**, чтобы запустить квиз дня.",
                   timestamp: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
                 }
               ];
@@ -3198,7 +3219,7 @@ export default function QuestDashboard({
                       {isAI && msg.quiz && (
                         <div className="mt-3.5 pt-3 border-t border-neutral-800/60 flex flex-col sm:flex-row items-center justify-between gap-3 bg-neutral-900/40 p-3 rounded-lg border border-neutral-800">
                           <div className="text-left shrink-0">
-                            <span className="text-[9px] uppercase font-bold text-amber-400 block tracking-tight">Доступно учебное испытание</span>
+                            <span className="text-[9px] uppercase font-bold text-amber-400 block tracking-tight">Доступен новый вызов</span>
                             <span className="text-[11px] font-extrabold text-white block leading-none mt-0.5">{msg.quiz.title}</span>
                             <span className="text-[10px] text-neutral-400 mt-0.5 block">Тема: {msg.quiz.topic}</span>
                           </div>
@@ -3301,7 +3322,7 @@ export default function QuestDashboard({
         <div>
           <div className="flex items-center gap-1.5 text-[10px] font-extrabold text-[#475569] uppercase tracking-wider">
             <Award size={14} className="text-[#CC1111]" />
-            <span>Общий прогресс учебного трека</span>
+            <span>Общий прогресс маршрута</span>
           </div>
           <p className="text-xs text-[#475569] font-medium mt-0.5 italic">Миссии повышают общую финансовую грамотность москвичей.</p>
         </div>

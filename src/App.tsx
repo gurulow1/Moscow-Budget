@@ -257,7 +257,7 @@ export default function App() {
             >
               {calculatorTaskCompleted ? (
                 <>
-                  <Check size={16} className="text-emerald-600 stroke-[3px]" /> Учебный расчёт сохранён
+                  <Check size={16} className="text-emerald-600 stroke-[3px]" /> Расчёт сохранён
                 </>
               ) : (
                 <>

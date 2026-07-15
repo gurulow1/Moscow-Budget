@@ -16,7 +16,7 @@ const PERSONAS: { id: Persona; label: string; icon: ElementType; color: string; 
     label: 'Студент', 
     icon: GraduationCap, 
     color: 'text-blue-600 dark:text-blue-400',
-    description: 'Учебный пример личных расходов на обучение и спорт с небольшими стартовыми значениями.',
+    description: 'Стартовый профиль личных расходов на обучение и спорт с небольшими значениями.',
     suggestion: 'Сценарий: обучение 45 000 ₽ и спорт 15 000 ₽.'
   },
   { 
@@ -24,7 +24,7 @@ const PERSONAS: { id: Persona; label: string; icon: ElementType; color: string; 
     label: 'Молодой специалист', 
     icon: Rocket, 
     color: 'text-emerald-600 dark:text-emerald-400',
-    description: 'Учебный пример расходов на собственное повышение квалификации и физкультурные услуги.',
+    description: 'Профиль расходов на повышение квалификации и физкультурные услуги.',
     suggestion: 'Сценарий: обучение 80 000 ₽ и спорт 40 000 ₽.'
   },
   { 
@@ -32,7 +32,7 @@ const PERSONAS: { id: Persona; label: string; icon: ElementType; color: string; 
     label: 'Предприниматель', 
     icon: Briefcase, 
     color: 'text-amber-600 dark:text-amber-400',
-    description: 'Личный учебный пример для предпринимателя, который платит НДФЛ с подходящих доходов.',
+    description: 'Профиль предпринимателя, который платит НДФЛ с подходящих доходов.',
     suggestion: 'Сценарий не рассчитывает расходы бизнеса, гранты или субсидии.'
   },
   { 
@@ -40,7 +40,7 @@ const PERSONAS: { id: Persona; label: string; icon: ElementType; color: string; 
     label: 'Семья с детьми', 
     icon: Users, 
     color: 'text-purple-600 dark:text-purple-400',
-    description: 'Учебный пример повышенных семейных расходов; право на конкретный вычет проверяется отдельно.',
+    description: 'Профиль семейных расходов; право на конкретный вычет проверяется отдельно.',
     suggestion: 'Лимит обучения ребёнка имеет отдельные условия на сайте ФНС.'
   },
 ];
@@ -74,7 +74,7 @@ export default function PersonaSelector({ activePersona, onSelect, isLoading }: 
         <div className="flex items-start justify-between">
           <div>
             <span className="text-[10px] font-bold text-[#CC1111] dark:text-[#E11D48] uppercase tracking-wider block mb-1">
-              Учебный сценарий
+              Стартовый профиль
             </span>
             <h2 className="text-xl font-bold text-[#0F172A] dark:text-slate-100 tracking-tight">Выберите пример пользователя</h2>
             <p className="text-[#475569] dark:text-slate-400 text-xs sm:text-sm mt-0.5">
@@ -122,7 +122,7 @@ export default function PersonaSelector({ activePersona, onSelect, isLoading }: 
               <Info size={15} className="text-[#475569] dark:text-slate-400" />
             </div>
             <div>
-              <span className="text-[10px] uppercase font-bold text-[#475569] dark:text-slate-400 tracking-wider">Описание учебного примера</span>
+              <span className="text-[10px] uppercase font-bold text-[#475569] dark:text-slate-400 tracking-wider">Описание профиля</span>
               <p className="text-xs sm:text-sm font-medium text-[#0F172A] dark:text-slate-200 mt-0.5 leading-relaxed">
                 {currentPersonaInfo.description}
               </p>

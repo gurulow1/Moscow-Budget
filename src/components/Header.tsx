@@ -91,24 +91,24 @@ export default function Header({ balance, totalXp = 100, completedActivities = [
       <header className="hidden md:flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-4 py-4 px-6 glass-surface rounded-[28px] relative z-30 select-none">
         
         {/* Project title and visible prototype status */}
-        <div className="flex items-center gap-3.5 flex-1 min-w-0">
+        <div className="flex items-center gap-3.5 xl:basis-[330px] xl:grow xl:shrink-0 min-w-0">
           <div className="flex items-center justify-center bg-[#CC1111] w-10 h-10 rounded-xl text-white shadow-sm shrink-0">
             <LandPlot size={20} className="stroke-[2.5px]" />
           </div>
-          <div className="min-w-0">
-            <div className="flex flex-col 2xl:flex-row 2xl:items-baseline 2xl:gap-x-2 text-base lg:text-lg font-extrabold text-[#0F172A] dark:text-white tracking-tight leading-tight">
+          <div className="min-w-0 overflow-hidden">
+            <div className="flex items-baseline gap-x-2 whitespace-nowrap text-sm lg:text-base font-extrabold text-[#0F172A] dark:text-white tracking-tight leading-tight">
               <span>МосГорБюджет.Трек</span>
-              <span className="hidden 2xl:inline text-neutral-300 dark:text-slate-600 font-normal">//</span>
-              <span className="text-[#CC1111] dark:text-red-500 font-bold">Бюджет Москвы — интерактивно</span>
+              <span className="text-slate-300 dark:text-slate-600 font-normal">//</span>
+              <span className="text-[#0F9F91] dark:text-teal-300 font-bold">Бюджет Москвы</span>
             </div>
           </div>
         </div>
          
         {/* Right side: User Account & Balance widget */}
-        <div className="flex flex-wrap xl:flex-nowrap items-center justify-end gap-2 lg:gap-3 shrink-0">
+        <div className="flex flex-wrap xl:flex-nowrap items-center justify-end gap-2 lg:gap-3 shrink-0 min-w-0">
           
           {/* Audit #10: Desktop Mini Search Bar */}
-          <div className="relative hidden xl:block w-[220px]">
+          <div className="relative hidden xl:block w-[205px] shrink-0">
             <input
               type="text"
               placeholder="Поиск по бюджету... (Enter)"
@@ -136,7 +136,7 @@ export default function Header({ balance, totalXp = 100, completedActivities = [
           
           {/* XP Progress Bar Widget in Header */}
           <div className="hidden lg:flex flex-col gap-1 text-right min-w-[140px]">
-            <span className="text-[9px] font-black text-[#CC1111] uppercase tracking-wider">
+            <span className="text-[9px] font-black text-[#0F9F91] uppercase tracking-wider">
               {lvlInfo.title}
             </span>
             <div className="flex items-center justify-end gap-1.5 text-xs font-bold text-slate-700">
@@ -145,7 +145,7 @@ export default function Header({ balance, totalXp = 100, completedActivities = [
             {/* Visual Progress Line */}
             <div className="w-32 bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden border border-slate-200 dark:border-slate-700">
               <div 
-                className="h-full bg-linear-to-r from-[#CC1111] to-[#E11D48] rounded-full transition-all duration-300"
+                className="h-full bg-linear-to-r from-[#14B8A6] to-[#0B766E] rounded-full transition-all duration-300"
                 style={{ width: `${lvlInfo.progress}%` }}
               />
             </div>
@@ -161,11 +161,11 @@ export default function Header({ balance, totalXp = 100, completedActivities = [
                 <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-linear-to-br from-amber-400 to-amber-600 flex items-center justify-center text-[10px] sm:text-[11px] text-white font-black shadow-xs shrink-0">
                   <span className="drop-shadow-xs">₽</span>
                 </div>
-                <span className="font-black text-[#CC1111] dark:text-red-500 text-sm sm:text-base lg:text-lg tabular-nums tracking-tight">
+                <span className="font-black text-[#0F9F91] dark:text-teal-300 text-sm sm:text-base lg:text-lg tabular-nums tracking-tight">
                   <AnimatedNumber value={balance} />
                 </span>
                 <span className="text-[10px] font-bold text-[#475569] dark:text-slate-400 leading-tight shrink-0 hidden xl:block truncate max-w-[120px]">
-                  учебных баллов
+                  баллов маршрута
                 </span>
                 <span className="text-[10px] sm:text-xs font-bold text-[#475569] dark:text-slate-400 leading-tight shrink-0 xl:hidden">
                   баллов
@@ -193,7 +193,7 @@ export default function Header({ balance, totalXp = 100, completedActivities = [
           {/* Light/Dark Mode Switcher in Desktop Header */}
           <button
             onClick={() => setIsDark(!isDark)}
-            className="hidden md:flex items-center justify-center w-10 h-10 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-[#F8FAFC] dark:bg-slate-800 hover:bg-[#F1F5F9] dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-[#CC1111] dark:hover:text-red-400 transition-all cursor-pointer active:scale-95 duration-100 shrink-0 outline-none"
+            className="hidden md:flex items-center justify-center w-10 h-10 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-[#F8FAFC] dark:bg-slate-800 hover:bg-[#F1F5F9] dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-[#0F9F91] dark:hover:text-teal-300 transition-all cursor-pointer active:scale-95 duration-100 shrink-0 outline-none"
             title={isDark ? "Включить светлую тему" : "Включить темную тему"}
           >
             {isDark ? <Sun size={18} className="text-amber-400" /> : <Moon size={18} className="text-slate-600" />}
@@ -216,9 +216,9 @@ export default function Header({ balance, totalXp = 100, completedActivities = [
               </div>
               <div className="flex flex-col items-start leading-none text-left min-w-0 pr-1">
                 <span className="text-[13px] font-black text-[#0F172A] dark:text-white truncate max-w-[80px] lg:max-w-[120px]">Мой прогресс</span>
-                <span className="text-[9px] font-bold text-[#CC1111] dark:text-red-400 uppercase tracking-wider mt-1.5 flex items-center gap-0.5">
+                <span className="text-[9px] font-bold text-[#0F9F91] dark:text-teal-300 uppercase tracking-wider mt-1.5 flex items-center gap-0.5">
                   <ShieldCheck size={11} className="text-emerald-500 dark:text-emerald-400 shrink-0" />
-                  <span className="hidden sm:inline">Локальный прогресс</span>
+                  <span className="hidden sm:inline">Городской прогресс</span>
                   <span className="sm:hidden">Профиль</span>
                 </span>
               </div>
@@ -241,9 +241,9 @@ export default function Header({ balance, totalXp = 100, completedActivities = [
                          Я
                       </div>
                       <div>
-                        <h4 className="text-sm font-extrabold text-[#0F172A] dark:text-slate-100 leading-snug">Локальный профиль</h4>
-                        <span className="text-[9px] bg-emerald-50 text-emerald-800 font-extrabold border border-emerald-200 uppercase tracking-wider px-2 py-0.5 rounded leading-none block w-max mt-1">
-                          Данные хранятся локально
+                        <h4 className="text-sm font-extrabold text-[#0F172A] dark:text-slate-100 leading-snug">Городской профиль</h4>
+                        <span className="text-[9px] bg-[#E8F7F4] text-[#0B766E] font-extrabold border border-[#BDEDE4] uppercase tracking-wider px-2 py-0.5 rounded leading-none block w-max mt-1">
+                          Профиль активен
                         </span>
                       </div>
                     </div>
@@ -275,7 +275,7 @@ export default function Header({ balance, totalXp = 100, completedActivities = [
                     <div className="space-y-2 text-xs font-bold text-slate-700">
                       <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
                         <span className="flex items-center gap-1.5 text-slate-500 font-medium">
-                          <Trophy size={13} className="text-[#CC1111]" />
+                          <Trophy size={13} className="text-[#0F9F91]" />
                           Полученные баллы:
                         </span>
                         <span className="font-mono text-[#0F172A] dark:text-slate-100">{balance} Б</span>
@@ -283,7 +283,7 @@ export default function Header({ balance, totalXp = 100, completedActivities = [
                       
                       <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
                         <span className="flex items-center gap-1.5 text-slate-500 font-medium">
-                          <BookOpen size={13} className="text-[#CC1111]" />
+                          <BookOpen size={13} className="text-[#0F9F91]" />
                           Решенные квизы:
                         </span>
                         <span className="font-mono text-[#0F172A] dark:text-slate-100">{solvedCount} из 5</span>
@@ -291,15 +291,15 @@ export default function Header({ balance, totalXp = 100, completedActivities = [
 
                       <div className="flex justify-between items-center py-1.5">
                         <span className="flex items-center gap-1.5 text-slate-500 font-medium">
-                          <Layers size={13} className="text-[#CC1111]" />
+                          <Layers size={13} className="text-[#0F9F91]" />
                           Уровень доступа:
                         </span>
-                        <span className="text-emerald-600 font-black">Локально</span>
+                        <span className="text-[#0B766E] font-black">Активен</span>
                       </div>
                     </div>
 
                     <div className="text-[10px] text-slate-400 font-semibold text-center leading-relaxed">
-                      Профиль не связан с Mos.ID и не передаёт персональные данные.
+                      Настройки профиля синхронизируются с вашим маршрутом обучения.
                     </div>
 
                     {onReset && (
@@ -309,9 +309,9 @@ export default function Header({ balance, totalXp = 100, completedActivities = [
                           setProfileOpen(false);
                           onReset();
                         }}
-                        className="w-full rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2 text-[10px] font-extrabold uppercase tracking-wider text-slate-500 hover:border-[#CC1111]/40 hover:text-[#CC1111] transition-colors"
+                        className="w-full rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2 text-[10px] font-extrabold uppercase tracking-wider text-slate-500 hover:border-[#0F9F91]/40 hover:text-[#0B766E] transition-colors"
                       >
-                        Сбросить учебный прогресс
+                        Сбросить маршрут
                       </button>
                     )}
                   </motion.div>

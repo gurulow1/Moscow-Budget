@@ -301,7 +301,7 @@ export default function TaxCalculator({ activePersona, onCalculate, isCompleted,
 
         <div className="lg:col-span-5 xl:col-span-4 flex flex-col gap-4">
         {/* Live-preview result showing instantly below inputs (Increases conversion by 30-40%) */}
-        <div className="bg-emerald-50/80 dark:bg-[#065F46]/10 border border-emerald-200 dark:border-emerald-800/40 rounded-xl p-4 lg:p-5 flex items-center justify-between gap-3 shadow-3xs transition-all animate-fade-in">
+        <div className="bg-emerald-50/80 dark:bg-[#065F46]/10 border border-emerald-200 dark:border-emerald-800/40 rounded-xl p-4 lg:p-5 flex items-center justify-between gap-3 shadow-sm transition-all animate-fade-in">
           <div className="flex flex-col">
             <span className="text-[9px] text-emerald-800 dark:text-emerald-400 font-extrabold uppercase tracking-wide mb-1 leading-none flex items-center gap-1.5 select-none animate-pulse">
               <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block shrink-0" />
@@ -317,7 +317,7 @@ export default function TaxCalculator({ activePersona, onCalculate, isCompleted,
         <div className="flex items-start gap-2.5 bg-[#F8FAFC] dark:bg-slate-950 rounded-xl p-3.5 border border-[#E2E8F0] dark:border-slate-800">
           <AlertCircle size={15} className="text-[#475569] dark:text-slate-400 mt-0.5 shrink-0" />
           <p className="text-xs text-[#475569] dark:text-slate-400 leading-relaxed font-medium">
-            Совокупный лимит расходов для большинства социальных вычетов — <span className="font-bold text-[#0F172A] dark:text-slate-200">150 000 ₽</span> в год; обучение детей учитывается отдельно в пределах <span className="font-bold text-[#0F172A] dark:text-slate-200">110 000 ₽</span> на ребёнка. Это учебная оценка: фактический возврат зависит от дохода, ставки и уже уплаченного НДФЛ. <a href="https://www.nalog.gov.ru/rn77/taxation/taxes/ndfl/nalog_vichet/soc_nv/soc_nv_ob/" target="_blank" rel="noopener noreferrer" className="font-bold text-[#CC1111] hover:underline">Проверить условия на сайте ФНС</a>.
+            Совокупный лимит расходов для большинства социальных вычетов — <span className="font-bold text-[#0F172A] dark:text-slate-200">150 000 ₽</span> в год; обучение детей учитывается отдельно в пределах <span className="font-bold text-[#0F172A] dark:text-slate-200">110 000 ₽</span> на ребёнка. Фактический возврат зависит от дохода, ставки и уже уплаченного НДФЛ. <a href="https://www.nalog.gov.ru/rn77/taxation/taxes/ndfl/nalog_vichet/soc_nv/soc_nv_ob/" target="_blank" rel="noopener noreferrer" className="font-bold text-[#0B766E] hover:underline">Проверить условия на сайте ФНС</a>.
           </p>
         </div>
 
@@ -326,7 +326,7 @@ export default function TaxCalculator({ activePersona, onCalculate, isCompleted,
           {isCompleted && isCurrentSaved ? (
             <div className="flex items-center gap-3 bg-[#065f46] text-white px-5 py-4 rounded-xl border border-emerald-800 shadow-md flex-1 animate-fade-in font-bold text-xs sm:text-sm shadow-emerald-900/10">
               <span className="w-5 h-5 flex items-center justify-center rounded-full bg-white dark:bg-[#1e293b]/20 shrink-0 text-xs font-black select-none">✓</span>
-              <span>Учебный расчёт сохранён. Стартовые +100 баллов начисляются один раз.</span>
+              <span>Расчёт сохранён. Стартовые +100 баллов начислены один раз.</span>
             </div>
           ) : (
             <button 
@@ -334,7 +334,7 @@ export default function TaxCalculator({ activePersona, onCalculate, isCompleted,
               className="px-6 py-3.5 font-bold rounded-full transition-all duration-200 text-xs sm:text-sm flex justify-center items-center gap-2 cursor-pointer tracking-tight teal-action active:scale-[0.98]"
             >
               <Sparkles size={16} />
-              {isCompleted ? 'Сохранить изменения' : 'Сохранить учебный расчёт (+100 баллов)'}
+              {isCompleted ? 'Сохранить изменения' : 'Сохранить расчёт (+100 баллов)'}
             </button>
           )}
 
@@ -351,7 +351,7 @@ export default function TaxCalculator({ activePersona, onCalculate, isCompleted,
                     Награда получена:
                   </span>
                   <span className="text-sm font-bold tracking-tight text-emerald-700 dark:text-emerald-300">
-                    +100 учебных баллов
+                    +100 баллов маршрута
                   </span>
                 </div>
               </motion.div>
