@@ -88,7 +88,7 @@ export default function Header({ balance, totalXp = 100, completedActivities = [
   return (
     <>
       {/* DESKTOP HEADER */}
-      <header className="hidden md:flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-4 py-4 px-6 glass-surface rounded-[28px] relative z-30 select-none">
+      <header className="hidden lg:flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-4 py-4 px-6 glass-surface rounded-[28px] relative z-30 select-none">
         
         {/* Project title and visible prototype status */}
         <div className="flex items-center gap-3.5 xl:basis-[330px] xl:grow xl:shrink-0 min-w-0">
@@ -206,8 +206,8 @@ export default function Header({ balance, totalXp = 100, completedActivities = [
               aria-expanded={profileOpen}
               aria-haspopup="menu"
               className={cn(
-                "flex items-center gap-2.5 pl-2 pr-3 py-1.5 bg-[#F8FAFC] dark:bg-slate-950 rounded-xl border transition-all cursor-pointer select-none outline-none overflow-hidden",
-                profileOpen ? "border-[#CC1111] dark:border-red-500 bg-[#CC1111]/5 dark:bg-red-950/20" : "border-[#E2E8F0] dark:border-slate-800 hover:bg-[#F1F5F9] dark:hover:bg-slate-900"
+                "flex items-center gap-2.5 pl-2 pr-3 py-1.5 bg-[#F8FAFC] dark:bg-[#142733] rounded-xl border transition-all cursor-pointer select-none outline-none overflow-hidden",
+                profileOpen ? "border-[#0F9F91] dark:border-[#2E8C89] bg-[#DDF7F1] dark:bg-[#163D43]" : "border-[#E2E8F0] dark:border-[#345160] hover:bg-[#F1F5F9] dark:hover:bg-[#1D3440]"
               )}
             >
               <div className="bg-[#CC1111] dark:bg-red-600 text-white p-2.5 rounded-lg relative shrink-0">
@@ -233,7 +233,7 @@ export default function Header({ balance, totalXp = 100, completedActivities = [
                     initial={{ opacity: 0, y: 10, scale: 0.95 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                    className="absolute right-0 mt-2 w-72 bg-white dark:bg-[#1e293b] border border-[#E2E8F0] dark:border-slate-800 shadow-lg rounded-2xl p-4 z-50 flex flex-col gap-3.5"
+                    className="absolute right-0 mt-2 w-72 bg-[#F8FBFA] dark:bg-[#1A2D38] border border-[#E2E8F0] dark:border-[#3A5665] shadow-lg rounded-2xl p-4 z-50 flex flex-col gap-3.5"
                     role="menu"
                   >
                     <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
@@ -249,7 +249,7 @@ export default function Header({ balance, totalXp = 100, completedActivities = [
                     </div>
 
                     {/* Level HUD widget inside dropdown */}
-                    <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-100 rounded-xl p-3 flex flex-col gap-2">
+                    <div className="bg-slate-50 dark:bg-[#10232E] border border-slate-100 dark:border-[#35515F] rounded-xl p-3 flex flex-col gap-2">
                       <div className="flex justify-between items-center text-xs font-black leading-none">
                         <span className="text-slate-500 uppercase text-[9px]">Текущий Уровень:</span>
                         <span className="text-[#CC1111]">Lvl {lvlInfo.level}</span>
@@ -324,7 +324,7 @@ export default function Header({ balance, totalXp = 100, completedActivities = [
       </header>
 
       {/* MOBILE COMPACT HEADER */}
-      <header className="flex md:hidden items-center justify-between h-14 px-3.5 glass-surface rounded-[22px] w-full relative z-20 select-none">
+      <header className="flex lg:hidden items-center justify-between h-14 px-3.5 glass-surface rounded-[22px] w-full relative z-20 select-none">
         
         {/* Left aspect: Only icon logo */}
         <div className="flex items-center gap-2">
@@ -388,15 +388,15 @@ export default function Header({ balance, totalXp = 100, completedActivities = [
       </header>
 
       {/* MOBILE XP WIDGET BAR - UNDER MAIN SHAPKA (Audit #8: Level 1 • Налоговый новичок • 100/150 XP progress bar) */}
-      <div className="flex md:hidden flex-col gap-1 px-3.5 py-2 bg-[#DDF7F1]/85 rounded-[18px] border border-white/90 text-[#0B766E] shadow-[0_10px_28px_rgba(15,118,110,0.1)] select-none backdrop-blur-md">
+      <div className="flex lg:hidden flex-col gap-1 px-3.5 py-2 bg-[#DDF7F1]/85 dark:bg-[#153D44] rounded-[18px] border border-white/90 dark:border-[#2B666B] text-[#0B766E] shadow-[0_10px_28px_rgba(15,118,110,0.1)] select-none backdrop-blur-md">
         <div className="flex items-center justify-between text-[10px] font-black tracking-tight leading-none">
-          <span className="text-[#8DE7D9] font-black">Lvl {lvlInfo.level} • {lvlInfo.title}</span>
-          <span className="text-[#5D7C7B] font-mono">{totalXp}/{lvlInfo.nextLevelXp} XP</span>
+          <span className="text-[#0B766E] dark:text-[#73E4D6] font-black">Lvl {lvlInfo.level} • {lvlInfo.title}</span>
+          <span className="text-[#5D7C7B] dark:text-[#BED6D8] font-mono">{totalXp}/{lvlInfo.nextLevelXp} XP</span>
         </div>
         {/* Progress bar line height 4px */}
         <div className="w-full bg-white/75 h-1.5 rounded-full overflow-hidden mt-1 border border-white/80">
           <div 
-            className="bg-gradient-to-r from-[#CC1111] to-[#E11D48] h-full rounded-full transition-all duration-300"
+            className="bg-gradient-to-r from-[#14B8A6] to-[#0B766E] h-full rounded-full transition-all duration-300"
             style={{ width: `${lvlInfo.progress}%` }}
           />
         </div>

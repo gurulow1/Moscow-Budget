@@ -236,12 +236,12 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
         {/* Display switches */}
         <div className="flex flex-wrap items-center gap-3 shrink-0">
           {/* % / ₽ Unit Switcher (Audit #5) */}
-          <div className="inline-flex bg-white/60 p-1 rounded-full border border-white/90 shadow-sm dark:border-slate-800 relative">
+          <div className="inline-flex bg-[#EDF4F2] p-1 rounded-full border border-white/90 shadow-sm dark:bg-[#10232E] dark:border-[#35515F] relative">
             <button
               onClick={() => setDisplayUnit('percent')}
               className={cn(
                 "px-3.5 py-1.5 rounded-full text-xs font-black transition-all select-none outline-none",
-                displayUnit === 'percent' ? "bg-white dark:bg-[#1e293b] text-[#0B766E] shadow-sm" : "text-[#475569] hover:text-[#0F172A] dark:text-slate-100"
+                displayUnit === 'percent' ? "bg-[#F9FBFA] dark:bg-[#29434F] text-[#0B766E] shadow-sm" : "text-[#475569] hover:text-[#0F172A] dark:text-slate-100"
               )}
             >
               %
@@ -250,7 +250,7 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
               onClick={() => setDisplayUnit('currency')}
               className={cn(
                 "px-3.5 py-1.5 rounded-full text-xs font-black transition-all select-none outline-none",
-                displayUnit === 'currency' ? "bg-white dark:bg-[#1e293b] text-[#0B766E] shadow-sm" : "text-[#475569] hover:text-[#0F172A] dark:text-slate-100"
+                displayUnit === 'currency' ? "bg-[#F9FBFA] dark:bg-[#29434F] text-[#0B766E] shadow-sm" : "text-[#475569] hover:text-[#0F172A] dark:text-slate-100"
               )}
             >
               ₽
@@ -258,7 +258,7 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
           </div>
 
           {/* Premium Segmented Control Selector */}
-          <div className="inline-flex bg-white/60 p-1 rounded-full border border-white/90 shadow-sm dark:border-slate-800 relative">
+          <div className="inline-flex bg-[#EDF4F2] p-1 rounded-full border border-white/90 shadow-sm dark:bg-[#10232E] dark:border-[#35515F] relative">
             <button
               onClick={() => setIsPersonal(false)}
               className={cn(
@@ -271,7 +271,7 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
               {!isPersonal && (
                 <motion.div
                   layoutId="active_analytic_toggle"
-                  className="absolute inset-0 bg-white dark:bg-[#1e293b] rounded-full shadow-sm ring-1 ring-[#0F9F91]/10 -z-10"
+                  className="absolute inset-0 bg-[#F9FBFA] dark:bg-[#29434F] rounded-full shadow-sm ring-1 ring-[#0F9F91]/20 -z-10"
                   transition={{ type: "spring", stiffness: 385, damping: 30 }}
                 />
               )}
@@ -354,7 +354,7 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
                   className={cn(
                     "glass-panel border rounded-2xl overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer select-none flex flex-col border-slate-200/60 dark:border-slate-700/50",
                     isSelected
-                      ? "bg-[#EAF9F6] dark:bg-slate-800/50 border-[#0F9F91] ring-4 ring-[#0F9F91]/10 sm:col-span-2"
+                      ? "bg-[#EAF9F6] dark:bg-[#173D42] border-[#0F9F91] ring-4 ring-[#0F9F91]/10 sm:col-span-2"
                       : isAnySelected 
                         ? "opacity-55 hover:opacity-100"
                         : "hover:border-[#0F9F91]/35"
@@ -390,7 +390,7 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
                       {/* Display quick-KPI tags */}
                       <div className="flex flex-wrap gap-1.5">
                         {item.kpis.map((k, idx) => (
-                          <span key={idx} className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700/50 text-[#0F172A] dark:text-slate-100 text-[9px] font-extrabold px-2 py-0.5 rounded-md tracking-tight">
+                          <span key={idx} className="bg-slate-100 dark:bg-[#10232E] border border-slate-200 dark:border-[#35515F] text-[#0F172A] dark:text-slate-100 text-[9px] font-extrabold px-2 py-0.5 rounded-md tracking-tight">
                             {k}
                           </span>
                         ))}
@@ -489,7 +489,7 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
                     onClick={() => setSelectedSector(isSelected ? null : s.id)} 
                     className={cn(
                       "glass-row p-3 rounded-[18px] border transition-all duration-200 cursor-pointer",
-                      isSelected ? "border-[#0F9F91] ring-3 ring-[#0F9F91]/10" : "border-slate-200 dark:border-slate-700/50"
+                      isSelected ? "border-[#0F9F91] ring-3 ring-[#0F9F91]/10" : "border-slate-200 dark:border-[#35515F]"
                     )}
                   >
                     <div className="flex items-center justify-between gap-2 mb-1.5">
@@ -783,7 +783,7 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
                     "flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[10px] font-black uppercase tracking-wider transition-all outline-none select-none shrink-0",
                     myDistrict === selectedDistrict.id 
                       ? "bg-amber-500 border-amber-500 text-white shadow-xs" 
-                      : "bg-white/70 border-slate-200 dark:border-slate-700/50 text-[#475569] hover:bg-[#EAF9F6] hover:border-[#0F9F91]/30"
+                      : "bg-[#F4F8F7] border-slate-200 dark:bg-[#10232E] dark:border-[#35515F] text-[#475569] hover:bg-[#EAF9F6] hover:border-[#0F9F91]/30"
                   )}
                 >
                   {myDistrict === selectedDistrict.id ? (
@@ -844,7 +844,7 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
                       "py-1.5 rounded-lg font-extrabold text-[10px] tracking-tight border text-center transition-all duration-150 outline-none select-none relative",
                       isActive 
                         ? "bg-[#0F9F91] border-[#0F9F91] text-white shadow-sm scale-105"
-                        : "bg-white/70 border-slate-200 dark:border-slate-700/50 text-[#475569] hover:bg-[#EAF9F6]"
+                        : "bg-[#F4F8F7] border-slate-200 dark:bg-[#10232E] dark:border-[#35515F] text-[#475569] hover:bg-[#EAF9F6]"
                     )}
                   >
                     {isHome && (
