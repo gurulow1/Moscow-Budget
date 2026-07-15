@@ -236,12 +236,12 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
         {/* Display switches */}
         <div className="flex flex-wrap items-center gap-3 shrink-0">
           {/* % / ₽ Unit Switcher (Audit #5) */}
-          <div className="inline-flex bg-[#EDF4F2] p-1 rounded-full border border-white/90 shadow-sm dark:bg-[#10232E] dark:border-[#35515F] relative">
+          <div className="soft-control inline-flex bg-[#EDF4F2] p-1 rounded-full border border-white/90 dark:bg-[#10232E] dark:border-[#35515F] relative">
             <button
               onClick={() => setDisplayUnit('percent')}
               className={cn(
                 "px-3.5 py-1.5 rounded-full text-xs font-black transition-all select-none outline-none",
-                displayUnit === 'percent' ? "bg-[#F9FBFA] dark:bg-[#29434F] text-[#0B766E] shadow-sm" : "text-[#475569] hover:text-[#0F172A] dark:text-slate-100"
+                displayUnit === 'percent' ? "soft-control--pressed bg-[#F9FBFA] dark:bg-[#29434F] text-[#0B766E]" : "text-[#475569] hover:text-[#0F172A] dark:text-slate-100"
               )}
             >
               %
@@ -250,7 +250,7 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
               onClick={() => setDisplayUnit('currency')}
               className={cn(
                 "px-3.5 py-1.5 rounded-full text-xs font-black transition-all select-none outline-none",
-                displayUnit === 'currency' ? "bg-[#F9FBFA] dark:bg-[#29434F] text-[#0B766E] shadow-sm" : "text-[#475569] hover:text-[#0F172A] dark:text-slate-100"
+                displayUnit === 'currency' ? "soft-control--pressed bg-[#F9FBFA] dark:bg-[#29434F] text-[#0B766E]" : "text-[#475569] hover:text-[#0F172A] dark:text-slate-100"
               )}
             >
               ₽
@@ -258,7 +258,7 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
           </div>
 
           {/* Premium Segmented Control Selector */}
-          <div className="inline-flex bg-[#EDF4F2] p-1 rounded-full border border-white/90 shadow-sm dark:bg-[#10232E] dark:border-[#35515F] relative">
+          <div className="soft-control inline-flex bg-[#EDF4F2] p-1 rounded-full border border-white/90 dark:bg-[#10232E] dark:border-[#35515F] relative">
             <button
               onClick={() => setIsPersonal(false)}
               className={cn(

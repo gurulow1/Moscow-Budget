@@ -91,7 +91,7 @@ export default function Header({ balance, totalXp = 100, completedActivities = [
       <header className="hidden lg:flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-4 py-4 px-6 glass-surface rounded-[28px] relative z-30 select-none">
         
         {/* Project title and visible prototype status */}
-        <div className="flex items-center gap-3.5 xl:basis-[330px] xl:grow xl:shrink-0 min-w-0">
+        <div className="flex items-center gap-3.5 xl:basis-[330px] xl:grow min-w-0">
           <div className="flex items-center justify-center bg-[#CC1111] w-10 h-10 rounded-xl text-white shadow-sm shrink-0">
             <LandPlot size={20} className="stroke-[2.5px]" />
           </div>
@@ -105,7 +105,7 @@ export default function Header({ balance, totalXp = 100, completedActivities = [
         </div>
          
         {/* Right side: User Account & Balance widget */}
-        <div className="flex flex-wrap xl:flex-nowrap items-center justify-end gap-2 lg:gap-3 shrink-0 min-w-0">
+        <div className="flex flex-wrap items-center justify-end gap-2 lg:gap-3 shrink-0 min-w-0">
           
           {/* Audit #10: Desktop Mini Search Bar */}
           <div className="relative hidden xl:block w-[205px] shrink-0">
@@ -153,7 +153,7 @@ export default function Header({ balance, totalXp = 100, completedActivities = [
 
           {/* Balance Widget */}
           <div className="relative shrink-[0.5]">
-            <div className="flex items-center justify-between sm:justify-start gap-2 lg:gap-3 pl-3 pr-3 py-2 bg-[#F8FAFC] dark:bg-slate-950/50 hover:bg-neutral-100/30 dark:hover:bg-slate-800/30 border border-[#E2E8F0] dark:border-slate-800 rounded-xl transition-all duration-200 min-w-0">
+            <div className="soft-control flex items-center justify-between sm:justify-start gap-2 lg:gap-3 pl-3 pr-3 py-2 bg-[#F8FAFC] dark:bg-slate-950/50 hover:bg-neutral-100/30 dark:hover:bg-slate-800/30 border border-[#E2E8F0] dark:border-slate-800 rounded-xl transition-all duration-200 min-w-0">
               <span className="text-xs font-black text-[#475569] dark:text-slate-400 uppercase tracking-wider shrink-0 lg:block hidden">
                 Баланс:
               </span>
@@ -193,7 +193,7 @@ export default function Header({ balance, totalXp = 100, completedActivities = [
           {/* Light/Dark Mode Switcher in Desktop Header */}
           <button
             onClick={() => setIsDark(!isDark)}
-            className="hidden md:flex items-center justify-center w-10 h-10 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-[#F8FAFC] dark:bg-slate-800 hover:bg-[#F1F5F9] dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-[#0F9F91] dark:hover:text-teal-300 transition-all cursor-pointer active:scale-95 duration-100 shrink-0 outline-none"
+            className="soft-control hidden md:flex items-center justify-center w-10 h-10 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-[#F8FAFC] dark:bg-slate-800 hover:bg-[#F1F5F9] dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-[#0F9F91] dark:hover:text-teal-300 transition-all cursor-pointer active:scale-95 duration-100 shrink-0 outline-none"
             title={isDark ? "Включить светлую тему" : "Включить темную тему"}
           >
             {isDark ? <Sun size={18} className="text-amber-400" /> : <Moon size={18} className="text-slate-600" />}
@@ -206,7 +206,7 @@ export default function Header({ balance, totalXp = 100, completedActivities = [
               aria-expanded={profileOpen}
               aria-haspopup="menu"
               className={cn(
-                "flex items-center gap-2.5 pl-2 pr-3 py-1.5 bg-[#F8FAFC] dark:bg-[#142733] rounded-xl border transition-all cursor-pointer select-none outline-none overflow-hidden",
+                "soft-control flex items-center gap-2.5 pl-2 pr-3 py-1.5 bg-[#F8FAFC] dark:bg-[#142733] rounded-xl border transition-all cursor-pointer select-none outline-none overflow-hidden",
                 profileOpen ? "border-[#0F9F91] dark:border-[#2E8C89] bg-[#DDF7F1] dark:bg-[#163D43]" : "border-[#E2E8F0] dark:border-[#345160] hover:bg-[#F1F5F9] dark:hover:bg-[#1D3440]"
               )}
             >
@@ -338,7 +338,7 @@ export default function Header({ balance, totalXp = 100, completedActivities = [
         <div className="flex items-center gap-1.5 min-w-0 justify-end">
           
           {/* Balance element */}
-          <div className="relative flex items-center gap-1 px-1.5 py-1.5 bg-white/65 dark:bg-slate-950/50 border border-slate-200/70 dark:border-slate-800 rounded-full min-w-max shrink-0">
+          <div className="soft-control relative flex items-center gap-1 px-1.5 py-1.5 bg-white/65 dark:bg-slate-950/50 border border-slate-200/70 dark:border-slate-800 rounded-full min-w-max shrink-0">
             <div className="w-4 h-4 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-[10px] text-white font-black shadow-xs shrink-0">
               <span className="drop-shadow-xs">₽</span>
             </div>
@@ -366,7 +366,7 @@ export default function Header({ balance, totalXp = 100, completedActivities = [
           {/* Compact Theme Switcher in Mobile Header */}
           <button
             onClick={() => setIsDark(!isDark)}
-            className="p-1.5 rounded-full border border-slate-200/70 dark:border-slate-800 bg-white/65 dark:bg-slate-950/50 text-slate-500 dark:text-slate-400 hover:text-[#0F9F91] dark:hover:text-teal-300 active:scale-90 transition-all cursor-pointer shrink-0 outline-none"
+            className="soft-control p-1.5 rounded-full border border-slate-200/70 dark:border-slate-800 bg-white/65 dark:bg-slate-950/50 text-slate-500 dark:text-slate-400 hover:text-[#0F9F91] dark:hover:text-teal-300 active:scale-90 transition-all cursor-pointer shrink-0 outline-none"
             title={isDark ? "Светлая тема" : "Темная тема"}
           >
             {isDark ? <Sun size={12} className="text-amber-500" /> : <Moon size={12} className="text-slate-500" />}
@@ -377,7 +377,7 @@ export default function Header({ balance, totalXp = 100, completedActivities = [
             onClick={() => window.dispatchEvent(new CustomEvent('start_mos_onboarding'))}
             title="Как это работает"
             aria-label="Открыть экскурсию по проекту"
-            className="flex items-center gap-1 pl-1 pr-1.5 py-1.5 bg-white/65 dark:bg-slate-950/50 rounded-full border border-slate-200/70 dark:border-slate-800 min-w-0 shrink-0 hover:border-[#0F9F91]/40 transition-colors"
+            className="soft-control flex items-center gap-1 pl-1 pr-1.5 py-1.5 bg-white/65 dark:bg-slate-950/50 rounded-full border border-slate-200/70 dark:border-slate-800 min-w-0 shrink-0 hover:border-[#0F9F91]/40 transition-colors"
           >
             <div className="bg-[#DDF7F1] text-[#0F9F91] dark:text-teal-300 p-1 rounded-full shrink-0">
               <HelpCircle size={11} className="stroke-[2.5px]" />
