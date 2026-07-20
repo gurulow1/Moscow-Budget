@@ -1,9 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { TrendingUp, Users, Building2, ArrowRight, ShieldCheck } from 'lucide-react';
+import { TrendingUp, Users, Building2, ArrowRight, ShieldCheck, Eye } from 'lucide-react';
 
 interface SplashPortalProps {
   onEnter: () => void;
+  onOpenAccessibility: () => void;
+  accessibilityEnabled: boolean;
+  reduceMotion: boolean;
 }
 
 interface Particle {
@@ -27,7 +30,12 @@ const BUDGET_STATS = [
   { icon: ShieldCheck, label: 'Дефицит 2026', value: '447,6 млрд ₽', color: '#8B5CF6' },
 ];
 
-export default function SplashPortal({ onEnter }: SplashPortalProps) {
+export default function SplashPortal({
+  onEnter,
+  onOpenAccessibility,
+  accessibilityEnabled,
+  reduceMotion,
+}: SplashPortalProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isEntering, setIsEntering] = useState(false);
   const [showContent, setShowContent] = useState(false);
@@ -40,7 +48,7 @@ export default function SplashPortal({ onEnter }: SplashPortalProps) {
     if (!ctx) return;
 
     let animId = 0;
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const prefersReducedMotion = reduceMotion || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     let width = window.innerWidth;
     let height = window.innerHeight;
 
@@ -180,22 +188,35 @@ export default function SplashPortal({ onEnter }: SplashPortalProps) {
       window.removeEventListener('resize', resize);
       window.removeEventListener('mousemove', handleMouseMove);
     };
-  }, []);
+  }, [reduceMotion]);
 
   const handleLaunchEnter = () => {
     if (isEntering) return;
     setIsEntering(true);
+    const shouldReduceMotion = reduceMotion || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     setTimeout(() => {
       onEnter();
-    }, 320);
+    }, shouldReduceMotion ? 0 : 320);
   };
 
   return (
     <div className="fixed inset-0 bg-[#0F172A] z-[9999] overflow-hidden flex flex-col items-center justify-center select-none font-sans">
+      <button
+        type="button"
+        onClick={onOpenAccessibility}
+        aria-label="Открыть версию для слабовидящих"
+        aria-pressed={accessibilityEnabled}
+        className="fixed right-3 top-3 z-20 flex min-h-11 items-center gap-2 rounded-xl border-2 border-white bg-[#0F172A] px-3 py-2 text-sm font-black text-white hover:bg-white hover:text-[#0F172A] sm:right-5 sm:top-5"
+      >
+        <Eye size={20} aria-hidden="true" />
+        <span className="hidden sm:inline">Версия для слабовидящих</span>
+      </button>
+
       {/* Animated background canvas */}
       <canvas 
         ref={canvasRef} 
-        className="absolute inset-0 w-full h-full"
+        aria-hidden="true"
+        className="decorative-canvas absolute inset-0 w-full h-full"
       />
 
       {/* Content overlay */}

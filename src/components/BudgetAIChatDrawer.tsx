@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MessageCircle, Bot, X, User, Send } from 'lucide-react';
-import { cn, safeLocalStorage } from '../lib/utils';
+import { cn, getPreferredScrollBehavior, safeLocalStorage } from '../lib/utils';
 import { BUDGET_FACTS, formatBudgetAmount } from '../data/budgetFacts';
 
 interface BudgetAIChatDrawerProps {
@@ -129,7 +129,7 @@ export default function BudgetAIChatDrawer({ activeMobileTab, tourStep = null }:
   const endRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: 'smooth' });
+    endRef.current?.scrollIntoView({ behavior: getPreferredScrollBehavior() });
   }, [messages, isTyping]);
 
   useEffect(() => {
@@ -208,7 +208,7 @@ export default function BudgetAIChatDrawer({ activeMobileTab, tourStep = null }:
           onClick={() => setIsOpen(true)}
           className={cn(
             'fixed bottom-[8.25rem] md:bottom-6 right-5 md:right-8 z-50 w-11 h-11 bg-[#0F9F91] text-white rounded-full flex items-center justify-center shadow-[0_12px_28px_rgba(15,159,145,0.28)] hover:bg-[#0B766E] transition duration-200 cursor-pointer active:scale-95 border-2 border-white/90',
-            tourStep !== null && tourStep !== 6 && 'blur-xs opacity-20 pointer-events-none scale-[0.98] transition-all duration-500',
+            tourStep !== null && tourStep !== 6 && 'opacity-20 pointer-events-none transition-opacity duration-200',
             tourStep === 6 && 'z-[220] ring-4 ring-[#0F9F91]/30 scale-105 animate-pulse'
           )}
           title="Открыть интерактивный справочник"

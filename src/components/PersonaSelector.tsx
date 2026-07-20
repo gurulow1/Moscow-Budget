@@ -98,7 +98,7 @@ export default function PersonaSelector({ activePersona, onSelect, isLoading }: 
                     "relative flex items-center gap-2 px-4 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all duration-200 outline-none select-none border tracking-tight btn-interactive",
                     isActive 
                       ? "bg-[#0F9F91] border-[#0F9F91] text-white shadow-[0_8px_18px_rgba(15,159,145,0.2)] cursor-default scale-[1.02]"
-                      : "bg-white/70 dark:bg-[#1E293B] border-slate-200/80 dark:border-slate-700 text-[#475569] dark:text-slate-300 hover:bg-[#DDF7F1]/55 dark:hover:bg-slate-800 hover:text-[#172033] dark:text-slate-100 dark:hover:text-white cursor-pointer"
+                      : "bg-[#EAF8F5] dark:bg-[#1E293B] border-[#B8E4DC] dark:border-slate-700 text-[#334155] dark:text-slate-100 shadow-[0_3px_10px_rgba(15,159,145,0.08)] hover:bg-[#D8F2ED] dark:hover:bg-slate-800 hover:border-[#75CDBF] hover:text-[#172033] dark:hover:text-white cursor-pointer"
                   )}
                 >
                   <Icon size={14} className={cn("stroke-[2.5px]", isActive ? "text-white" : p.color)} />
@@ -115,10 +115,10 @@ export default function PersonaSelector({ activePersona, onSelect, isLoading }: 
           initial={{ opacity: 0, y: 4 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
-          className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center bg-white/55 dark:bg-slate-950/45 p-4 rounded-[22px] border border-white/80 dark:border-slate-800"
+          className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center bg-[#F1FAF8] dark:bg-slate-950/45 p-4 rounded-[22px] border border-[#C6E9E2] dark:border-slate-800"
         >
           <div className="md:col-span-8 flex items-start gap-3">
-            <div className="bg-white dark:bg-slate-900 p-2 rounded-lg border border-[#E2E8F0] dark:border-slate-800 mt-0.5 shrink-0">
+            <div className="bg-[#E7F7F3] dark:bg-slate-900 p-2 rounded-lg border border-[#BFE5DD] dark:border-slate-800 mt-0.5 shrink-0">
               <Info size={15} className="text-[#475569] dark:text-slate-400" />
             </div>
             <div>
@@ -129,7 +129,7 @@ export default function PersonaSelector({ activePersona, onSelect, isLoading }: 
             </div>
           </div>
           
-          <div className="md:col-span-4 border-t md:border-t-0 md:border-l border-[#E2E8F0] dark:border-slate-800 pt-3 md:pt-0 md:pl-4 flex items-start gap-2.5">
+          <div className="md:col-span-4 border-t md:border-t-0 md:border-l border-[#BFE5DD] dark:border-slate-800 pt-3 md:pt-0 md:pl-4 flex items-start gap-2.5">
             <Lightbulb size={16} className="text-amber-500 shrink-0 mt-0.5" />
             <p className="text-xs text-[#475569] dark:text-slate-400 font-medium italic">
               {currentPersonaInfo.suggestion}

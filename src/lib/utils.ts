@@ -85,3 +85,9 @@ export function readStoredStringArray(key: string): string[] {
     return [];
   }
 }
+
+export function getPreferredScrollBehavior(): ScrollBehavior {
+  const reducedByMode = document.documentElement.dataset.a11yReduceMotion === 'true';
+  const reducedBySystem = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  return reducedByMode || reducedBySystem ? 'auto' : 'smooth';
+}

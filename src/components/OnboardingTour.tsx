@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useCallback, useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ChevronLeft, ChevronRight, X, Sparkles, HelpCircle } from 'lucide-react';
 import { cn, safeLocalStorage } from '../lib/utils';
@@ -12,7 +12,7 @@ interface OnboardingTourProps {
 
 const FinyMascot = ({ mood }: { mood: 'happy' | 'waving' | 'thinking' | 'neutral' }) => {
   return (
-    <div className="relative w-16 h-16 shrink-0 select-none mx-auto sm:mx-0">
+    <div aria-hidden="true" className="relative w-16 h-16 shrink-0 select-none mx-auto sm:mx-0">
       <motion.div
         animate={{ y: [0, -6, 0] }}
         transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
@@ -94,6 +94,9 @@ export default function OnboardingTour({ onClose, activeStep, setActiveStep, set
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
   const [isMobile, setIsMobile] = useState<boolean>(false);
   const scrollTimerRef = useRef<number | null>(null);
+  const focusDialog = useCallback((node: HTMLDivElement | null) => {
+    node?.focus();
+  }, []);
 
   const steps = [
     {
@@ -188,13 +191,13 @@ export default function OnboardingTour({ onClose, activeStep, setActiveStep, set
     const updatePosition = (shouldScroll = false) => {
       const el = getTargetElement();
       if (el) {
-        const rect = el.getBoundingClientRect();
-        setTargetRect(rect);
-
         if (shouldScroll) {
-          const isLargeTarget = rect.height > window.innerHeight * 0.6;
-          el.scrollIntoView({ behavior: 'smooth', block: isLargeTarget ? 'start' : 'center' });
+          const initialRect = el.getBoundingClientRect();
+          const isLargeTarget = initialRect.height > window.innerHeight * 0.6;
+          el.scrollIntoView({ behavior: 'auto', block: isLargeTarget ? 'start' : 'center' });
         }
+
+        setTargetRect(el.getBoundingClientRect());
       }
     };
 
@@ -241,17 +244,31 @@ export default function OnboardingTour({ onClose, activeStep, setActiveStep, set
     onClose();
   };
 
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        safeLocalStorage.setItem('mos_onboarding_completed_v3', 'true');
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [onClose]);
+
   const currentStepData = steps[activeStep];
   if (!currentStepData) return null;
 
   // Calculate dynamic styling for the floating guide card on desktop
   const getTooltipStyle = () => {
     if (isMobile) {
+      const placeAtTop = targetRect !== null && targetRect.top > window.innerHeight * 0.55;
       return {
         position: 'fixed' as const,
-        bottom: '80px',
+        ...(placeAtTop ? { top: '16px' } : { bottom: '80px' }),
         left: '16px',
         right: '16px',
+        maxHeight: 'calc(100vh - 112px)',
+        overflowY: 'auto' as const,
         zIndex: 250,
       };
     }
@@ -301,21 +318,20 @@ export default function OnboardingTour({ onClose, activeStep, setActiveStep, set
       left: `${left}px`,
       width: `${tooltipWidth}px`,
       maxWidth: 'calc(100vw - 32px)',
-      maxHeight: 'calc(100vh - 32px)',
+      maxHeight: `calc(100vh - ${top + 16}px)`,
       overflowY: 'auto' as const,
       zIndex: 250,
-      transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
     };
   };
 
   return (
-    <div className="fixed inset-0 z-[200] overflow-visible pointer-events-none select-none">
+    <div className="fixed inset-0 z-[200] overflow-visible pointer-events-none">
       {/* 1. Global blurring backdrop overlay behind the active step card */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-slate-950/20 backdrop-blur-[1px] pointer-events-none"
+        className="tour-backdrop fixed inset-0 bg-slate-950/30 pointer-events-none"
       />
 
       {/* 2. Highlights overlay frame (draws transparent highlight around the targeted element) */}
@@ -323,14 +339,13 @@ export default function OnboardingTour({ onClose, activeStep, setActiveStep, set
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="fixed pointer-events-none rounded-2xl border-2 border-[#CC1111] shadow-[0_0_0_9999px_rgba(15,23,42,0.45),0_0_20px_rgba(204,17,17,0.4)]"
+          className="fixed pointer-events-none rounded-2xl border-2 border-[#CC1111] shadow-[0_0_20px_rgba(204,17,17,0.45)]"
           style={{
             top: targetRect.top - 8,
             left: targetRect.left - 8,
             width: targetRect.width + 16,
             height: targetRect.height + 16,
             zIndex: 210,
-            transition: 'all 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
           }}
         />
       )}
@@ -338,13 +353,19 @@ export default function OnboardingTour({ onClose, activeStep, setActiveStep, set
       {/* 3. The Guide Card UI itself */}
       <AnimatePresence mode="wait">
         <motion.div
+          ref={focusDialog}
           key={activeStep}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="onboarding-title"
+          aria-describedby="onboarding-description"
+          tabIndex={-1}
           initial={{ opacity: 0, scale: 0.95, y: isMobile ? 20 : 0 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: isMobile ? 20 : 0 }}
           transition={{ duration: 0.25, ease: "easeOut" }}
           style={getTooltipStyle()}
-          className="bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-slate-800 rounded-3xl p-5 sm:p-6 shadow-[0_20px_50px_rgba(0,0,0,0.3)] pointer-events-auto flex flex-col gap-4 select-none relative overflow-hidden"
+          className="bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-slate-800 rounded-3xl p-5 sm:p-6 shadow-[0_20px_50px_rgba(0,0,0,0.3)] pointer-events-auto flex flex-col gap-4 relative overflow-hidden"
         >
           {/* Subtle Moscow coat of arms decorative red background glow */}
           <div className="absolute -top-12 -right-12 w-32 h-32 rounded-full bg-[#CC1111]/5 blur-2xl pointer-events-none" />
@@ -366,7 +387,7 @@ export default function OnboardingTour({ onClose, activeStep, setActiveStep, set
                 )}
               </div>
               
-              <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100 tracking-tight leading-snug">
+              <h3 id="onboarding-title" className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100 tracking-tight leading-snug">
                 {currentStepData.title}
               </h3>
             </div>
@@ -374,6 +395,7 @@ export default function OnboardingTour({ onClose, activeStep, setActiveStep, set
             {/* Skip X icon inside Welcome/Main Tour */}
             <button
               onClick={handleSkip}
+              aria-label="Пропустить обучение"
               className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 outline-none"
               title="Пропустить обучение"
             >
@@ -382,7 +404,7 @@ export default function OnboardingTour({ onClose, activeStep, setActiveStep, set
           </div>
 
           {/* Text Message */}
-          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
+          <p id="onboarding-description" className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
             {currentStepData.text}
           </p>
 

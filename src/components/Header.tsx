@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'motion/react';
-import { User, LandPlot, ShieldCheck, Trophy, Sparkles, BookOpen, Layers, CheckCircle2, Sun, Moon, HelpCircle } from 'lucide-react';
+import { User, LandPlot, ShieldCheck, Trophy, Sparkles, BookOpen, Layers, CheckCircle2, Sun, Moon, HelpCircle, Eye } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { cn, safeLocalStorage } from '../lib/utils';
 
@@ -41,9 +41,18 @@ interface HeaderProps {
   totalXp?: number;
   completedActivities?: string[];
   onReset?: () => void;
+  onOpenAccessibility: () => void;
+  accessibilityEnabled: boolean;
 }
 
-export default function Header({ balance, totalXp = 100, completedActivities = [], onReset }: HeaderProps) {
+export default function Header({
+  balance,
+  totalXp = 100,
+  completedActivities = [],
+  onReset,
+  onOpenAccessibility,
+  accessibilityEnabled,
+}: HeaderProps) {
   const [prevBalance, setPrevBalance] = useState(balance);
   const [floatingPoints, setFloatingPoints] = useState<number | null>(null);
   
@@ -111,6 +120,7 @@ export default function Header({ balance, totalXp = 100, completedActivities = [
           <div className="relative hidden xl:block w-[205px] shrink-0">
             <input
               type="text"
+              aria-label="Поиск по бюджету"
               placeholder="Поиск по бюджету... (Enter)"
               className="w-full text-base xl:text-xs font-semibold pl-8 pr-3 py-2 bg-white/65 dark:bg-slate-950/50 border border-slate-200/70 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 focus:border-[#0F9F91]/60 focus:bg-white dark:focus:bg-slate-900 text-slate-800 dark:text-slate-200 rounded-full outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
               onKeyDown={(e) => {
@@ -147,6 +157,11 @@ export default function Header({ balance, totalXp = 100, completedActivities = [
               <div 
                 className="h-full bg-linear-to-r from-[#14B8A6] to-[#0B766E] rounded-full transition-all duration-300"
                 style={{ width: `${lvlInfo.progress}%` }}
+                role="progressbar"
+                aria-label="Прогресс уровня"
+                aria-valuemin={lvlInfo.min}
+                aria-valuemax={lvlInfo.nextLevelXp}
+                aria-valuenow={totalXp}
               />
             </div>
           </div>
@@ -193,12 +208,32 @@ export default function Header({ balance, totalXp = 100, completedActivities = [
           {/* Light/Dark Mode Switcher in Desktop Header */}
           <button
             onClick={() => setIsDark(!isDark)}
+            type="button"
+            aria-label={isDark ? "Включить светлую тему" : "Включить тёмную тему"}
+            aria-pressed={isDark}
             className="soft-control hidden md:flex items-center justify-center w-10 h-10 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-[#F8FAFC] dark:bg-slate-800 hover:bg-[#F1F5F9] dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-[#0F9F91] dark:hover:text-teal-300 transition-all cursor-pointer active:scale-95 duration-100 shrink-0 outline-none"
             title={isDark ? "Включить светлую тему" : "Включить темную тему"}
           >
             {isDark ? <Sun size={18} className="text-amber-400" /> : <Moon size={18} className="text-slate-600" />}
           </button>
           
+          <button
+            type="button"
+            onClick={onOpenAccessibility}
+            aria-label="Открыть версию для слабовидящих"
+            aria-pressed={accessibilityEnabled}
+            className={cn(
+              "soft-control flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl border px-3 font-extrabold transition-colors",
+              accessibilityEnabled
+                ? "border-slate-950 bg-slate-950 text-white dark:border-white dark:bg-white dark:text-slate-950"
+                : "border-[#E2E8F0] bg-[#F8FAFC] text-slate-700 hover:border-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200",
+            )}
+            title="Версия для слабовидящих"
+          >
+            <Eye size={18} aria-hidden="true" />
+            <span>Для слабовидящих</span>
+          </button>
+
           {/* Local demo profile */}
           <div className="relative shrink-0">
             <button 
@@ -324,7 +359,7 @@ export default function Header({ balance, totalXp = 100, completedActivities = [
       </header>
 
       {/* MOBILE COMPACT HEADER */}
-      <header className="flex lg:hidden items-center justify-between h-14 px-3.5 glass-surface rounded-[22px] w-full relative z-20 select-none">
+      <header className="a11y-mobile-header flex lg:hidden items-center justify-between h-14 px-3.5 glass-surface rounded-[22px] w-full relative z-20 select-none">
         
         {/* Left aspect: Only icon logo */}
         <div className="flex items-center gap-2">
@@ -366,10 +401,29 @@ export default function Header({ balance, totalXp = 100, completedActivities = [
           {/* Compact Theme Switcher in Mobile Header */}
           <button
             onClick={() => setIsDark(!isDark)}
+            type="button"
+            aria-label={isDark ? "Включить светлую тему" : "Включить тёмную тему"}
+            aria-pressed={isDark}
             className="soft-control p-1.5 rounded-full border border-slate-200/70 dark:border-slate-800 bg-white/65 dark:bg-slate-950/50 text-slate-500 dark:text-slate-400 hover:text-[#0F9F91] dark:hover:text-teal-300 active:scale-90 transition-all cursor-pointer shrink-0 outline-none"
             title={isDark ? "Светлая тема" : "Темная тема"}
           >
             {isDark ? <Sun size={12} className="text-amber-500" /> : <Moon size={12} className="text-slate-500" />}
+          </button>
+
+          <button
+            type="button"
+            onClick={onOpenAccessibility}
+            aria-label="Открыть версию для слабовидящих"
+            aria-pressed={accessibilityEnabled}
+            className={cn(
+              "soft-control flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition-colors",
+              accessibilityEnabled
+                ? "border-slate-950 bg-slate-950 text-white dark:border-white dark:bg-white dark:text-slate-950"
+                : "border-slate-200/70 bg-white/65 text-slate-600 dark:border-slate-800 dark:bg-slate-950/50 dark:text-slate-300",
+            )}
+            title="Версия для слабовидящих"
+          >
+            <Eye size={16} aria-hidden="true" />
           </button>
 
           <button
@@ -398,6 +452,11 @@ export default function Header({ balance, totalXp = 100, completedActivities = [
           <div 
             className="bg-gradient-to-r from-[#14B8A6] to-[#0B766E] h-full rounded-full transition-all duration-300"
             style={{ width: `${lvlInfo.progress}%` }}
+            role="progressbar"
+            aria-label="Прогресс уровня"
+            aria-valuemin={lvlInfo.min}
+            aria-valuemax={lvlInfo.nextLevelXp}
+            aria-valuenow={totalXp}
           />
         </div>
       </div>

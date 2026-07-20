@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { memo, useCallback, useEffect, useLayoutEffect, useState } from 'react';
+import { motion, AnimatePresence, MotionConfig } from 'motion/react';
 import Header from './components/Header';
 import PersonaSelector from './components/PersonaSelector';
 import TaxCalculator, { type TaxCalculation } from './components/TaxCalculator';
@@ -9,11 +9,25 @@ import BudgetAIChatDrawer from './components/BudgetAIChatDrawer';
 import SplashPortal from './components/SplashPortal';
 import OnboardingTour from './components/OnboardingTour';
 import LearningAssessment from './components/LearningAssessment';
+import AccessibilityPanel, {
+  applyAccessibilitySettings,
+  readAccessibilitySettings,
+} from './components/AccessibilityPanel';
 import { Persona } from '../types';
 import { Calculator, Target, PieChart as PieChartIcon, Check, Sparkles } from 'lucide-react';
-import { cn, readStoredNumber, readStoredStringArray, safeLocalStorage } from './lib/utils';
+import { cn, getPreferredScrollBehavior, readStoredNumber, readStoredStringArray, safeLocalStorage } from './lib/utils';
+
+const MemoQuestDashboard = memo(QuestDashboard);
+const MemoAnalyticsChart = memo(AnalyticsChart);
 
 export default function App() {
+  const [accessibilitySettings, setAccessibilitySettings] = useState(readAccessibilitySettings);
+  const [accessibilityOpen, setAccessibilityOpen] = useState(false);
+
+  useLayoutEffect(() => {
+    applyAccessibilitySettings(accessibilitySettings);
+  }, [accessibilitySettings]);
+
   const [balance, setBalance] = useState<number>(() => {
     return readStoredNumber('mos_game_balance_v3');
   });
@@ -85,6 +99,16 @@ export default function App() {
   // Onboarding Tour State
   const [tourStep, setTourStep] = useState<number | null>(null);
 
+  const closeAccessibility = useCallback(() => {
+    setAccessibilityOpen(false);
+  }, []);
+
+  const openAccessibility = useCallback(() => {
+    setTourStep(null);
+    setAccessibilitySettings(current => current.enabled ? current : { ...current, enabled: true });
+    setAccessibilityOpen(true);
+  }, []);
+
   useEffect(() => {
     const handleStartTour = () => {
       setTourStep(0);
@@ -97,7 +121,7 @@ export default function App() {
     const handleFocusCalculator = () => {
       setActiveMobileTab('calc');
       window.requestAnimationFrame(() => {
-        document.getElementById('tour-calculator')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        document.getElementById('tour-calculator')?.scrollIntoView({ behavior: getPreferredScrollBehavior(), block: 'start' });
       });
     };
     window.addEventListener('focus_mos_calculator', handleFocusCalculator);
@@ -107,9 +131,9 @@ export default function App() {
   const getTourClass = (stepId: number) => {
     if (tourStep === null) return '';
     if (tourStep === stepId) {
-      return 'relative z-[220] ring-4 ring-[#CC1111]/30 transition-all duration-300';
+      return 'relative z-[220] ring-4 ring-[#CC1111]/30 transition-opacity duration-200';
     }
-    return 'blur-[2px] opacity-20 pointer-events-none scale-[0.98] transition-all duration-500';
+    return 'opacity-20 pointer-events-none transition-opacity duration-200';
   };
 
   const handleCalculate = (calculation: TaxCalculation) => {
@@ -155,16 +179,28 @@ export default function App() {
 
   if (showSplash) {
     return (
-      <SplashPortal 
-        onEnter={() => {
-          setShowSplash(false);
-          safeLocalStorage.setItem('mos_splash_seen_v3', 'true');
-        }} 
-      />
+      <MotionConfig reducedMotion={accessibilitySettings.enabled && accessibilitySettings.reduceMotion ? 'always' : 'user'}>
+        <SplashPortal
+          onEnter={() => {
+            setShowSplash(false);
+            safeLocalStorage.setItem('mos_splash_seen_v3', 'true');
+          }}
+          onOpenAccessibility={openAccessibility}
+          accessibilityEnabled={accessibilitySettings.enabled}
+          reduceMotion={accessibilitySettings.enabled && accessibilitySettings.reduceMotion}
+        />
+        <AccessibilityPanel
+          open={accessibilityOpen}
+          settings={accessibilitySettings}
+          onChange={setAccessibilitySettings}
+          onClose={closeAccessibility}
+        />
+      </MotionConfig>
     );
   }
 
   return (
+    <MotionConfig reducedMotion={accessibilitySettings.enabled && accessibilitySettings.reduceMotion ? 'always' : 'user'}>
     <div className="min-h-screen bg-transparent text-[#172033] dark:text-slate-100 flex flex-col md:py-6 relative pb-20 md:pb-0">
       
       {/* Expose the tour component globally above everything else */}
@@ -180,7 +216,14 @@ export default function App() {
       <div className="w-full max-w-7xl px-4 sm:px-6 lg:px-8 mx-auto flex flex-col gap-4 md:gap-6 flex-1 pb-16 md:pb-4 relative z-10">
         {/* Header (local demo profile and learning points) */}
         <div className={cn("py-2 md:py-0 transition-all duration-500", getTourClass(1))} id="tour-header">
-          <Header balance={balance} totalXp={totalXp} completedActivities={completedActivities} onReset={handleResetDemo} />
+          <Header
+            balance={balance}
+            totalXp={totalXp}
+            completedActivities={completedActivities}
+            onReset={handleResetDemo}
+            onOpenAccessibility={openAccessibility}
+            accessibilityEnabled={accessibilitySettings.enabled}
+          />
         </div>
         
         {/* One responsive tree: each module stays mounted, so tab changes do not erase user work. */}
@@ -203,7 +246,7 @@ export default function App() {
           </div>
 
           <div className={cn(showMobileTab('quests', 'flex flex-col'), "transition-all duration-300", getTourClass(4))} id="tour-quests">
-            <QuestDashboard
+            <MemoQuestDashboard
               isCalculatorCompleted={calculatorTaskCompleted}
               balance={balance}
               setBalance={setBalance}
@@ -215,7 +258,7 @@ export default function App() {
           </div>
 
           <div className={cn(showMobileTab('analytics'), "transition-all duration-300", getTourClass(5))} id="tour-analytics">
-            <AnalyticsChart />
+            <MemoAnalyticsChart />
           </div>
         </main>
 
@@ -240,13 +283,13 @@ export default function App() {
             exit={{ y: "100%", opacity: 0 }}
             transition={{ type: "spring", stiffness: 350, damping: 30 }}
             className={cn(
-              "md:hidden fixed bottom-[5.25rem] left-4 right-20 h-12 glass-island rounded-full p-1 z-40 transition-all duration-500",
-              tourStep !== null && "blur-xs opacity-20 pointer-events-none"
+              "a11y-mobile-primary-action md:hidden fixed bottom-[5.25rem] left-4 right-20 h-12 glass-island rounded-full p-1 z-40 transition-opacity duration-200",
+              tourStep !== null && "opacity-20 pointer-events-none"
             )}
           >
             <button
               onClick={() => {
-                document.getElementById('tour-calculator')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                document.getElementById('tour-calculator')?.scrollIntoView({ behavior: getPreferredScrollBehavior(), block: 'start' });
               }}
               className={cn(
                 "w-full h-full rounded-full text-center text-xs font-extrabold tracking-tight flex items-center justify-center gap-2 px-4 transition-all",
@@ -270,10 +313,13 @@ export default function App() {
       </AnimatePresence>
 
       {/* MOBILE BOTTOM NAVIGATION: floating capsule, light active state, no full-width rails. */}
-      <div className={cn(
-        "md:hidden fixed bottom-3 left-4 right-4 glass-island rounded-full z-50 h-14 flex items-center justify-around px-2 pb-safe transition-all duration-500",
-        tourStep !== null && "blur-xs opacity-20 pointer-events-none"
-      )}>
+      <nav
+        aria-label="Разделы приложения"
+        className={cn(
+          "a11y-mobile-navigation md:hidden fixed bottom-3 left-4 right-4 glass-island rounded-full z-50 h-14 flex items-center justify-around px-2 pb-safe transition-opacity duration-200",
+          tourStep !== null && "opacity-20 pointer-events-none"
+        )}
+      >
         {/* Tab 1: Calculator */}
         <button 
           onClick={() => setActiveMobileTab('calc')}
@@ -341,10 +387,17 @@ export default function App() {
           <PieChartIcon size={18} className={cn("transition-transform", activeMobileTab === 'analytics' ? "scale-110 drop-shadow-sm" : "")} />
           <span className="text-[10px] font-extrabold tracking-tight">Аналитика</span>
         </button>
-      </div>
+      </nav>
       
       {/* Global local-reference drawer and mobile FAB button */}
       <BudgetAIChatDrawer activeMobileTab={activeMobileTab} tourStep={tourStep} />
     </div>
+    <AccessibilityPanel
+      open={accessibilityOpen}
+      settings={accessibilitySettings}
+      onChange={setAccessibilitySettings}
+      onClose={closeAccessibility}
+    />
+    </MotionConfig>
   );
 }

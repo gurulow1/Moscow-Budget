@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { PieChart as PieChartIcon, Info, Map as MapIcon, Wallet, Activity, ArrowUpRight, CheckCircle2, Star, StarOff, Trophy, ListOrdered } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { cn, safeLocalStorage } from '../lib/utils';
+import { cn, getPreferredScrollBehavior, safeLocalStorage } from '../lib/utils';
 import {
   BUDGET_SECTORS,
   TOTAL_EXPENSES_BILLION,
@@ -197,7 +197,7 @@ export default function AnalyticsChart({ isLoading }: { isLoading?: boolean }) {
       setTimeout(() => {
         const el = document.getElementById(`district-row-${distId}`);
         if (el) {
-          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          el.scrollIntoView({ behavior: getPreferredScrollBehavior(), block: 'center' });
           // Add a temporary glow animation outline
           el.classList.add('ring-4', 'ring-amber-500/60', 'border-amber-500');
           setTimeout(() => {

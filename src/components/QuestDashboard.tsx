@@ -6,7 +6,7 @@ import {
   Briefcase, ArrowRight, Info, Check, ToggleLeft, ToggleRight,
   TrendingUp, Activity, FileText, Ban, Sparkle, Clock
 } from 'lucide-react';
-import { cn, readStoredStringArray, safeLocalStorage } from '../lib/utils';
+import { cn, getPreferredScrollBehavior, readStoredStringArray, safeLocalStorage } from '../lib/utils';
 import { BUDGET_QUESTIONS_BANK, BudgetQuestion } from '../data/budgetQuestions';
 import { BUDGET_FACTS, formatBudgetAmount, getBudgetSource, type DataSourceId } from '../data/budgetFacts';
 import { Send, Bot, User as UserIcon, Crown, Map as MapIcon, Coins, Lock, MessageCircle } from 'lucide-react';
@@ -601,7 +601,7 @@ export default function QuestDashboard({
   useEffect(() => {
     if (!activeQuiz) return;
     const frame = window.requestAnimationFrame(() => {
-      document.getElementById('mos_quiz_session')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      document.getElementById('mos_quiz_session')?.scrollIntoView({ behavior: getPreferredScrollBehavior(), block: 'start' });
     });
     return () => window.cancelAnimationFrame(frame);
   }, [activeQuiz]);
@@ -3229,7 +3229,7 @@ export default function QuestDashboard({
                               if (msg.quiz) {
                                 startQuiz(msg.quiz);
                                 const element = document.getElementById('mos_game_center');
-                                element?.scrollIntoView({ behavior: 'smooth' });
+                                element?.scrollIntoView({ behavior: getPreferredScrollBehavior() });
                               }
                             }}
                             className="w-full sm:w-auto px-4 py-2 bg-[#CC1111] hover:bg-[#A30E0E] text-white font-extrabold text-[11px] rounded-lg shadow-xs select-none hover:scale-105 transition duration-150 cursor-pointer text-center whitespace-nowrap uppercase leading-none"
