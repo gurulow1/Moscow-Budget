@@ -1,29 +1,30 @@
-import React, { useCallback, useState, useEffect, useRef } from 'react';
+import { useCallback, useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronLeft, ChevronRight, X, Sparkles, HelpCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { cn, safeLocalStorage } from '../lib/utils';
+import type { AppTab } from '../ui/TabBar';
 
 interface OnboardingTourProps {
   onClose: () => void;
   activeStep: number;
   setActiveStep: (step: number) => void;
-  setActiveMobileTab: (tab: 'calc' | 'quests' | 'analytics') => void;
+  setActiveTab: (tab: AppTab) => void;
 }
 
 const FinyMascot = ({ mood }: { mood: 'happy' | 'waving' | 'thinking' | 'neutral' }) => {
   return (
-    <div aria-hidden="true" className="relative w-16 h-16 shrink-0 select-none mx-auto sm:mx-0">
+    <div aria-hidden="true" className="relative size-14 shrink-0 select-none">
       <motion.div
         animate={{ y: [0, -6, 0] }}
         transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
         className="w-full h-full"
       >
-        <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-[0_4px_12px_rgba(204,17,17,0.3)]">
+        <svg viewBox="0 0 100 100" className="h-full w-full drop-shadow-[0_4px_12px_rgba(214,38,58,0.3)]">
           <defs>
             <radialGradient id="bodyGrad" cx="30%" cy="30%" r="70%">
-              <stop offset="0%" stopColor="#ff4d4d" />
-              <stop offset="80%" stopColor="#CC1111" />
-              <stop offset="100%" stopColor="#880000" />
+              <stop offset="0%" stopColor="#FF5A6D" />
+              <stop offset="80%" stopColor="#D6263A" />
+              <stop offset="100%" stopColor="#A3141F" />
             </radialGradient>
             <radialGradient id="screenGrad" cx="50%" cy="50%" r="50%">
               <stop offset="0%" stopColor="#1e293b" />
@@ -90,7 +91,7 @@ const FinyMascot = ({ mood }: { mood: 'happy' | 'waving' | 'thinking' | 'neutral
   );
 };
 
-export default function OnboardingTour({ onClose, activeStep, setActiveStep, setActiveMobileTab }: OnboardingTourProps) {
+export default function OnboardingTour({ onClose, activeStep, setActiveStep, setActiveTab }: OnboardingTourProps) {
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
   const [isMobile, setIsMobile] = useState<boolean>(false);
   const scrollTimerRef = useRef<number | null>(null);
@@ -101,13 +102,13 @@ export default function OnboardingTour({ onClose, activeStep, setActiveStep, set
   const steps = [
     {
       title: "Добро пожаловать в МосГорБюджет.Трек!",
-      text: "Я ваш гид Фини. Покажу, как устроен интерактивный маршрут по бюджету Москвы. За знания и ежедневные задания начисляются городские баллы — их можно использовать в программах «Миллион призов» и «Активный гражданин».",
+      text: "Я ваш гид Фини. Покажу, как устроен интерактивный маршрут по бюджету Москвы. За расчёты, викторины и ежедневные задания начисляются учебные баллы, они хранятся в этом браузере.",
       targetSelector: null,
       mood: "waving" as const,
     },
     {
       title: "Ваш профиль и баланс баллов",
-      text: "В шапке находится профиль участника. Здесь собраны уровень, опыт и баллы маршрута.",
+      text: "Кольцо у кнопки профиля показывает прогресс уровня. В профиле — баллы, ночная тема и эта экскурсия, рядом кнопка версии для слабовидящих.",
       targetSelector: "#tour-header",
       mood: "neutral" as const,
     },
@@ -125,13 +126,13 @@ export default function OnboardingTour({ onClose, activeStep, setActiveStep, set
     },
     {
       title: "Игровой центр и квесты",
-      text: "Выполняйте задания, проходите викторины по финансовой грамотности, играйте в симулятор районного бюджета и исследуйте карту Москвы. Достижения пополняют баланс городских баллов.",
+      text: "Выполняйте задания, проходите викторины по финансовой грамотности, играйте в симулятор районного бюджета и исследуйте карту Москвы. За достижения начисляются учебные баллы.",
       targetSelector: "#tour-quests",
       mood: "neutral" as const,
     },
     {
-      title: "Интерактивная аналитика бюджета",
-      text: "Исследуйте структуру расходов Москвы на 2026 год. Режим вычета показывает, как меняется масштаб разных направлений.",
+      title: "Куда идут деньги",
+      text: "Потоки показывают, куда идут расходы Москвы в 2026 году. Нажмите на направление, чтобы увидеть подробности, а чек разложит 1 000 ₽ или ваш вычет по тем же долям.",
       targetSelector: "#tour-analytics",
       mood: "thinking" as const,
     },
@@ -149,19 +150,16 @@ export default function OnboardingTour({ onClose, activeStep, setActiveStep, set
     }
   ];
 
-  // Sync tab switching on mobile based on current step
+  // Open the tab that holds the current step's target.
   useEffect(() => {
     if (activeStep === 2 || activeStep === 3) {
-      setActiveMobileTab('calc');
+      setActiveTab('calc');
     } else if (activeStep === 4) {
-      setActiveMobileTab('quests');
+      setActiveTab('quests');
     } else if (activeStep === 5) {
-      setActiveMobileTab('analytics');
-    } else if (activeStep === 6) {
-      // FAB chat button is visible on calc/analytics tab, go back to calc
-      setActiveMobileTab('calc');
+      setActiveTab('data');
     }
-  }, [activeStep, setActiveMobileTab]);
+  }, [activeStep, setActiveTab]);
 
   // Responsive display listener
   useEffect(() => {
@@ -326,20 +324,20 @@ export default function OnboardingTour({ onClose, activeStep, setActiveStep, set
 
   return (
     <div className="fixed inset-0 z-[200] overflow-visible pointer-events-none">
-      {/* 1. Global blurring backdrop overlay behind the active step card */}
+      {/* 1. Backdrop behind the active step card */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="tour-backdrop fixed inset-0 bg-slate-950/30 pointer-events-none"
+        className="tour-backdrop fixed inset-0 bg-[rgba(8,11,18,0.4)] pointer-events-none"
       />
 
-      {/* 2. Highlights overlay frame (draws transparent highlight around the targeted element) */}
+      {/* 2. A frame around the element the step is about */}
       {targetRect && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="fixed pointer-events-none rounded-2xl border-2 border-[#CC1111] shadow-[0_0_20px_rgba(204,17,17,0.45)]"
+          className="fixed pointer-events-none rounded-[1.25rem] border-2 border-accent shadow-[0_0_0_4px_var(--mgb-accent-soft)]"
           style={{
             top: targetRect.top - 8,
             left: targetRect.left - 8,
@@ -350,7 +348,7 @@ export default function OnboardingTour({ onClose, activeStep, setActiveStep, set
         />
       )}
 
-      {/* 3. The Guide Card UI itself */}
+      {/* 3. The guide card */}
       <AnimatePresence mode="wait">
         <motion.div
           ref={focusDialog}
@@ -360,101 +358,69 @@ export default function OnboardingTour({ onClose, activeStep, setActiveStep, set
           aria-labelledby="onboarding-title"
           aria-describedby="onboarding-description"
           tabIndex={-1}
-          initial={{ opacity: 0, scale: 0.95, y: isMobile ? 20 : 0 }}
+          initial={{ opacity: 0, scale: 0.97, y: isMobile ? 16 : 0 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: isMobile ? 20 : 0 }}
-          transition={{ duration: 0.25, ease: "easeOut" }}
+          exit={{ opacity: 0, scale: 0.97, y: isMobile ? 16 : 0 }}
+          transition={{ duration: 0.22, ease: 'easeOut' }}
           style={getTooltipStyle()}
-          className="bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-slate-800 rounded-3xl p-5 sm:p-6 shadow-[0_20px_50px_rgba(0,0,0,0.3)] pointer-events-auto flex flex-col gap-4 relative overflow-hidden"
+          className="mgb-card pointer-events-auto flex flex-col gap-3.5 px-5 py-[1.125rem] text-ink outline-none backdrop-blur-xl"
         >
-          {/* Subtle Moscow coat of arms decorative red background glow */}
-          <div className="absolute -top-12 -right-12 w-32 h-32 rounded-full bg-[#CC1111]/5 blur-2xl pointer-events-none" />
-
-          {/* Top Row: Mascot & Step Progress */}
-          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
+          <div className="flex items-start gap-3.5 pr-10">
             <FinyMascot mood={currentStepData.mood} />
-            
-            <div className="flex-1 text-center sm:text-left min-w-0">
-              <div className="flex items-center justify-center sm:justify-between flex-wrap gap-1 mb-1">
-                <span className="text-[10px] font-black uppercase text-[#CC1111] dark:text-red-400 tracking-wider">
-                  Ассистент Фини • Шаг {activeStep + 1} из {steps.length}
-                </span>
-                
-                {activeStep > 0 && activeStep < steps.length - 1 && (
-                  <span className="text-[10px] bg-emerald-50 dark:bg-emerald-950/45 text-emerald-800 dark:text-emerald-300 px-2 py-0.5 rounded-md font-bold tracking-tight">
-                    Интерактив
-                  </span>
-                )}
-              </div>
-              
-              <h3 id="onboarding-title" className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100 tracking-tight leading-snug">
+            <div className="min-w-0 flex-1">
+              <p className="m-0 text-[0.8125rem] font-semibold text-accent">
+                Фини · шаг {activeStep + 1} из {steps.length}
+              </p>
+              <h3 id="onboarding-title" className="m-0 mt-0.5 text-[1.125rem] font-semibold leading-snug tracking-[-0.01em]">
                 {currentStepData.title}
               </h3>
             </div>
-
-            {/* Skip X icon inside Welcome/Main Tour */}
-            <button
-              onClick={handleSkip}
-              aria-label="Пропустить обучение"
-              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 outline-none"
-              title="Пропустить обучение"
-            >
-              <X size={16} className="stroke-[2.5px]" />
-            </button>
           </div>
 
-          {/* Text Message */}
-          <p id="onboarding-description" className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
+          <button
+            type="button"
+            onClick={handleSkip}
+            aria-label="Пропустить экскурсию"
+            className="mgb-glass absolute right-3.5 top-3.5 grid size-10 place-items-center rounded-full text-ink"
+          >
+            <X size={16} strokeWidth={2.4} aria-hidden="true" />
+          </button>
+
+          <p id="onboarding-description" className="m-0 text-[0.9375rem] leading-[1.45] text-ink-2 [text-wrap:pretty]">
             {currentStepData.text}
           </p>
 
-          {/* Bottom Actions Bar */}
-          <div className="flex items-center justify-between border-t border-slate-100 dark:border-slate-800 pt-4 mt-1">
-            {/* Left page indicator dots */}
-            <div className="flex gap-1.5 shrink-0">
+          <div className="flex items-center justify-between gap-3 border-t border-line pt-3.5">
+            <div aria-hidden="true" className="flex shrink-0 gap-1.5">
               {steps.map((_, idx) => (
-                <div
+                <span
                   key={idx}
                   className={cn(
-                    "w-1.5 h-1.5 rounded-full transition-all duration-300",
-                    idx === activeStep 
-                      ? "bg-[#CC1111] w-4" 
-                      : idx < activeStep 
-                        ? "bg-emerald-500" 
-                        : "bg-slate-200 dark:bg-slate-700"
+                    'h-1.5 rounded-full transition-all duration-300',
+                    idx === activeStep ? 'w-4 bg-accent' : idx < activeStep ? 'w-1.5 bg-c3' : 'w-1.5 bg-track',
                   )}
                 />
               ))}
             </div>
 
-            {/* Navigation buttons */}
             <div className="flex items-center gap-2">
               {activeStep > 0 && (
                 <button
+                  type="button"
                   onClick={handlePrev}
-                  className="px-3 py-2 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 font-extrabold text-xs rounded-xl flex items-center gap-1 transition-all outline-none"
+                  className="flex h-11 items-center gap-1 rounded-full border border-line bg-card px-3.5 text-[0.875rem] font-semibold text-ink"
                 >
-                  <ChevronLeft size={14} className="stroke-[3px]" />
+                  <ChevronLeft size={16} strokeWidth={2.4} aria-hidden="true" />
                   Назад
                 </button>
               )}
-
               <button
+                type="button"
                 onClick={handleNext}
-                className={cn(
-                  "px-4 py-2 font-extrabold text-xs rounded-xl flex items-center gap-1 transition-all outline-none text-white",
-                  activeStep === steps.length - 1 
-                    ? "bg-emerald-600 hover:bg-emerald-700 shadow-md shadow-emerald-700/10" 
-                    : "bg-[#CC1111] hover:bg-[#A30E0E]"
-                )}
+                className="flex h-11 items-center gap-1 rounded-full bg-accent-fill px-4 text-[0.875rem] font-semibold text-white shadow-[0_10px_20px_-14px_var(--mgb-accent)]"
               >
-                {activeStep === 0 ? (
-                  <>Начать экскурсию <ChevronRight size={14} className="stroke-[3px]" /></>
-                ) : activeStep === steps.length - 1 ? (
-                  <>Поехали! <Sparkles size={14} className="animate-pulse" /></>
-                ) : (
-                  <>Далее <ChevronRight size={14} className="stroke-[3px]" /></>
-                )}
+                {activeStep === 0 ? 'Начать экскурсию' : activeStep === steps.length - 1 ? 'Поехали!' : 'Далее'}
+                {activeStep < steps.length - 1 && <ChevronRight size={16} strokeWidth={2.4} aria-hidden="true" />}
               </button>
             </div>
           </div>

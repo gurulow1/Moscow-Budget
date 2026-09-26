@@ -150,31 +150,43 @@ export default function LearningAssessment({ postUnlocked }: { postUnlocked: boo
   if (mode) {
     const source = getBudgetSource(question.sourceId);
     return (
-      <section className="glass-surface rounded-[26px] p-5 md:p-6" aria-labelledby="assessment-title">
-        <div className="flex items-center justify-between gap-3 mb-4">
-          <div>
-            <span className="text-[10px] font-black uppercase tracking-[0.18em] text-[#0F9F91]">{mode === 'pre' ? 'Входная диагностика' : 'Итоговая диагностика'}</span>
-            <h2 id="assessment-title" className="text-lg font-black text-[#172033] mt-1">{question.competency}</h2>
-          </div>
-          <span className="rounded-full bg-[#E8F7F4] px-3 py-1 text-xs font-black text-[#0B766E]">{questionIndex + 1}/{questions.length}</span>
+      <section className="mgb-card px-5 py-[1.125rem]" aria-labelledby="assessment-title">
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-[0.875rem] font-bold text-ink-2">{mode === 'pre' ? 'Входной тест' : 'Итоговый тест'}</span>
+          <span className="text-[0.9375rem] font-semibold text-ink-2">
+            {questionIndex + 1} из {questions.length}
+          </span>
         </div>
-        <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden mb-5">
-          <div className="h-full rounded-full bg-[#0F9F91] transition-all" style={{ width: `${((questionIndex + 1) / questions.length) * 100}%` }} />
+        <div aria-hidden="true" className="mt-2.5 grid grid-cols-5 gap-1.5">
+          {questions.map((item, index) => (
+            <span
+              key={item.competency}
+              className={cn('h-1.5 rounded-full', index < questionIndex ? 'bg-ink' : index === questionIndex ? 'bg-accent' : 'bg-track')}
+            />
+          ))}
         </div>
-        <p className="text-base md:text-lg font-bold text-[#172033] leading-snug">{question.question}</p>
-        <div className="grid gap-2.5 mt-5">
+        <span className="mt-4 inline-block rounded-full bg-track px-2.5 py-1.5 text-[0.78125rem] font-semibold leading-none text-ink-2">
+          {question.competency}
+        </span>
+        <h2 id="assessment-title" className="m-0 mt-3 text-[1.25rem] font-bold leading-snug tracking-[-0.02em]">
+          {question.question}
+        </h2>
+        <div role="group" aria-label="Варианты ответа" className="mt-4 grid gap-2.5">
           {question.options.map((option, index) => (
             <button
               key={option}
               type="button"
               onClick={() => answer(index)}
-              className="rounded-[18px] border border-slate-200/90 bg-white/70 px-4 py-3 text-left text-sm font-semibold text-[#334155] transition hover:border-[#0F9F91]/50 hover:bg-[#EAF9F6]"
+              className="flex min-h-14 items-center gap-3 rounded-[1.25rem] border-[1.5px] border-line bg-card px-4 py-2.5 text-left text-ink shadow-[var(--mgb-shadow)]"
             >
-              {option}
+              <span aria-hidden="true" className="grid size-[1.875rem] shrink-0 place-items-center rounded-full bg-track text-[0.875rem] font-bold text-ink-2">
+                {'АБВ'[index]}
+              </span>
+              <span className="text-[1rem] font-semibold leading-snug">{option}</span>
             </button>
           ))}
         </div>
-        <a href={source.url} target="_blank" rel="noopener noreferrer" className="inline-flex mt-4 text-[11px] font-bold text-[#64748B] hover:text-[#0B766E]">
+        <a href={source.url} target="_blank" rel="noopener noreferrer" className="mt-3.5 inline-block text-[0.8125rem] text-ink-2 underline underline-offset-[3px]">
           Источник вопроса: {source.publisher} ↗
         </a>
       </section>
@@ -183,17 +195,24 @@ export default function LearningAssessment({ postUnlocked }: { postUnlocked: boo
 
   if (!record) {
     return (
-      <section className="glass-surface rounded-[26px] p-5 md:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4" aria-labelledby="assessment-intro-title">
-        <div className="flex gap-3.5">
-          <div className="w-11 h-11 shrink-0 rounded-2xl bg-[#DDF7F1] text-[#0B766E] flex items-center justify-center"><BarChart3 size={21} /></div>
+      <section className="mgb-card px-5 py-[1.125rem]" aria-labelledby="assessment-intro-title">
+        <div className="flex items-center gap-3.5">
+          <span aria-hidden="true" className="grid size-12 shrink-0 place-items-center rounded-[0.9375rem] bg-ok-soft text-ok-ink">
+            <BarChart3 size={23} strokeWidth={1.8} />
+          </span>
           <div>
-            <span className="text-[10px] font-black uppercase tracking-[0.18em] text-[#0F9F91]">Измеримый результат</span>
-            <h2 id="assessment-intro-title" className="text-lg font-black text-[#172033] mt-1">Что вы знаете до обучения?</h2>
-            <p className="text-sm text-[#64748B] mt-1 max-w-2xl">5 вопросов, около 2 минут. После практики повторим диагностику и покажем прирост знаний в процентных пунктах.</p>
+            <h2 id="assessment-intro-title" className="m-0 text-[1.125rem] font-semibold leading-snug tracking-[-0.01em]">
+              Что вы знаете до обучения?
+            </h2>
+            <p className="m-0 mt-1 text-[0.9375rem] leading-snug text-ink-2">5 вопросов, около 2 минут. После практики покажем прирост знаний.</p>
           </div>
         </div>
-        <button type="button" onClick={() => start('pre')} className="teal-action rounded-full px-5 py-2.5 text-sm font-black flex items-center justify-center gap-2 shrink-0">
-          Пройти входной тест <ArrowRight size={16} />
+        <button
+          type="button"
+          onClick={() => start('pre')}
+          className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-track text-[1rem] font-semibold text-ink"
+        >
+          Пройти входной тест <ArrowRight size={18} aria-hidden="true" />
         </button>
       </section>
     );
@@ -202,25 +221,39 @@ export default function LearningAssessment({ postUnlocked }: { postUnlocked: boo
   const prePercent = record.preScore * 20;
   if (record.postScore === undefined) {
     return (
-      <section className="glass-surface rounded-[26px] p-5 md:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4" aria-labelledby="assessment-wait-title">
-        <div className="flex gap-3.5">
-          <div className="w-11 h-11 shrink-0 rounded-2xl bg-[#E8F7F4] text-[#0B766E] flex items-center justify-center"><CheckCircle2 size={21} /></div>
+      <section className="mgb-card px-5 py-[1.125rem]" aria-labelledby="assessment-wait-title">
+        <div className="flex items-center gap-3.5">
+          <span aria-hidden="true" className="grid size-12 shrink-0 place-items-center rounded-[0.9375rem] bg-ok-soft text-ok-ink">
+            <CheckCircle2 size={23} strokeWidth={1.8} />
+          </span>
           <div>
-            <span className="text-[10px] font-black uppercase tracking-[0.18em] text-[#0F9F91]">Входной результат · {prePercent}%</span>
-            <h2 id="assessment-wait-title" className="text-lg font-black text-[#172033] mt-1">Теперь закрепите знания на практике</h2>
-            <p className="text-sm text-[#64748B] mt-1">Сохраните расчёт и завершите одну миссию или квиз — после этого откроется итоговый срез.</p>
+            <p className="m-0 text-[0.875rem] text-ink-2">Входной тест · {prePercent}&nbsp;%</p>
+            <h2 id="assessment-wait-title" className="m-0 mt-0.5 text-[1.125rem] font-semibold leading-snug tracking-[-0.01em]">
+              Теперь закрепите знания на практике
+            </h2>
           </div>
         </div>
+        <p className="m-0 mt-3 text-[0.9375rem] leading-snug text-ink-2">
+          Сохраните расчёт вычета и пройдите викторину, квиз дня или сценарий мэра — тогда откроется итоговый тест.
+        </p>
         <button
           type="button"
           disabled={!postUnlocked}
           onClick={() => start('post')}
           className={cn(
-            'rounded-full px-5 py-2.5 text-sm font-black flex items-center justify-center gap-2 shrink-0',
-            postUnlocked ? 'teal-action' : 'bg-slate-100 text-slate-400 cursor-not-allowed',
+            'mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-full text-[1rem] font-semibold',
+            postUnlocked ? 'bg-accent-fill text-white' : 'cursor-not-allowed bg-track text-ink-3',
           )}
         >
-          {postUnlocked ? <><span>Пройти итоговый тест</span><ArrowRight size={16} /></> : <><LockKeyhole size={15} /><span>Сначала практика</span></>}
+          {postUnlocked ? (
+            <>
+              Пройти итоговый тест <ArrowRight size={18} aria-hidden="true" />
+            </>
+          ) : (
+            <>
+              <LockKeyhole size={17} aria-hidden="true" /> Сначала практика
+            </>
+          )}
         </button>
       </section>
     );
@@ -229,18 +262,20 @@ export default function LearningAssessment({ postUnlocked }: { postUnlocked: boo
   const postPercent = record.postScore * 20;
   const delta = postPercent - prePercent;
   return (
-    <section className="glass-surface rounded-[26px] p-5 md:p-6" aria-labelledby="assessment-result-title">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <span className="text-[10px] font-black uppercase tracking-[0.18em] text-[#0F9F91]">Образовательный результат зафиксирован</span>
-          <h2 id="assessment-result-title" className="text-lg font-black text-[#172033] mt-1">Вход {prePercent}% → итог {postPercent}%</h2>
-          <p className="text-sm text-[#64748B] mt-1">Прирост: <strong className={delta >= 0 ? 'text-[#0B766E]' : 'text-amber-700'}>{delta > 0 ? '+' : ''}{delta} п.п.</strong> Результат сохранён в профиле.</p>
-        </div>
-        <div className="rounded-[20px] bg-[#E8F7F4] border border-[#BDEDE4] px-5 py-3 text-center shrink-0">
-          <span className="block text-[10px] uppercase font-black tracking-wider text-[#0B766E]">эффект обучения</span>
-          <span className="text-2xl font-black text-[#0F9F91]">{delta > 0 ? '+' : ''}{delta} п.п.</span>
-        </div>
-      </div>
+    <section className="mgb-card px-5 py-[1.125rem]" aria-labelledby="assessment-result-title">
+      <p id="assessment-result-title" className="m-0 text-[0.875rem] text-ink-2">
+        Результат обучения
+      </p>
+      <p className="m-0 mt-0.5 flex items-baseline gap-2">
+        <b className={cn('text-[3rem] font-bold leading-[1.05] tracking-[-0.035em]', delta >= 0 ? 'text-ok-ink' : 'text-streak-ink')}>
+          {delta > 0 ? '+' : ''}
+          {delta}
+        </b>
+        <span className="text-[1.25rem] font-semibold text-ink-2">п.п.</span>
+      </p>
+      <p className="m-0 mt-2 text-[0.9375rem] leading-snug text-ink-2">
+        Входной тест {prePercent}&nbsp;% → итоговый {postPercent}&nbsp;%. Результат сохранён в этом браузере.
+      </p>
     </section>
   );
 }

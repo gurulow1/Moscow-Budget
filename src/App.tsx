@@ -1,148 +1,202 @@
-import { memo, useCallback, useEffect, useLayoutEffect, useState } from 'react';
-import { motion, AnimatePresence, MotionConfig } from 'motion/react';
-import Header from './components/Header';
-import PersonaSelector from './components/PersonaSelector';
-import TaxCalculator, { type TaxCalculation } from './components/TaxCalculator';
-import QuestDashboard from './components/QuestDashboard';
-import AnalyticsChart from './components/AnalyticsChart';
-import BudgetAIChatDrawer from './components/BudgetAIChatDrawer';
-import SplashPortal from './components/SplashPortal';
+import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { MotionConfig } from 'motion/react';
+import HelperChat from './components/HelperChat';
 import OnboardingTour from './components/OnboardingTour';
-import LearningAssessment from './components/LearningAssessment';
+import ProfileSheet from './components/ProfileSheet';
 import AccessibilityPanel, {
   applyAccessibilitySettings,
   readAccessibilitySettings,
 } from './components/AccessibilityPanel';
-import { Persona } from '../types';
-import { Calculator, Target, PieChart as PieChartIcon, Check, Sparkles } from 'lucide-react';
-import { cn, getPreferredScrollBehavior, readStoredNumber, readStoredStringArray, safeLocalStorage } from './lib/utils';
+import AppHeader from './ui/AppHeader';
+import Aurora from './ui/Aurora';
+import TabBar, { APP_TABS, type AppTab } from './ui/TabBar';
+import HomeScreen from './screens/HomeScreen';
+import DeductionScreen from './screens/DeductionScreen';
+import QuestsScreen from './screens/QuestsScreen';
+import DataScreen from './screens/DataScreen';
+import SplashScreen from './screens/SplashScreen';
+import BudgetBalancer from './screens/games/BudgetBalancer';
+import Auditor from './screens/games/Auditor';
+import InvestStrategist from './screens/games/InvestStrategist';
+import DeductionClick from './screens/games/DeductionClick';
+import DevelopmentVector from './screens/games/DevelopmentVector';
+import NeedsProfile from './screens/games/NeedsProfile';
+import FiscalExpert from './screens/games/FiscalExpert';
+import AnalyticSurfing from './screens/games/AnalyticSurfing';
+import DistrictMap from './screens/games/DistrictMap';
+import QuizFlow from './screens/QuizFlow';
+import MayorFlow from './screens/MayorFlow';
+import { BUDGET_FACTS } from './data/budgetFacts';
+import {
+  GAMES,
+  MAP_ITEM,
+  QUIZZES,
+  QUIZ_PREREQUISITE,
+  SPECIALS,
+  getDailyQuiz,
+  readLedger,
+  saveLedger,
+  todayEntry,
+  withDailyResult,
+} from './data/quests';
+import { cn, readStoredNumber, readStoredStringArray, safeLocalStorage } from './lib/utils';
+import { getLevelInfo, QUIZ_IDS } from './lib/progress';
+import type { TaxCalculation } from './lib/deduction';
+import { useTheme } from './lib/theme';
 
-const MemoQuestDashboard = memo(QuestDashboard);
-const MemoAnalyticsChart = memo(AnalyticsChart);
+const QUEST_ITEMS = [...GAMES, ...SPECIALS];
+const GAME_VIEWS: Record<string, typeof BudgetBalancer> = {
+  'game-1': BudgetBalancer,
+  'game-2': Auditor,
+  'game-3': InvestStrategist,
+  'game-4': DeductionClick,
+  'game-5': DevelopmentVector,
+  'special-1': NeedsProfile,
+  'special-2': FiscalExpert,
+  'special-3': AnalyticSurfing,
+};
+
+// The address holds the tab and, on «Квесты», an open step: #quests/daily, #quests/quiz-2, #quests/mayor/tverskoy.
+interface Route {
+  tab: AppTab;
+  flow: string | null;
+  arg: string | null;
+}
+
+const readRoute = (): Route => {
+  const [tab = '', flow = '', arg = ''] = window.location.hash.slice(1).split('/');
+  if (!APP_TABS.some((item) => item.id === tab)) return { tab: 'home', flow: null, arg: null };
+  return { tab: tab as AppTab, flow: (tab === 'quests' && flow) || null, arg: arg || null };
+};
+
+const goTo = (tab: AppTab) => {
+  if (window.location.hash !== `#${tab}`) window.location.hash = tab;
+};
+
+const readSavedCalculation = (): TaxCalculation | null => {
+  const raw = safeLocalStorage.getItem('mos_calc_last_model');
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as Partial<TaxCalculation>;
+    if (Number.isFinite(parsed.education) && Number.isFinite(parsed.sport) && Number.isFinite(parsed.deduction)) {
+      return { education: Number(parsed.education), sport: Number(parsed.sport), deduction: Number(parsed.deduction) };
+    }
+  } catch {
+    // Ignore stale local demo data and start with a clean calculation.
+  }
+  return null;
+};
 
 export default function App() {
   const [accessibilitySettings, setAccessibilitySettings] = useState(readAccessibilitySettings);
   const [accessibilityOpen, setAccessibilityOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const { isDark, toggle: toggleTheme } = useTheme();
+  const [route, setRoute] = useState<Route>(readRoute);
+  const tab = route.tab;
 
   useLayoutEffect(() => {
     applyAccessibilitySettings(accessibilitySettings);
   }, [accessibilitySettings]);
 
-  const [balance, setBalance] = useState<number>(() => {
-    return readStoredNumber('mos_game_balance_v3');
-  });
-  
+  useEffect(() => {
+    const handleHashChange = () => {
+      setRoute(readRoute());
+      window.scrollTo({ top: 0 });
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  // A step opened from inside the app closes with Back, so the phone's Back button does the same.
+  const flowOpenedHere = useRef(false);
+  const openFlow = useCallback((flow: string) => {
+    flowOpenedHere.current = true;
+    window.location.hash = `quests/${flow}`;
+  }, []);
+  const closeFlow = useCallback(() => {
+    if (flowOpenedHere.current) window.history.back();
+    else window.location.replace('#quests');
+  }, []);
+  const toQuests = useCallback(() => {
+    flowOpenedHere.current = false;
+    window.location.replace('#quests');
+  }, []);
+
+  const [balance, setBalance] = useState<number>(() => readStoredNumber('mos_game_balance_v3'));
   useEffect(() => {
     safeLocalStorage.setItem('mos_game_balance_v3', balance.toString());
   }, [balance]);
 
-  const [persona, setPersona] = useState<Persona>('Student');
-  const [calculatorTaskCompleted, setCalculatorTaskCompleted] = useState(() => {
-    const saved = safeLocalStorage.getItem('mos_calc_completed_v3');
-    return saved === 'true';
-  });
-  const [savedCalculation, setSavedCalculation] = useState<TaxCalculation | null>(() => {
-    const raw = safeLocalStorage.getItem('mos_calc_last_model');
-    if (!raw) return null;
-    try {
-      const parsed = JSON.parse(raw) as Partial<TaxCalculation>;
-      if (
-        Number.isFinite(parsed.education) &&
-        Number.isFinite(parsed.sport) &&
-        Number.isFinite(parsed.deduction)
-      ) {
-        return {
-          education: Number(parsed.education),
-          sport: Number(parsed.sport),
-          deduction: Number(parsed.deduction),
-        };
-      }
-    } catch {
-      // Ignore stale local demo data and start with a clean calculation.
-    }
-    return null;
-  });
-  
-  const [completedActivities, setCompletedActivities] = useState<string[]>(() => {
-    return readStoredStringArray('mos_completed_activities_v3');
-  });
+  const [calculatorTaskCompleted, setCalculatorTaskCompleted] = useState(
+    () => safeLocalStorage.getItem('mos_calc_completed_v3') === 'true',
+  );
+  const [savedCalculation, setSavedCalculation] = useState<TaxCalculation | null>(readSavedCalculation);
 
-  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
-
-  useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-  
+  const [completedActivities, setCompletedActivities] = useState<string[]>(() =>
+    readStoredStringArray('mos_completed_activities_v3'),
+  );
   useEffect(() => {
     safeLocalStorage.setItem('mos_completed_activities_v3', JSON.stringify(completedActivities));
   }, [completedActivities]);
 
-  const [totalXp, setTotalXp] = useState<number>(() => {
-    return readStoredNumber('mos_total_xp_v3', balance);
-  });
-
+  const [totalXp, setTotalXp] = useState<number>(() => readStoredNumber('mos_total_xp_v3', balance));
   useEffect(() => {
     safeLocalStorage.setItem('mos_total_xp_v3', totalXp.toString());
   }, [totalXp]);
-
   useEffect(() => {
-    if (balance > totalXp) {
-      setTotalXp(balance);
-    }
+    if (balance > totalXp) setTotalXp(balance);
   }, [balance, totalXp]);
 
-  const [activeMobileTab, setActiveMobileTab] = useState<'calc' | 'quests' | 'analytics'>('calc');
-  
-  // Onboarding Tour State
+  const [ledger, setLedger] = useState(readLedger);
+  useEffect(() => {
+    saveLedger(ledger);
+  }, [ledger]);
+
+
+  // Points for a quiz, a game or a district are given once per activity.
+  const completeActivity = (id: string, points: number) => {
+    if (completedActivities.includes(id)) return false;
+    setCompletedActivities((prev) => (prev.includes(id) ? prev : [...prev, id]));
+    setBalance((prev) => prev + points);
+    return true;
+  };
+
+  const recordDailyResult = (quizId: string, correctAnswers: number) => {
+    const first = !todayEntry(ledger);
+    setLedger((current) => withDailyResult(current, quizId, correctAnswers));
+    return first;
+  };
+
   const [tourStep, setTourStep] = useState<number | null>(null);
 
-  const closeAccessibility = useCallback(() => {
-    setAccessibilityOpen(false);
-  }, []);
-
+  const closeAccessibility = useCallback(() => setAccessibilityOpen(false), []);
   const openAccessibility = useCallback(() => {
     setTourStep(null);
-    setAccessibilitySettings(current => current.enabled ? current : { ...current, enabled: true });
+    setProfileOpen(false);
+    setAccessibilitySettings((current) => (current.enabled ? current : { ...current, enabled: true }));
     setAccessibilityOpen(true);
   }, []);
+  const closeProfile = useCallback(() => setProfileOpen(false), []);
 
   useEffect(() => {
     const handleStartTour = () => {
+      setProfileOpen(false);
       setTourStep(0);
     };
     window.addEventListener('start_mos_onboarding', handleStartTour);
     return () => window.removeEventListener('start_mos_onboarding', handleStartTour);
   }, []);
 
-  useEffect(() => {
-    const handleFocusCalculator = () => {
-      setActiveMobileTab('calc');
-      window.requestAnimationFrame(() => {
-        document.getElementById('tour-calculator')?.scrollIntoView({ behavior: getPreferredScrollBehavior(), block: 'start' });
-      });
-    };
-    window.addEventListener('focus_mos_calculator', handleFocusCalculator);
-    return () => window.removeEventListener('focus_mos_calculator', handleFocusCalculator);
-  }, []);
+  const startDailyQuiz = useCallback(() => openFlow('daily'), [openFlow]);
 
-  const getTourClass = (stepId: number) => {
-    if (tourStep === null) return '';
-    if (tourStep === stepId) {
-      return 'relative z-[220] ring-4 ring-[#CC1111]/30 transition-opacity duration-200';
-    }
-    return 'opacity-20 pointer-events-none transition-opacity duration-200';
-  };
-
-  const handleCalculate = (calculation: TaxCalculation) => {
+  const handleSaveCalculation = (calculation: TaxCalculation) => {
     setSavedCalculation(calculation);
     safeLocalStorage.setItem('mos_calc_last_model', JSON.stringify(calculation));
     if (!calculatorTaskCompleted) {
       setCalculatorTaskCompleted(true);
       safeLocalStorage.setItem('mos_calc_completed_v3', 'true');
-      setBalance(prev => prev + 100);
+      setBalance((prev) => prev + 100);
     }
   };
 
@@ -162,32 +216,101 @@ export default function App() {
       'mos_onboarding_completed_v3',
       'mos_learning_assessment_v1',
       'mos_city_rewards_preview_v1',
-    ].forEach(key => safeLocalStorage.removeItem(key));
+      'mos_interests_v1',
+    ].forEach((key) => safeLocalStorage.removeItem(key));
+    window.location.hash = '';
     window.location.reload();
   };
 
-  const quizzesIds = ['quiz-1', 'quiz-2', 'quiz-3', 'quiz-4', 'quiz-5'];
-  const availableQuizzesCount = quizzesIds.filter(id => !completedActivities.includes(id)).length;
-  const hasLearningPractice = calculatorTaskCompleted && completedActivities.some(id =>
-    id.startsWith('quiz-') || id.startsWith('daily-quiz-') || id.startsWith('mayor-success-'),
-  );
+  const level = getLevelInfo(totalXp);
+  const availableQuizzesCount = QUIZ_IDS.filter((id) => !completedActivities.includes(id)).length;
+  const hasLearningPractice =
+    calculatorTaskCompleted &&
+    completedActivities.some((id) => id.startsWith('quiz-') || id.startsWith('daily-quiz-') || id.startsWith('mayor-success-'));
 
-  const showMobileTab = (tab: 'calc' | 'quests' | 'analytics', visibleClass = 'block') =>
-    isMobile && activeMobileTab !== tab ? 'hidden' : visibleClass;
+  const HEADINGS: Record<AppTab, { title: string; sub: string }> = {
+    home: { title: 'Бюджет Москвы', sub: '2026 год · закон № 39 от 01.11.2025' },
+    calc: { title: 'Налоговый вычет', sub: 'за учёбу и спорт · ставка 13 %' },
+    quests: { title: 'Квесты', sub: `Уровень ${level.level} · ${totalXp} из ${level.nextLevelXp} баллов` },
+    data: {
+      title: 'Куда идут деньги',
+      sub: `расходы 2026 года · ${BUDGET_FACTS.expenses.amountBillion.toLocaleString('ru-RU')} млрд ₽`,
+    },
+  };
+
+  const renderFlow = () => {
+    const { flow, arg } = route;
+    if (!flow) return null;
+    if (flow === 'daily' || QUIZZES.some((quiz) => quiz.id === flow)) {
+      const quiz = flow === 'daily' ? getDailyQuiz() : QUIZZES.find((item) => item.id === flow)!;
+      const after = QUIZ_PREREQUISITE[quiz.id];
+      if (after && !completedActivities.includes(after)) return null;
+      return (
+        <Fragment key={quiz.id}>
+          <QuizFlow
+            quiz={quiz}
+            ledger={ledger}
+            onComplete={completeActivity}
+            onDailyResult={recordDailyResult}
+            onClose={closeFlow}
+            onToQuests={toQuests}
+          />
+        </Fragment>
+      );
+    }
+    if (flow === 'mayor') {
+      return (
+        <Fragment key={arg ?? 'mayor'}>
+          <MayorFlow
+            initialDistrictId={arg}
+            calculatorDone={calculatorTaskCompleted}
+            completedActivities={completedActivities}
+            onComplete={completeActivity}
+            onClose={closeFlow}
+            onToQuests={toQuests}
+          />
+        </Fragment>
+      );
+    }
+    if (flow === MAP_ITEM.id) {
+      return (
+        <Fragment key={flow}>
+          <DistrictMap item={MAP_ITEM} onClose={closeFlow} onOpenMayor={(districtId) => openFlow(`mayor/${districtId}`)} />
+        </Fragment>
+      );
+    }
+    const item = QUEST_ITEMS.find((entry) => entry.id === flow);
+    if (!item) return null;
+    const GameView = GAME_VIEWS[item.id];
+    return (
+      <Fragment key={item.id}>
+        <GameView item={item} onComplete={completeActivity} onClose={closeFlow} onToQuests={toQuests} />
+      </Fragment>
+    );
+  };
+  const flowView = renderFlow();
+
+  // The tour lifts its current target above the backdrop and fades the rest.
+  const getTourClass = (stepId: number) => {
+    if (tourStep === null) return '';
+    return tourStep === stepId ? 'relative z-[220]' : 'pointer-events-none opacity-20';
+  };
+
+  const reducedMotion = accessibilitySettings.enabled && accessibilitySettings.reduceMotion ? 'always' : 'user';
 
   const [showSplash, setShowSplash] = useState(() => safeLocalStorage.getItem('mos_splash_seen_v3') !== 'true');
 
   if (showSplash) {
     return (
-      <MotionConfig reducedMotion={accessibilitySettings.enabled && accessibilitySettings.reduceMotion ? 'always' : 'user'}>
-        <SplashPortal
-          onEnter={() => {
+      <MotionConfig reducedMotion={reducedMotion}>
+        <SplashScreen
+          onEnter={(withTour) => {
             setShowSplash(false);
             safeLocalStorage.setItem('mos_splash_seen_v3', 'true');
+            if (withTour) setTourStep(0);
           }}
           onOpenAccessibility={openAccessibility}
           accessibilityEnabled={accessibilitySettings.enabled}
-          reduceMotion={accessibilitySettings.enabled && accessibilitySettings.reduceMotion}
         />
         <AccessibilityPanel
           open={accessibilityOpen}
@@ -200,204 +323,96 @@ export default function App() {
   }
 
   return (
-    <MotionConfig reducedMotion={accessibilitySettings.enabled && accessibilitySettings.reduceMotion ? 'always' : 'user'}>
-    <div className="min-h-screen bg-transparent text-[#172033] dark:text-slate-100 flex flex-col md:py-6 relative pb-20 md:pb-0">
-      
-      {/* Expose the tour component globally above everything else */}
+    <MotionConfig reducedMotion={reducedMotion}>
+      <Aurora />
+
       {tourStep !== null && (
         <OnboardingTour
           activeStep={tourStep}
           setActiveStep={setTourStep}
           onClose={() => setTourStep(null)}
-          setActiveMobileTab={setActiveMobileTab}
+          setActiveTab={goTo}
         />
       )}
 
-      <div className="w-full max-w-7xl px-4 sm:px-6 lg:px-8 mx-auto flex flex-col gap-4 md:gap-6 flex-1 pb-16 md:pb-4 relative z-10">
-        {/* Header (local demo profile and learning points) */}
-        <div className={cn("py-2 md:py-0 transition-all duration-500", getTourClass(1))} id="tour-header">
-          <Header
-            balance={balance}
-            totalXp={totalXp}
-            completedActivities={completedActivities}
-            onReset={handleResetDemo}
-            onOpenAccessibility={openAccessibility}
-            accessibilityEnabled={accessibilitySettings.enabled}
-          />
-        </div>
-        
-        {/* One responsive tree: each module stays mounted, so tab changes do not erase user work. */}
-        <main className="flex-1 px-0.5 pb-36 relative overflow-x-hidden flex flex-col gap-4 md:gap-6">
-          <div className={cn(showMobileTab('calc'), "transition-all duration-300", getTourClass(2))} id="tour-persona">
-            <PersonaSelector activePersona={persona} onSelect={setPersona} />
-          </div>
+      {flowView}
 
-          <div className={cn(showMobileTab('calc'), "transition-all duration-300")}>
-            <LearningAssessment postUnlocked={hasLearningPractice} />
-          </div>
+      {/* An open step replaces the tabs; the tabs stay mounted underneath and keep their state. */}
+      <div
+        hidden={flowView !== null}
+        className="mx-auto min-h-dvh w-full max-w-[30rem] pb-[calc(7.5rem_+_env(safe-area-inset-bottom))] pt-[env(safe-area-inset-top)] lg:ml-[max(17.5rem,calc((100vw_-_62rem)_/_2))] lg:mr-0 lg:max-w-[62rem] lg:pb-12 lg:pr-4 lg:pt-3"
+      >
+        <AppHeader
+          title={HEADINGS[tab].title}
+          sub={HEADINGS[tab].sub}
+          balance={balance}
+          level={level}
+          accessibilityEnabled={accessibilitySettings.enabled}
+          onOpenAccessibility={openAccessibility}
+          onOpenProfile={() => setProfileOpen(true)}
+          profileClassName={getTourClass(1)}
+          helperClassName={getTourClass(6)}
+        />
 
-          <div className={cn(showMobileTab('calc', 'flex flex-col'), "transition-all duration-300", getTourClass(3))} id="tour-calculator">
-            <TaxCalculator
-              activePersona={persona}
-              onCalculate={handleCalculate}
-              isCompleted={calculatorTaskCompleted}
+        {/* Every screen stays mounted, so switching tabs never loses a half-finished quiz or calculation. */}
+        <main>
+          <section hidden={tab !== 'home'} aria-label="Главная">
+            <HomeScreen
               savedCalculation={savedCalculation}
+              learningPostUnlocked={hasLearningPractice}
+              onStartDailyQuiz={startDailyQuiz}
             />
-          </div>
-
-          <div className={cn(showMobileTab('quests', 'flex flex-col'), "transition-all duration-300", getTourClass(4))} id="tour-quests">
-            <MemoQuestDashboard
-              isCalculatorCompleted={calculatorTaskCompleted}
-              balance={balance}
-              setBalance={setBalance}
+          </section>
+          <section hidden={tab !== 'calc'} aria-label="Налоговый вычет">
+            <DeductionScreen
+              savedCalculation={savedCalculation}
+              isCompleted={calculatorTaskCompleted}
+              onSave={handleSaveCalculation}
+              tourPersonaClass={getTourClass(2)}
+              tourCalculatorClass={getTourClass(3)}
+            />
+          </section>
+          <section hidden={tab !== 'quests'} aria-label="Квесты" id="tour-quests">
+            <QuestsScreen
+              calculatorDone={calculatorTaskCompleted}
               completedActivities={completedActivities}
-              setCompletedActivities={setCompletedActivities}
-              totalXp={totalXp}
-              setTotalXp={setTotalXp}
+              ledger={ledger}
+              onOpen={openFlow}
+              tourClassName={getTourClass(4)}
             />
-          </div>
-
-          <div className={cn(showMobileTab('analytics'), "transition-all duration-300", getTourClass(5))} id="tour-analytics">
-            <MemoAnalyticsChart />
-          </div>
+          </section>
+          <section
+            hidden={tab !== 'data'}
+            aria-label="Куда идут деньги"
+            id="tour-analytics"
+            className={cn('transition-opacity duration-200', getTourClass(5))}
+          >
+            <DataScreen savedCalculation={savedCalculation} active={tab === 'data' && flowView === null} />
+          </section>
         </main>
-
-        {/* Project footer, hidden on mobile for compact layout */}
-        <footer className="hidden md:flex mt-8 pt-6 border-t border-[#E2E8F0] text-center flex-col sm:flex-row items-center justify-between gap-4 text-xs font-semibold text-[#475569]">
-          <span>МосГорБюджет.Трек</span>
-          <div className="flex items-center gap-4">
-            <a href="https://budget.mos.ru" target="_blank" rel="noopener noreferrer" className="hover:text-slate-600 transition-colors">Портал бюджета</a>
-            <span>•</span>
-            <a href="https://ag.mos.ru" target="_blank" rel="noopener noreferrer" className="hover:text-[#CC1111] transition-colors text-[#475569] font-bold">Активный Гражданин</a>
-          </div>
-        </footer>
-
       </div>
 
-      {/* MOBILE PRIMARY ACTION: a small floating island keeps the content breathable. */}
-      <AnimatePresence>
-        {activeMobileTab === 'calc' && (
-          <motion.div 
-            initial={{ y: "100%", opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: "100%", opacity: 0 }}
-            transition={{ type: "spring", stiffness: 350, damping: 30 }}
-            className={cn(
-              "a11y-mobile-primary-action md:hidden fixed bottom-[5.25rem] left-4 right-20 h-12 glass-island rounded-full p-1 z-40 transition-opacity duration-200",
-              tourStep !== null && "opacity-20 pointer-events-none"
-            )}
-          >
-            <button
-              onClick={() => {
-                document.getElementById('tour-calculator')?.scrollIntoView({ behavior: getPreferredScrollBehavior(), block: 'start' });
-              }}
-              className={cn(
-                "w-full h-full rounded-full text-center text-xs font-extrabold tracking-tight flex items-center justify-center gap-2 px-4 transition-all",
-                calculatorTaskCompleted 
-                  ? "bg-[#DDF7F1] text-[#0B766E] font-extrabold"
-                  : "teal-action active:scale-95 duration-100"
-              )}
-            >
-              {calculatorTaskCompleted ? (
-                <>
-                  <Check size={16} className="text-emerald-600 stroke-[3px]" /> Расчёт сохранён
-                </>
-              ) : (
-                <>
-                  <Sparkles size={16} /> Перейти к расчёту
-                </>
-              )}
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {flowView === null && <TabBar active={tab} questsBadge={availableQuizzesCount} dimmed={tourStep !== null} />}
+      <HelperChat />
 
-      {/* MOBILE BOTTOM NAVIGATION: floating capsule, light active state, no full-width rails. */}
-      <nav
-        aria-label="Разделы приложения"
-        className={cn(
-          "a11y-mobile-navigation md:hidden fixed bottom-3 left-4 right-4 glass-island rounded-full z-50 h-14 flex items-center justify-around px-2 pb-safe transition-opacity duration-200",
-          tourStep !== null && "opacity-20 pointer-events-none"
-        )}
-      >
-        {/* Tab 1: Calculator */}
-        <button 
-          onClick={() => setActiveMobileTab('calc')}
-          aria-current={activeMobileTab === 'calc' ? 'page' : undefined}
-          className={cn(
-            "relative flex flex-col items-center justify-center gap-0.5 flex-1 py-1 transition-all outline-none h-11 rounded-full",
-            activeMobileTab === 'calc' ? "bg-[#DDF7F1] text-[#0B766E]" : "text-slate-400 dark:text-slate-500"
-          )}
-        >
-          {activeMobileTab === 'calc' && (
-            <motion.div 
-              layoutId="mobileTabActiveLine"
-              className="absolute bottom-1 w-5 h-0.5 bg-[#0F9F91] rounded-full"
-              transition={{ type: "spring", stiffness: 380, damping: 30 }}
-            />
-          )}
-          <Calculator size={18} className={cn("transition-transform", activeMobileTab === 'calc' ? "scale-110 drop-shadow-sm" : "")} />
-          <span className="text-[10px] font-extrabold tracking-tight">Калькулятор</span>
-        </button>
-        
-        {/* Tab 2: Quests Track inside available red badge overlay */}
-        <button 
-          onClick={() => setActiveMobileTab('quests')}
-          aria-current={activeMobileTab === 'quests' ? 'page' : undefined}
-          className={cn(
-            "relative flex flex-col items-center justify-center gap-0.5 flex-1 py-1 transition-all outline-none h-11 rounded-full",
-            activeMobileTab === 'quests' ? "bg-[#DDF7F1] text-[#0B766E]" : "text-slate-400 dark:text-slate-500"
-          )}
-        >
-          {activeMobileTab === 'quests' && (
-            <motion.div 
-              layoutId="mobileTabActiveLine"
-              className="absolute bottom-1 w-5 h-0.5 bg-[#0F9F91] rounded-full"
-              transition={{ type: "spring", stiffness: 380, damping: 30 }}
-            />
-          )}
-          <div className="relative">
-            <Target size={18} className={cn("transition-transform", activeMobileTab === 'quests' ? "scale-110 drop-shadow-sm" : "")} />
-            {/* Red circle available quiz count notification badge */}
-            {availableQuizzesCount > 0 && (
-                <span className="absolute -top-1.5 -right-2 bg-[#CC1111] dark:bg-red-600 text-white text-[9px] font-black h-4 min-w-4 px-1 rounded-full flex items-center justify-center border-2 border-white dark:border-slate-950 animate-pulse">
-                {availableQuizzesCount}
-              </span>
-            )}
-          </div>
-          <span className="text-[10px] font-extrabold tracking-tight">Квесты</span>
-        </button>
-        
-        {/* Tab 3: Analytics */}
-        <button 
-          onClick={() => setActiveMobileTab('analytics')}
-          aria-current={activeMobileTab === 'analytics' ? 'page' : undefined}
-          className={cn(
-            "relative flex flex-col items-center justify-center gap-0.5 flex-1 py-1 transition-all outline-none h-11 rounded-full",
-            activeMobileTab === 'analytics' ? "bg-[#DDF7F1] text-[#0B766E]" : "text-slate-400 dark:text-slate-500"
-          )}
-        >
-          {activeMobileTab === 'analytics' && (
-            <motion.div 
-              layoutId="mobileTabActiveLine"
-              className="absolute bottom-1 w-5 h-0.5 bg-[#0F9F91] rounded-full"
-              transition={{ type: "spring", stiffness: 380, damping: 30 }}
-            />
-          )}
-          <PieChartIcon size={18} className={cn("transition-transform", activeMobileTab === 'analytics' ? "scale-110 drop-shadow-sm" : "")} />
-          <span className="text-[10px] font-extrabold tracking-tight">Аналитика</span>
-        </button>
-      </nav>
-      
-      {/* Global local-reference drawer and mobile FAB button */}
-      <BudgetAIChatDrawer activeMobileTab={activeMobileTab} tourStep={tourStep} />
-    </div>
-    <AccessibilityPanel
-      open={accessibilityOpen}
-      settings={accessibilitySettings}
-      onChange={setAccessibilitySettings}
-      onClose={closeAccessibility}
-    />
+      <ProfileSheet
+        open={profileOpen}
+        onClose={closeProfile}
+        balance={balance}
+        totalXp={totalXp}
+        completedActivities={completedActivities}
+        isDark={isDark}
+        onToggleTheme={toggleTheme}
+        onOpenAccessibility={openAccessibility}
+        onStartTour={() => window.dispatchEvent(new CustomEvent('start_mos_onboarding'))}
+        onReset={handleResetDemo}
+      />
+      <AccessibilityPanel
+        open={accessibilityOpen}
+        settings={accessibilitySettings}
+        onChange={setAccessibilitySettings}
+        onClose={closeAccessibility}
+      />
     </MotionConfig>
   );
 }

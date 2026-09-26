@@ -146,16 +146,17 @@ const coreSectorTotal = CORE_SECTOR_FACT_IDS.reduce(
 
 export const TOTAL_EXPENSES_BILLION = BUDGET_FACTS.expenses.amountBillion;
 
+// Colors match the redesign palette (src/ui/sectors.ts) so a direction looks the same on every screen.
 export const BUDGET_SECTORS = [
-  { id: 'edu', name: 'Образование', factId: 'education', color: '#2563EB' },
-  { id: 'trans', name: 'Транспортная система', factId: 'transport', color: '#8B5CF6' },
-  { id: 'health', name: 'Здравоохранение', factId: 'healthcare', color: '#CC1111' },
-  { id: 'soc', name: 'Социальная поддержка', factId: 'socialSupport', color: '#10B981' },
+  { id: 'edu', name: 'Образование', factId: 'education', color: '#7C5CF5' },
+  { id: 'trans', name: 'Транспортная система', factId: 'transport', color: '#3D7BFD' },
+  { id: 'health', name: 'Здравоохранение', factId: 'healthcare', color: '#F29A38' },
+  { id: 'soc', name: 'Социальная поддержка', factId: 'socialSupport', color: '#16B38A' },
   {
     id: 'other',
     name: 'Другие расходы и программы',
     factId: null,
-    color: '#F59E0B',
+    color: '#A7B0C0',
   },
 ].map((sector) => {
   const amountBillion = sector.factId
