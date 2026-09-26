@@ -4,19 +4,16 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="description" content="МосГорБюджет.Трек — интерактивный образовательный проект о бюджете Москвы на 2026 год" />
-    <meta name="theme-color" content="#EDF1F8" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#0A0D13" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#EDF1F8" />
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23CC1111'/%3E%3Cpath d='M17 43V21h7l8 12 8-12h7v22h-7V31l-8 11-8-11v12z' fill='white'/%3E%3C/svg%3E" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400..800&family=JetBrains+Mono:wght@400..600&display=swap" />
     <title>МосГорБюджет.Трек — интерактивно о бюджете Москвы</title>
     <script>
-      // Pick the theme before the first paint (same rule as useTheme: a saved choice, else the device setting).
+      // Pick the theme before the first paint (same rule as useTheme: light unless night was chosen).
       try {
-        var saved = localStorage.getItem('mos_theme');
-        var dark = saved ? saved === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
-        if (dark) document.documentElement.classList.add('dark');
+        if (localStorage.getItem('mos_theme') === 'dark') document.documentElement.classList.add('dark');
       } catch (e) {}
     </script>
   </head>

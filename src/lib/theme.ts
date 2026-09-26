@@ -3,11 +3,9 @@ import { safeLocalStorage } from './utils';
 
 const STORAGE_KEY = 'mos_theme';
 
-// A saved choice wins; without one the app follows the device's light or dark setting.
+// Light by default; night only after the visitor switches it on in the profile.
 function readInitialDark() {
-  const saved = safeLocalStorage.getItem(STORAGE_KEY);
-  if (saved === 'dark' || saved === 'light') return saved === 'dark';
-  return typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  return safeLocalStorage.getItem(STORAGE_KEY) === 'dark';
 }
 
 export function useTheme() {

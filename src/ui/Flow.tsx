@@ -7,7 +7,7 @@ export function FlowPage({ children, className }: { children: ReactNode; classNa
   return (
     <div
       className={cn(
-        'mx-auto flex min-h-dvh w-full max-w-[30rem] flex-col px-4 pb-[calc(7rem_+_env(safe-area-inset-bottom))] pt-[calc(1.5rem_+_env(safe-area-inset-top))]',
+        'mx-auto flex min-h-dvh w-full max-w-[30rem] flex-col px-4 pb-[calc(7rem_+_env(safe-area-inset-bottom))] pt-[calc(1.5rem_+_env(safe-area-inset-top))] lg:max-w-[44rem] lg:pt-10',
         className,
       )}
     >
@@ -65,7 +65,7 @@ export function BottomAction({ label, onClick, disabled }: BottomActionProps) {
       aria-disabled={disabled || undefined}
       onClick={() => !disabled && onClick()}
       className={cn(
-        'fixed bottom-[calc(1.5rem_+_env(safe-area-inset-bottom))] left-1/2 z-40 h-14 w-[calc(min(100vw,30rem)_-_2rem)] -translate-x-1/2 rounded-full text-[1rem] font-semibold transition-colors duration-200',
+        'fixed bottom-[calc(1.5rem_+_env(safe-area-inset-bottom))] left-1/2 z-40 h-14 w-[calc(min(100vw,30rem)_-_2rem)] -translate-x-1/2 rounded-full text-[1rem] font-semibold transition-colors duration-200 lg:w-[calc(min(100vw,44rem)_-_2rem)]',
         disabled
           ? 'cursor-default bg-track text-ink-3'
           : 'bg-accent-fill text-white shadow-[0_12px_24px_-16px_var(--mgb-accent)]',

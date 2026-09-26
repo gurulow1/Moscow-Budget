@@ -114,6 +114,15 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  /* Big screens get a slightly larger rem, so the whole layout (type, cards, gaps) grows with the screen.
+     The low-vision mode sets its own sizes and wins. */
+  @media (min-width: 1280px) {
+    html:not([data-a11y]) { font-size: 106.25%; }
+  }
+  @media (min-width: 1600px) {
+    html:not([data-a11y]) { font-size: 112.5%; }
+  }
+
   #root {
     min-height: 100vh;
     min-height: 100dvh;

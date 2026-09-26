@@ -79,7 +79,7 @@ export default function Sheet({ open, title, onClose, children, fill, actions, s
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 320 }}
             className={cn(
-              'relative w-full max-w-[30rem] rounded-t-[1.75rem] bg-page px-4 pt-3 text-ink shadow-[0_-18px_40px_-24px_rgba(0,0,0,0.5)] outline-none lg:rounded-[1.75rem]',
+              'relative w-full max-w-[30rem] rounded-t-[1.75rem] bg-page px-4 pt-3 text-ink shadow-[0_-18px_40px_-24px_rgba(0,0,0,0.5)] outline-none lg:max-w-[36rem] lg:rounded-[1.75rem]',
               fill
                 ? 'flex h-[92dvh] flex-col overflow-hidden pb-[calc(0.75rem_+_env(safe-area-inset-bottom))] lg:h-[80dvh]'
                 : 'max-h-[88dvh] overflow-y-auto pb-[calc(1.5rem_+_env(safe-area-inset-bottom))]',

@@ -46,8 +46,9 @@ export default function AppHeader({
   }, [balance]);
 
   return (
-    <header className={cn('px-5 pt-3', className)}>
-      <div className="flex min-h-11 flex-wrap items-center justify-between gap-x-3 gap-y-2">
+    // On a wide screen the title and the actions share one row.
+    <header className={cn('px-5 pt-3 lg:flex lg:items-center lg:justify-between lg:gap-6 lg:px-0 lg:pt-7', className)}>
+      <div className="flex min-h-11 flex-wrap items-center justify-between gap-x-3 gap-y-2 lg:order-2 lg:shrink-0">
         <p className="m-0 text-[0.875rem] font-bold tracking-[-0.01em] text-ink-2 lg:hidden">
           МосГорБюджет<span className="text-accent">.Трек</span>
         </p>
@@ -109,8 +110,10 @@ export default function AppHeader({
           </AnimatePresence>
         </div>
       </div>
-      <h1 className="m-0 mt-1 text-[1.875rem] font-bold leading-[1.15] tracking-[-0.03em] text-ink">{title}</h1>
-      <p className="m-0 mt-1 text-[0.9375rem] text-ink-2">{sub}</p>
+      <div className="lg:order-1 lg:min-w-0">
+        <h1 className="m-0 mt-1 text-[1.875rem] font-bold leading-[1.15] tracking-[-0.03em] text-ink lg:mt-0 lg:text-[2.5rem]">{title}</h1>
+        <p className="m-0 mt-1 text-[0.9375rem] text-ink-2 lg:text-[1.0625rem]">{sub}</p>
+      </div>
     </header>
   );
 }

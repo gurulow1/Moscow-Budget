@@ -153,19 +153,19 @@ export default function DataScreen({ savedCalculation, active }: DataScreenProps
   const districtSheet = sheet?.kind === 'district' ? DISTRICT_SCENARIOS.find((item) => item.id === sheet.id)! : null;
 
   return (
-    <div className="grid gap-3 px-4 pt-4 lg:grid-cols-2 lg:items-start">
-      <section className="mgb-card px-5 py-[1.125rem] lg:row-span-2" aria-labelledby="flows-title">
+    <div className="grid gap-3 px-4 pt-4 xl:grid-cols-12 lg:items-start lg:gap-5 lg:px-0 lg:pt-7">
+      <section className="mgb-card px-5 py-[1.125rem] xl:col-span-7 xl:row-span-2 lg:px-8 lg:py-7" aria-labelledby="flows-title">
         <h2 id="flows-title" className="sr-only">
           Расходы по направлениям. Нажмите на направление, чтобы открыть подробности
         </h2>
         <Flows onPick={(id) => setSheet({ kind: 'sector', id })} />
-        <p className="m-0 mt-3 text-[0.875rem] leading-normal text-ink-2">
+        <p className="m-0 mt-3 text-[0.875rem] leading-normal text-ink-2 lg:mt-4 lg:text-[1rem]">
           = доходы {billions(BUDGET_FACTS.income.amountBillion)} + дефицит {billions(BUDGET_FACTS.deficit.amountBillion)}
           {NB}млрд{NB}₽
         </p>
       </section>
 
-      <section className="mgb-card px-5 py-[1.125rem]" aria-labelledby="receipt-title">
+      <section className="mgb-card px-5 py-[1.125rem] xl:col-span-5 lg:px-7 lg:py-6" aria-labelledby="receipt-title">
         {deduction > 0 && (
           <div role="group" aria-label="Сумма чека" className="mb-3.5 flex rounded-[0.875rem] bg-track p-[3px]">
             {[
@@ -187,10 +187,10 @@ export default function DataScreen({ savedCalculation, active }: DataScreenProps
             ))}
           </div>
         )}
-        <h2 id="receipt-title" className="m-0 mb-2 text-[1rem] font-semibold leading-snug">
+        <h2 id="receipt-title" className="m-0 mb-2 text-[1rem] font-semibold leading-snug lg:mb-3 lg:text-[1.125rem]">
           {personal ? `Ваш вычет ${formatRub(deduction)} по тем же долям` : `Условный чек на 1${NB}000${NB}₽ расходов`}
         </h2>
-        <ul className="m-0 list-none p-0 font-mono text-[0.8125rem] leading-[1.55]">
+        <ul className="m-0 list-none p-0 font-mono text-[0.8125rem] leading-[1.55] lg:text-[0.9375rem] lg:leading-[1.7]">
           {SECTORS.map((sector) => (
             <li key={sector.id}>
               <button
@@ -217,20 +217,20 @@ export default function DataScreen({ savedCalculation, active }: DataScreenProps
         )}
       </section>
 
-      <section className="mgb-card" aria-labelledby="districts-title">
-        <div className="px-5 pb-1 pt-4">
-          <h2 id="districts-title" className="m-0 text-[1rem] font-semibold leading-snug">
+      <section className="mgb-card xl:col-span-5" aria-labelledby="districts-title">
+        <div className="px-5 pb-1 pt-4 lg:px-7 lg:pt-6">
+          <h2 id="districts-title" className="m-0 text-[1rem] font-semibold leading-snug lg:text-[1.125rem]">
             Сценарии округов
           </h2>
           <p className="m-0 mt-0.5 text-[0.8125rem] leading-snug text-ink-2">Условные значения для сравнения масштаба, не данные бюджета</p>
         </div>
         {DISTRICT_SCENARIOS.map((district, i) => (
           <div key={district.id}>
-            {i > 0 && <div aria-hidden="true" className="mx-5 h-px bg-line" />}
+            {i > 0 && <div aria-hidden="true" className="mx-5 h-px bg-line lg:mx-7" />}
             <button
               type="button"
               onClick={() => setSheet({ kind: 'district', id: district.id })}
-              className="flex min-h-[4.25rem] w-full items-center gap-3 px-5 py-3 text-left text-ink"
+              className="flex min-h-[4.25rem] w-full items-center gap-3 px-5 py-3 text-left text-ink lg:px-7"
             >
               <span className="grid min-w-0 flex-1 gap-0.5">
                 <span className="flex items-center gap-2 text-[1rem] font-semibold leading-snug">
@@ -253,7 +253,7 @@ export default function DataScreen({ savedCalculation, active }: DataScreenProps
         ))}
       </section>
 
-      <p className="m-0 px-2 pb-2 pt-1 text-[0.8125rem] leading-relaxed text-ink-3 lg:col-span-2">
+      <p className="m-0 px-2 pb-2 pt-1 text-[0.8125rem] leading-relaxed text-ink-3 xl:col-span-12 lg:px-1 lg:text-[0.875rem]">
         Суммы направлений —{' '}
         <a href={openBudget.url} target="_blank" rel="noopener noreferrer" className="text-ink-2 underline underline-offset-2">
           {openBudget.label}

@@ -9,7 +9,7 @@ import AccessibilityPanel, {
 } from './components/AccessibilityPanel';
 import AppHeader from './ui/AppHeader';
 import Aurora from './ui/Aurora';
-import TabBar, { APP_TABS, type AppTab } from './ui/TabBar';
+import TabBar, { APP_TABS, SideNav, type AppTab } from './ui/TabBar';
 import HomeScreen from './screens/HomeScreen';
 import DeductionScreen from './screens/DeductionScreen';
 import QuestsScreen from './screens/QuestsScreen';
@@ -298,102 +298,105 @@ export default function App() {
 
   const reducedMotion = accessibilitySettings.enabled && accessibilitySettings.reduceMotion ? 'always' : 'user';
 
-  const [showSplash, setShowSplash] = useState(() => safeLocalStorage.getItem('mos_splash_seen_v3') !== 'true');
+  // The start screen opens on every visit: it is the way into the app, not a one-time intro.
+  const [showSplash, setShowSplash] = useState(true);
 
-  if (showSplash) {
-    return (
-      <MotionConfig reducedMotion={reducedMotion}>
+  return (
+    <MotionConfig reducedMotion={reducedMotion}>
+      {/* The app is already in place under the start screen, so leaving it fades straight into the home screen. */}
+      <div inert={showSplash}>
+        <Aurora />
+
+        {tourStep !== null && (
+          <OnboardingTour
+            activeStep={tourStep}
+            setActiveStep={setTourStep}
+            onClose={() => setTourStep(null)}
+            setActiveTab={goTo}
+          />
+        )}
+
+        {flowView}
+
+        {/* An open step replaces the tabs; the tabs stay mounted underneath and keep their state. */}
+        <div
+          hidden={flowView !== null}
+          className="mx-auto min-h-dvh w-full max-w-[30rem] pb-[calc(7.5rem_+_env(safe-area-inset-bottom))] pt-[env(safe-area-inset-top)] lg:max-w-none lg:pb-12 lg:pl-[19rem] lg:pr-10"
+        >
+          {/* On a wide screen the content is centred in the space right of the sidebar. */}
+          <div className="lg:mx-auto lg:max-w-[76rem]">
+            <AppHeader
+              title={HEADINGS[tab].title}
+              sub={HEADINGS[tab].sub}
+              balance={balance}
+              level={level}
+              accessibilityEnabled={accessibilitySettings.enabled}
+              onOpenAccessibility={openAccessibility}
+              onOpenProfile={() => setProfileOpen(true)}
+              profileClassName={getTourClass(1)}
+              helperClassName={getTourClass(6)}
+            />
+
+            {/* Every screen stays mounted, so switching tabs never loses a half-finished quiz or calculation. */}
+            <main>
+              <section hidden={tab !== 'home'} aria-label="Главная">
+                <HomeScreen
+                  savedCalculation={savedCalculation}
+                  learningPostUnlocked={hasLearningPractice}
+                  onStartDailyQuiz={startDailyQuiz}
+                />
+              </section>
+              <section hidden={tab !== 'calc'} aria-label="Налоговый вычет">
+                <DeductionScreen
+                  savedCalculation={savedCalculation}
+                  isCompleted={calculatorTaskCompleted}
+                  onSave={handleSaveCalculation}
+                  tourPersonaClass={getTourClass(2)}
+                  tourCalculatorClass={getTourClass(3)}
+                />
+              </section>
+              <section hidden={tab !== 'quests'} aria-label="Квесты" id="tour-quests">
+                <QuestsScreen
+                  calculatorDone={calculatorTaskCompleted}
+                  completedActivities={completedActivities}
+                  ledger={ledger}
+                  onOpen={openFlow}
+                  tourClassName={getTourClass(4)}
+                />
+              </section>
+              <section
+                hidden={tab !== 'data'}
+                aria-label="Куда идут деньги"
+                id="tour-analytics"
+                className={cn('transition-opacity duration-200', getTourClass(5))}
+              >
+                <DataScreen savedCalculation={savedCalculation} active={tab === 'data' && flowView === null} />
+              </section>
+            </main>
+          </div>
+        </div>
+
+        {flowView === null && (
+          <>
+            <TabBar active={tab} questsBadge={availableQuizzesCount} dimmed={tourStep !== null} />
+            <SideNav active={tab} questsBadge={availableQuizzesCount} dimmed={tourStep !== null} />
+          </>
+        )}
+        <HelperChat />
+
+      </div>
+
+      {showSplash && (
         <SplashScreen
           onEnter={(withTour) => {
             setShowSplash(false);
-            safeLocalStorage.setItem('mos_splash_seen_v3', 'true');
             if (withTour) setTourStep(0);
           }}
           onOpenAccessibility={openAccessibility}
           accessibilityEnabled={accessibilitySettings.enabled}
-        />
-        <AccessibilityPanel
-          open={accessibilityOpen}
-          settings={accessibilitySettings}
-          onChange={setAccessibilitySettings}
-          onClose={closeAccessibility}
-        />
-      </MotionConfig>
-    );
-  }
-
-  return (
-    <MotionConfig reducedMotion={reducedMotion}>
-      <Aurora />
-
-      {tourStep !== null && (
-        <OnboardingTour
-          activeStep={tourStep}
-          setActiveStep={setTourStep}
-          onClose={() => setTourStep(null)}
-          setActiveTab={goTo}
+          reduceMotion={accessibilitySettings.enabled && accessibilitySettings.reduceMotion}
         />
       )}
-
-      {flowView}
-
-      {/* An open step replaces the tabs; the tabs stay mounted underneath and keep their state. */}
-      <div
-        hidden={flowView !== null}
-        className="mx-auto min-h-dvh w-full max-w-[30rem] pb-[calc(7.5rem_+_env(safe-area-inset-bottom))] pt-[env(safe-area-inset-top)] lg:ml-[max(17.5rem,calc((100vw_-_62rem)_/_2))] lg:mr-0 lg:max-w-[62rem] lg:pb-12 lg:pr-4 lg:pt-3"
-      >
-        <AppHeader
-          title={HEADINGS[tab].title}
-          sub={HEADINGS[tab].sub}
-          balance={balance}
-          level={level}
-          accessibilityEnabled={accessibilitySettings.enabled}
-          onOpenAccessibility={openAccessibility}
-          onOpenProfile={() => setProfileOpen(true)}
-          profileClassName={getTourClass(1)}
-          helperClassName={getTourClass(6)}
-        />
-
-        {/* Every screen stays mounted, so switching tabs never loses a half-finished quiz or calculation. */}
-        <main>
-          <section hidden={tab !== 'home'} aria-label="Главная">
-            <HomeScreen
-              savedCalculation={savedCalculation}
-              learningPostUnlocked={hasLearningPractice}
-              onStartDailyQuiz={startDailyQuiz}
-            />
-          </section>
-          <section hidden={tab !== 'calc'} aria-label="Налоговый вычет">
-            <DeductionScreen
-              savedCalculation={savedCalculation}
-              isCompleted={calculatorTaskCompleted}
-              onSave={handleSaveCalculation}
-              tourPersonaClass={getTourClass(2)}
-              tourCalculatorClass={getTourClass(3)}
-            />
-          </section>
-          <section hidden={tab !== 'quests'} aria-label="Квесты" id="tour-quests">
-            <QuestsScreen
-              calculatorDone={calculatorTaskCompleted}
-              completedActivities={completedActivities}
-              ledger={ledger}
-              onOpen={openFlow}
-              tourClassName={getTourClass(4)}
-            />
-          </section>
-          <section
-            hidden={tab !== 'data'}
-            aria-label="Куда идут деньги"
-            id="tour-analytics"
-            className={cn('transition-opacity duration-200', getTourClass(5))}
-          >
-            <DataScreen savedCalculation={savedCalculation} active={tab === 'data' && flowView === null} />
-          </section>
-        </main>
-      </div>
-
-      {flowView === null && <TabBar active={tab} questsBadge={availableQuizzesCount} dimmed={tourStep !== null} />}
-      <HelperChat />
 
       <ProfileSheet
         open={profileOpen}

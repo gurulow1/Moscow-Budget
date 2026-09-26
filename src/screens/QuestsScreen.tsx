@@ -37,7 +37,7 @@ const KINDS: { id: Kind; label: string }[] = [
 const DIFFICULTY_DOT: Record<Difficulty, string> = { Лёгкий: 'bg-c3', Средний: 'bg-c4', Сложный: 'bg-accent' };
 
 const PILL = 'inline-flex h-11 shrink-0 items-center rounded-full bg-accent-fill px-[1.125rem] text-[0.9375rem] font-semibold text-white no-underline shadow-[0_10px_20px_-14px_var(--mgb-accent)]';
-const ROW = 'flex min-h-[4.75rem] w-full items-center gap-3 px-5 py-3.5 text-left text-ink';
+const ROW = 'flex min-h-[4.75rem] w-full items-center gap-3 px-5 py-3.5 text-left text-ink lg:px-6';
 
 function IconTile({ icon: Icon }: { icon: LucideIcon }) {
   return (
@@ -70,7 +70,7 @@ function Row({ title, meta, right, onClick, disabled }: { title: string; meta: R
   );
 }
 
-const Divider = () => <div aria-hidden="true" className="mx-5 h-px bg-line" />;
+const Divider = () => <div aria-hidden="true" className="mx-5 h-px bg-line lg:mx-6" />;
 
 export default function QuestsScreen({ calculatorDone, completedActivities, ledger, onOpen, tourClassName }: QuestsScreenProps) {
   const [kind, setKind] = useState<Kind>('quizzes');
@@ -149,13 +149,13 @@ export default function QuestsScreen({ calculatorDone, completedActivities, ledg
   };
 
   return (
-    <div className={cn('grid gap-3 px-4 pt-4 transition-opacity duration-200 lg:grid-cols-2 lg:items-start', tourClassName)}>
-      <div className="grid gap-3">
+    <div className={cn('grid gap-3 px-4 pt-4 transition-opacity duration-200 lg:gap-5 lg:px-0 lg:pt-7', tourClassName)}>
+      <div className="grid gap-3 lg:grid-cols-2 lg:gap-5">
         {/* With the large font of the low-vision mode the button moves under the text. */}
-        <section className="mgb-card flex flex-wrap items-center gap-3.5 px-5 py-[1.125rem]" aria-labelledby="daily-quiz-title">
+        <section className="mgb-card flex flex-wrap items-center gap-3.5 px-5 py-[1.125rem] lg:gap-5 lg:px-7 lg:py-7" aria-labelledby="daily-quiz-title">
           <div className="min-w-[12rem] flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <h2 id="daily-quiz-title" className="m-0 text-[1.125rem] font-semibold leading-snug tracking-[-0.01em]">
+              <h2 id="daily-quiz-title" className="m-0 text-[1.125rem] font-semibold leading-snug tracking-[-0.01em] lg:text-[1.5rem]">
                 Квиз дня
               </h2>
               {streak > 0 && (
@@ -164,7 +164,7 @@ export default function QuestsScreen({ calculatorDone, completedActivities, ledg
                 </span>
               )}
             </div>
-            <p className="m-0 mt-1 text-[0.9375rem] leading-snug text-ink-2 [text-wrap:pretty]">
+            <p className="m-0 mt-1 text-[0.9375rem] leading-snug text-ink-2 [text-wrap:pretty] lg:mt-2 lg:text-[1.0625rem]">
               {today
                 ? `Сегодня ${today.correctAnswers} из 3 верных${today.points > 0 ? ` · +${today.points}\u00A0${plural(today.points, ['балл', 'балла', 'баллов'])}` : ''}`
                 : `3 вопроса · ${PILOT_POINTS_PER_ANSWER}\u00A0баллов за верный ответ`}
@@ -175,7 +175,7 @@ export default function QuestsScreen({ calculatorDone, completedActivities, ledg
           </button>
         </section>
 
-        <section className="mgb-card px-5 py-[1.125rem]" aria-labelledby="route-title">
+        <section className="mgb-card px-5 py-[1.125rem] lg:px-7 lg:py-6" aria-labelledby="route-title">
           <div className="flex items-baseline justify-between gap-2.5">
             <h2 id="route-title" className="m-0 text-[0.875rem] font-normal text-ink-2">
               Ваш маршрут
@@ -227,7 +227,8 @@ export default function QuestsScreen({ calculatorDone, completedActivities, ledg
       </div>
 
       <div className="grid gap-3">
-        <div role="group" aria-label="Тип заданий" className="flex rounded-2xl bg-track p-[3px]">
+        {/* The phone switches between the three lists; a wide screen shows them side by side. */}
+        <div role="group" aria-label="Тип заданий" className="flex rounded-2xl bg-track p-[3px] lg:hidden">
           {KINDS.map((item) => {
             const on = item.id === kind;
             return (
@@ -247,14 +248,25 @@ export default function QuestsScreen({ calculatorDone, completedActivities, ledg
           })}
         </div>
 
-        <section className="mgb-card" aria-label={KINDS.find((item) => item.id === kind)?.label}>
-          {lists[kind].map((row, i) => (
-            <div key={i}>
-              {i > 0 && <Divider />}
-              {row}
-            </div>
+        <div className="grid gap-3 lg:grid-cols-2 lg:items-start lg:gap-5 xl:grid-cols-3">
+          {KINDS.map((item) => (
+            <section
+              key={item.id}
+              className={cn('mgb-card', item.id !== kind && 'hidden lg:block')}
+              aria-labelledby={`quests-${item.id}-title`}
+            >
+              <h2 id={`quests-${item.id}-title`} className="m-0 hidden px-6 pb-1 pt-5 text-[1.125rem] font-semibold leading-snug tracking-[-0.01em] lg:block">
+                {item.label}
+              </h2>
+              {lists[item.id].map((row, i) => (
+                <div key={i}>
+                  {i > 0 && <Divider />}
+                  {row}
+                </div>
+              ))}
+            </section>
           ))}
-        </section>
+        </div>
       </div>
     </div>
   );
