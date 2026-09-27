@@ -1,155 +1,21 @@
-// The splash animation: a small top-down city grows (roads, the river, houses, parks, cars), the camera pulls back,
-// and every house, tree and car flies into the «МосГорБюджет.Трек» lettering. Plain canvas 2D, one particle per object.
+// The splash: Moscow's landmarks rise on the skyline, the camera climbs and tilts down until the city map
+// (rings, the river, avenues, parks) lies flat, and then the map breaks into dots that fly into «МосГорБюджет.Трек».
+// One perspective camera over a ground plane in kilometres; landmarks are upright billboards standing on it.
+
+import { LANDMARKS, LANDMARK_DARK, LANDMARK_LIGHT, type LandmarkId } from './landmarks';
+import { BOULEVARD_RING, GARDEN_RING, KREMLIN, MKAD, PARKS, RADIALS, RIVER, TTK, cumulative, parkOutline, type Pt } from './moscow';
 
 type RGB = [number, number, number];
-type Kind = 'house' | 'tree' | 'car';
 
-interface Obj {
-  kind: Kind;
-  // World position: pixels at zoom 1, origin in the middle of the canvas. Houses: footprint centre.
-  x: number;
-  y: number;
-  w: number; // house footprint / car length / tree diameter
-  h: number; // house footprint / car width / tree diameter
-  ext: number; // house height, drawn as a front facade
-  color: RGB;
-  side: RGB;
-  // Ready-made fill styles, so drawing a frame doesn't build thousands of strings.
-  fill: string;
-  sideFill: string;
-  hiFill: string;
-  appear: number;
-  seed: number;
-  tower: boolean;
-  // Cars drive along a road: axis 0 is horizontal, 1 vertical.
-  axis: 0 | 1;
-  dir: 1 | -1;
-  speed: number;
-  lo: number;
-  hi: number;
-  // Flight into the lettering.
-  spare: boolean;
-  tx: number;
-  ty: number;
-  tc: RGB;
-  delay: number;
-  dur: number;
-  bend: number;
-  launched: boolean;
-  sx: number;
-  sy: number;
-  sw: number;
-  sh: number;
-  sext: number;
-  srot: number;
-  sc: RGB;
-  twinkle: number;
-}
-
-// A straight piece of road; roads stop at the river except on bridges.
-interface Segment {
-  axis: 0 | 1;
-  at: number;
-  from: number;
-  to: number;
-}
-
-interface World {
-  objs: Obj[];
-  segs: Segment[];
-  road: number;
-  riverHalf: number;
-  blocks: { x: number; y: number; w: number; h: number; park: boolean }[];
-  half: { w: number; h: number };
-}
-
-interface Palette {
-  road: string;
-  roadLine: string;
-  block: string;
-  park: string;
-  river: RGB;
-  riverHi: string;
-  shadow: string;
-  roofs: RGB[];
-  accentRoofs: RGB[];
-  towerRoof: RGB;
-  towerSide: RGB;
-  trees: RGB[];
-  cars: RGB[];
-  window: RGB;
-  windowOff: RGB;
-  ink: RGB;
-  accent: RGB;
-  glint: RGB;
-}
-
-const hex = (value: string): RGB => [
-  parseInt(value.slice(1, 3), 16),
-  parseInt(value.slice(3, 5), 16),
-  parseInt(value.slice(5, 7), 16),
-];
+const hex = (value: string): RGB => [parseInt(value.slice(1, 3), 16), parseInt(value.slice(3, 5), 16), parseInt(value.slice(5, 7), 16)];
 const mix = (a: RGB, b: RGB, k: number): RGB => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
 const rgb = (c: RGB, alpha = 1) =>
   alpha >= 1 ? `rgb(${c[0] | 0},${c[1] | 0},${c[2] | 0})` : `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${alpha.toFixed(3)})`;
-const shade = (c: RGB, k: number): RGB => mix(c, [0, 0, 0], k);
-
-const LIGHT: Palette = {
-  road: 'rgba(255,255,255,0.72)',
-  roadLine: 'rgba(14,21,36,0.08)',
-  block: 'rgba(226,233,246,0.5)',
-  park: 'rgba(150,222,184,0.55)',
-  river: hex('#A9CFF7'),
-  riverHi: 'rgba(255,255,255,0.75)',
-  shadow: 'rgba(38,58,108,0.16)',
-  roofs: ['#FFFFFF', '#F7F9FD', '#EEF3FB', '#E7EEF9'].map(hex),
-  accentRoofs: ['#FFD9DF', '#D6E5FF', '#FFE6C4', '#D9F2E6'].map(hex),
-  towerRoof: hex('#CFE0FF'),
-  towerSide: hex('#8EAEE6'),
-  trees: ['#4CC48A', '#3BB47B', '#63D19B', '#2FA56E'].map(hex),
-  cars: ['#D6263A', '#D6263A', '#3D7BFD', '#F29A38', '#FFFFFF', '#16B38A', '#1C2436'].map(hex),
-  window: hex('#D5E4FF'),
-  windowOff: hex('#C3CEE2'),
-  ink: hex('#0E1524'),
-  accent: hex('#D6263A'),
-  glint: hex('#FFFFFF'),
-};
-
-const DARK: Palette = {
-  road: 'rgba(38,46,64,0.95)',
-  roadLine: 'rgba(255,255,255,0.07)',
-  block: 'rgba(22,28,40,0.9)',
-  park: 'rgba(22,58,42,0.9)',
-  river: hex('#12304F'),
-  riverHi: 'rgba(120,170,230,0.35)',
-  shadow: 'rgba(0,0,0,0.38)',
-  roofs: ['#2C3548', '#283042', '#323D53', '#2A3244'].map(hex),
-  accentRoofs: ['#4A2A34', '#243A5E', '#4A3A24', '#1F4034'].map(hex),
-  towerRoof: hex('#2E4670'),
-  towerSide: hex('#172642'),
-  trees: ['#1F8F5E', '#24A06A', '#18744D', '#2BB077'].map(hex),
-  cars: ['#FF4B60', '#FF4B60', '#5E8FFF', '#FFAF57', '#E8ECF4', '#34CF9C'].map(hex),
-  window: hex('#FFD27A'),
-  windowOff: hex('#1C2331'),
-  ink: hex('#F2F4F8'),
-  accent: hex('#FF4B60'),
-  glint: hex('#9CC2FF'),
-};
-
-// Timeline, seconds.
-const PULL_END = 3.1;
-const FLY_START = 2.9;
-const FLY_SPREAD = 0.65;
-const FLY_DUR = 1.2;
-const FORMED = FLY_START + FLY_SPREAD + FLY_DUR + 0.25;
-const GLINT_END = FORMED + 1.6;
-const MAX_POINTS = 1300;
-
+const lerp = (a: number, b: number, k: number) => a + (b - a) * k;
 const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
 const easeInOutCubic = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 const easeInOutSine = (t: number) => -(Math.cos(Math.PI * t) - 1) / 2;
 const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
-const easeOutBack = (t: number) => 1 + 2.2 * Math.pow(t - 1, 3) + 1.2 * Math.pow(t - 1, 2);
 
 function prng(seed: number) {
   return () => {
@@ -161,139 +27,144 @@ function prng(seed: number) {
   };
 }
 
-// The river bends across the city a little above the middle.
-const riverY = (x: number, w: number, h: number) => -h * 0.1 + Math.sin((x / w) * Math.PI * 2.2 + 0.7) * h * 0.1;
+// ---------- Timeline, seconds ----------
 
-function newObj(kind: Kind, x: number, y: number, w: number, h: number, color: RGB, side: RGB, seed: number): Obj {
-  return {
-    kind, x, y, w, h, ext: 0, color, side, fill: rgb(color), sideFill: rgb(side), hiFill: rgb(mix(color, [255, 255, 255], 0.28)), appear: 0, seed, tower: false, axis: 0, dir: 1, speed: 0, lo: 0, hi: 0,
-    spare: false, tx: 0, ty: 0, tc: color, delay: 0, dur: FLY_DUR, bend: 0, launched: false,
-    sx: 0, sy: 0, sw: 0, sh: 0, sext: 0, srot: 0, sc: color, twinkle: 0,
-  };
+const SIDE_END = 3.2; // the skyline shot ends, the camera starts to climb
+const RISE_END = 5.1; // the map lies flat
+const ASSEMBLE = 5.45; // the map breaks into dots
+const FLY_SPREAD = 0.6;
+const FLY_DUR = 1.05;
+const FORMED = ASSEMBLE + FLY_SPREAD + FLY_DUR + 0.2;
+const GLINT_END = FORMED + 1.5;
+const MAX_POINTS = 1300;
+const NEAR = 0.3;
+
+// ---------- Palettes ----------
+
+interface Palette {
+  sky: [string, string];
+  ground: [string, string];
+  city: string;
+  distant: string;
+  haze: string;
+  cloud: string;
+  sun: boolean;
+  stars: boolean;
+  mkad: string;
+  ttk: string;
+  garden: string;
+  boulevard: string;
+  radial: string;
+  river: string;
+  riverCore: string;
+  park: string;
+  kremlin: string;
+  cars: string[];
+  shadow: string;
+  labelBg: string;
+  labelInk: string;
+  bird: string;
+  ink: RGB;
+  accent: RGB;
+  glint: RGB;
 }
 
-function buildWorld(width: number, height: number, block: number, pal: Palette): World {
-  const rand = prng(20260927);
-  const half = { w: width * 0.54, h: height * 0.54 };
-  const road = Math.max(5, block * 0.14);
-  const riverHalf = Math.max(road * 1.1, height * 0.032);
-  const towersAt = { x: width * 0.2, y: height * 0.16 };
+const LIGHT: Palette = {
+  sky: ['#BCD2FF', '#FFE6EC'],
+  ground: ['rgba(246, 248, 252, 0.95)', 'rgba(214, 224, 240, 0.95)'],
+  city: 'rgba(255, 255, 255, 0.5)',
+  distant: 'rgba(196, 210, 236, 0.75)',
+  haze: 'rgba(255, 255, 255, 0.9)',
+  cloud: 'rgba(255, 255, 255, 0.85)',
+  sun: true,
+  stars: false,
+  mkad: '#243049',
+  ttk: '#5A6784',
+  garden: '#D6263A',
+  boulevard: '#16B38A',
+  radial: '#A3AEC4',
+  river: '#86B8F6',
+  riverCore: '#D8E9FF',
+  park: '#BDEBD0',
+  kremlin: '#D6263A',
+  cars: ['#D6263A', '#F29A38', '#3D7BFD'],
+  shadow: 'rgba(38, 58, 108, 0.16)',
+  labelBg: 'rgba(255, 255, 255, 0.9)',
+  labelInk: '#0E1524',
+  bird: 'rgba(14, 21, 36, 0.55)',
+  ink: hex('#0E1524'),
+  accent: hex('#D6263A'),
+  glint: hex('#FFFFFF'),
+};
 
-  const line = (from: number, to: number) => {
-    const out: number[] = [];
-    for (let v = from - rand() * block * 0.5; v < to + block; v += block * (0.8 + rand() * 0.45)) out.push(v);
-    return out;
-  };
-  const xs = line(-half.w, half.w);
-  const ys = line(-half.h, half.h);
+const DARK: Palette = {
+  sky: ['#050811', '#1B2745'],
+  ground: ['rgba(20, 27, 42, 0.97)', 'rgba(8, 11, 17, 0.97)'],
+  city: 'rgba(120, 150, 210, 0.07)',
+  distant: 'rgba(40, 54, 86, 0.85)',
+  haze: 'rgba(40, 56, 96, 0.7)',
+  cloud: 'rgba(120, 140, 180, 0.16)',
+  sun: false,
+  stars: true,
+  mkad: '#E6EAF2',
+  ttk: '#9AA5BD',
+  garden: '#FF4B60',
+  boulevard: '#34CF9C',
+  radial: '#4E586D',
+  river: '#3A78D6',
+  riverCore: '#7FB0F5',
+  park: '#1B4A35',
+  kremlin: '#FF4B60',
+  cars: ['#FFB561', '#FF6B6B', '#FFE3A3'],
+  shadow: 'rgba(0, 0, 0, 0.45)',
+  labelBg: 'rgba(22, 27, 38, 0.9)',
+  labelInk: '#F2F4F8',
+  bird: 'rgba(200, 210, 230, 0.5)',
+  ink: hex('#F2F4F8'),
+  accent: hex('#FF4B60'),
+  glint: hex('#9CC2FF'),
+};
 
-  const objs: Obj[] = [];
-  const blocks: World['blocks'] = [];
-  const nearRiver = (x: number, y: number, pad: number) => Math.abs(y - riverY(x, width, height)) < riverHalf + pad;
+// ---------- The scene ----------
 
-  for (let i = 0; i < xs.length - 1; i++) {
-    for (let j = 0; j < ys.length - 1; j++) {
-      const bx = xs[i] + road / 2;
-      const by = ys[j] + road / 2;
-      const bw = xs[i + 1] - xs[i] - road;
-      const bh = ys[j + 1] - ys[j] - road;
-      if (bw < road || bh < road) continue;
-      const riverside = nearRiver(bx + bw / 2, by + bh / 2, Math.max(bw, bh) * 0.7);
-      const park = rand() < (riverside ? 0.45 : 0.17);
-      blocks.push({ x: bx, y: by, w: bw, h: bh, park });
+// Landmarks stand in a composed row for the skyline shot and slide to their real places as the map flattens.
+const SCENE: { id: LandmarkId; row: Pt; geo: Pt; h: number; start: number }[] = [
+  { id: 'msu', row: [-8, 2.5], geo: [-6, -5.6], h: 4.4, start: 0.2 },
+  { id: 'shukhov', row: [-4.3, 0.4], geo: [-0.5, -3.7], h: 3.3, start: 0.45 },
+  { id: 'kremlin', row: [0, -1.6], geo: [0.05, 0.05], h: 3.4, start: 0.7 },
+  { id: 'ostankino', row: [1.6, 8], geo: [-0.6, 7.9], h: 7.4, start: 0.95 },
+  { id: 'basil', row: [4.8, -2.2], geo: [0.45, -0.1], h: 3.1, start: 1.2 },
+  { id: 'city', row: [7.8, 3.4], geo: [-5.1, 0.8], h: 5.2, start: 1.45 },
+];
 
-      if (park) {
-        const step = block * 0.21;
-        for (let ty = by + step * 0.55; ty < by + bh - step * 0.3; ty += step) {
-          for (let tx = bx + step * 0.55; tx < bx + bw - step * 0.3; tx += step) {
-            if (rand() > 0.8) continue;
-            const x = tx + (rand() - 0.5) * step * 0.35;
-            const y = ty + (rand() - 0.5) * step * 0.35;
-            if (nearRiver(x, y, step * 0.4)) continue;
-            const d = step * (0.62 + rand() * 0.28);
-            const color = pal.trees[(rand() * pal.trees.length) | 0];
-            objs.push(newObj('tree', x, y, d, d, color, shade(color, 0.18), rand()));
-          }
-        }
-        continue;
-      }
+interface MapLine {
+  pts: Pt[];
+  cum: number[];
+  total: number;
+  color: string;
+  width: number;
+  reveal: [number, number];
+}
 
-      const nx = Math.max(1, Math.min(4, Math.round(bw / (block * 0.3))));
-      const ny = Math.max(1, Math.min(4, Math.round(bh / (block * 0.3))));
-      const lw = bw / nx;
-      const lh = bh / ny;
-      const gap = block * 0.05;
-      for (let a = 0; a < nx; a++) {
-        for (let b = 0; b < ny; b++) {
-          if (rand() < 0.06) continue;
-          const w = lw - gap * (1.2 + rand());
-          const h = lh - gap * (1.2 + rand());
-          const x = bx + lw * (a + 0.5);
-          const y = by + lh * (b + 0.5);
-          if (nearRiver(x, y, Math.max(w, h) * 0.6)) continue;
-          const tower = Math.hypot(x - towersAt.x, (y - towersAt.y) * 1.3) < block * 1.25;
-          const accent = !tower && rand() < 0.13;
-          const color = tower ? pal.towerRoof : (accent ? pal.accentRoofs : pal.roofs)[(rand() * 4) | 0];
-          const side = tower ? pal.towerSide : shade(color, accent ? 0.22 : 0.2);
-          const house = newObj('house', x, y, w, h, color, side, rand());
-          house.tower = tower;
-          house.ext = Math.min(w, h) * (tower ? 1.1 + rand() * 0.9 : 0.25 + rand() * 0.55);
-          objs.push(house);
-        }
-      }
-    }
-  }
+interface Car {
+  line: MapLine;
+  offset: number;
+  speed: number;
+  color: string;
+}
 
-  // Road pieces: every third avenue crosses the river on a bridge, the rest stop at the embankment.
-  const segs: Segment[] = [];
-  const cut = riverHalf + road * 0.8;
-  xs.forEach((x, i) => {
-    const ry = riverY(x, width, height);
-    if (i % 3 === 1) segs.push({ axis: 1, at: x, from: -half.h, to: half.h });
-    else {
-      segs.push({ axis: 1, at: x, from: -half.h, to: ry - cut });
-      segs.push({ axis: 1, at: x, from: ry + cut, to: half.h });
-    }
-  });
-  ys.forEach((y) => {
-    let from: number | null = null;
-    for (let x = -half.w; x <= half.w + 6; x += 6) {
-      const dry = x > half.w || Math.abs(y - riverY(x, width, height)) < cut;
-      if (!dry && from === null) from = x;
-      if (dry && from !== null) {
-        segs.push({ axis: 0, at: y, from, to: Math.min(x, half.w) });
-        from = null;
-      }
-    }
-  });
-
-  // Cars: a few per piece of road, in both directions.
-  const laneOffset = road * 0.23;
-  const carLen = road * 0.62;
-  const carWid = road * 0.34;
-  for (const seg of segs) {
-    const length = seg.to - seg.from;
-    if (length < road * 2) continue;
-    const share = length / (block * 2.3);
-    const count = Math.floor(share) + (rand() < share % 1 ? 1 : 0);
-    for (let k = 0; k < count; k++) {
-      const dir: 1 | -1 = rand() < 0.5 ? 1 : -1;
-      const along = seg.from + rand() * length;
-      const across = seg.at + dir * laneOffset;
-      const color = pal.cars[(rand() * pal.cars.length) | 0];
-      const car = newObj('car', seg.axis ? across : along, seg.axis ? along : across, carLen, carWid, color, shade(color, 0.3), rand());
-      car.axis = seg.axis;
-      car.dir = dir;
-      car.speed = block * (0.45 + rand() * 0.5);
-      car.lo = seg.from;
-      car.hi = seg.to;
-      objs.push(car);
-    }
-  }
-  // Back to front, so nearer houses cover the ones behind them.
-  objs.sort((a, b) => a.y + a.h / 2 - (b.y + b.h / 2));
-
-  return { objs, segs, road, riverHalf, blocks, half };
+interface Dot {
+  sx: number;
+  sy: number;
+  size: number;
+  color: RGB;
+  tx: number;
+  ty: number;
+  tc: RGB;
+  delay: number;
+  dur: number;
+  bend: number;
+  spare: boolean;
 }
 
 // Points of the lettering, sampled on a hexagonal grid inside the box.
@@ -313,9 +184,7 @@ function sampleLogo(box: { x: number; y: number; w: number; h: number }) {
   const mainW = ctx.measureText(main).width;
   const tailW = ctx.measureText(tail).width;
   const twoLines = bw < 620;
-  const size = twoLines
-    ? Math.min((100 * bw * 0.97) / mainW, bh / 2.05)
-    : Math.min((100 * bw * 0.97) / (mainW + tailW), bh / 1.1);
+  const size = twoLines ? Math.min((100 * bw * 0.97) / mainW, bh / 2.05) : Math.min((100 * bw * 0.97) / (mainW + tailW), bh / 1.1);
   ctx.font = `800 ${size}px ${family}`;
   ctx.textBaseline = 'middle';
   const k = size / 100;
@@ -344,7 +213,6 @@ function sampleLogo(box: { x: number; y: number; w: number; h: number }) {
     }
     return points;
   };
-  // About 1 300 points at most: enough to read the lettering, light enough for weak laptops and phones.
   let step = Math.max(2.8, Math.min(6, size * 0.05));
   let points = sample(step);
   if (points.length > MAX_POINTS) {
@@ -365,6 +233,7 @@ export interface CitySplashOptions {
 
 export function startCitySplash({ canvas, measure, dark, reduced, onFormed }: CitySplashOptions) {
   const pal = dark ? DARK : LIGHT;
+  const lc = dark ? LANDMARK_DARK : LANDMARK_LIGHT;
   const ctx = canvas.getContext('2d');
   let raf = 0;
   let start = 0;
@@ -372,16 +241,50 @@ export function startCitySplash({ canvas, measure, dark, reduced, onFormed }: Ci
   let formedSent = false;
   let destroyed = false;
 
-  let width = 0;
-  let height = 0;
-  let world: World | null = null;
-  let flyers: Obj[] = [];
-  let step = 4;
-  let zoom0 = 2.5;
-  let pan0 = { x: 0, y: 0 };
-  let paired = false;
-  let logoSpan = { left: 0, right: 0 };
+  let W = 0;
+  let H = 0;
+  let f = 1000;
+  let portrait = false;
+  let pan: [number, number] = [0, 0];
+  let distTop = 60;
+  let starts = SCENE.map((item) => item.start);
   let logoBox = { x: 0, y: 0, w: 0, h: 0 };
+  let logoSpan = { left: 0, right: 0 };
+  let targets: { x: number; y: number; accent: boolean }[] = [];
+  let step = 4;
+  let dots: Dot[] = [];
+  let flyers: Dot[] = [];
+
+  const rand = prng(20260927);
+  const stars = Array.from({ length: 90 }, () => ({ x: rand(), y: rand(), r: 0.4 + rand() * 1.1, p: rand() * 6 }));
+  const skyline = Array.from({ length: 37 }, () => rand());
+  const clouds = Array.from({ length: 5 }, () => ({ x: rand(), y: 0.08 + rand() * 0.2, s: 0.7 + rand() * 0.7, v: 0.006 + rand() * 0.01 }));
+
+  const line = (pts: Pt[], color: string, width: number, reveal: [number, number]): MapLine => {
+    const cum = cumulative(pts);
+    return { pts, cum, total: cum[cum.length - 1], color, width, reveal };
+  };
+  const lines = {
+    radials: RADIALS.map((pts, i) => line(pts, pal.radial, 1.3, [0.3 + i * 0.05, 2.2 + i * 0.05])),
+    river: line(RIVER, pal.river, 6, [0.2, 2.6]),
+    mkad: line(MKAD, pal.mkad, 3.4, [3.2, 4.7]),
+    ttk: line(TTK, pal.ttk, 2.6, [3.35, 4.6]),
+    garden: line(GARDEN_RING, pal.garden, 2.4, [3.5, 4.6]),
+    boulevard: line(BOULEVARD_RING, pal.boulevard, 2, [3.6, 4.7]),
+  };
+  const allLines = [...lines.radials, lines.mkad, lines.ttk, lines.garden, lines.boulevard];
+  const parks = PARKS.map((park, i) => ({ park, outline: parkOutline(park, i * 1.7) }));
+
+  const cars: Car[] = [];
+  const addCars = (target: MapLine, count: number, speed: number) => {
+    for (let i = 0; i < count; i++) {
+      const dir = i % 2 ? 1 : -1;
+      cars.push({ line: target, offset: rand() * target.total, speed: dir * speed * (0.7 + rand() * 0.6), color: pal.cars[i % pal.cars.length] });
+    }
+  };
+  addCars(lines.mkad, 26, 1.1);
+  addCars(lines.ttk, 12, 0.8);
+  lines.radials.forEach((radial) => addCars(radial, 3, 0.9));
 
   const sendFormed = () => {
     if (formedSent) return;
@@ -389,347 +292,574 @@ export function startCitySplash({ canvas, measure, dark, reduced, onFormed }: Ci
     onFormed();
   };
 
+  // ---------- Camera ----------
+
+  function cam(t: number) {
+    const side = clamp01(t / SIDE_END);
+    const rise = easeInOutCubic(clamp01((t - SIDE_END) / (RISE_END - SIDE_END)));
+    const panX = lerp(pan[0], pan[1], easeInOutSine(side));
+    const pitch0 = lerp(0.035, 0.065, side);
+    return {
+      rise,
+      pitch: lerp(pitch0, Math.PI / 2, rise),
+      dist: lerp(24, distTop, easeInOutSine(rise)),
+      tx: lerp(panX, -1, rise),
+      ty: lerp(0, -0.9, rise),
+      cy: lerp(H * (portrait ? 0.7 : 0.74), H * 0.5, rise),
+    };
+  }
+
+  type Cam = ReturnType<typeof cam>;
+  type Proj = { sx: number; sy: number; depth: number };
+  type Projector = (x: number, y: number, z?: number) => Proj;
+
+  function projector(c: Cam): Projector {
+    const cp = Math.cos(c.pitch);
+    const sp = Math.sin(c.pitch);
+    const cx = c.tx;
+    const cyw = c.ty - c.dist * cp;
+    const cz = c.dist * sp;
+    return (x, y, z = 0) => {
+      const vx = x - cx;
+      const vy = y - cyw;
+      const vz = z - cz;
+      const depth = vy * cp - vz * sp;
+      return { depth, sx: W / 2 + (f * vx) / depth, sy: c.cy - (f * (vy * sp + vz * cp)) / depth };
+    };
+  }
+
+  // A polyline on the ground, cut where it passes behind the camera.
+  function tracePath(proj: Projector, pts: Pt[], upto: number) {
+    if (!ctx) return;
+    let pen = false;
+    let prev: Pt | null = null;
+    let prevP: Proj | null = null;
+    for (let i = 0; i < upto; i++) {
+      const pt = pts[i];
+      const p = proj(pt[0], pt[1]);
+      if (prev && prevP) {
+        const inA = prevP.depth >= NEAR;
+        const inB = p.depth >= NEAR;
+        if (inA && inB) {
+          if (!pen) ctx.moveTo(prevP.sx, prevP.sy);
+          ctx.lineTo(p.sx, p.sy);
+          pen = true;
+        } else if (inA !== inB) {
+          const k = (NEAR - prevP.depth) / (p.depth - prevP.depth);
+          const cut = proj(lerp(prev[0], pt[0], k), lerp(prev[1], pt[1], k));
+          if (inA) {
+            if (!pen) ctx.moveTo(prevP.sx, prevP.sy);
+            ctx.lineTo(cut.sx, cut.sy);
+            pen = false;
+          } else {
+            ctx.moveTo(cut.sx, cut.sy);
+            ctx.lineTo(p.sx, p.sy);
+            pen = true;
+          }
+        } else pen = false;
+      }
+      prev = pt;
+      prevP = p;
+    }
+  }
+
+  // The drawn part of a line: whole points up to the reveal, plus the moving tip.
+  function revealed(ln: MapLine, t: number): { pts: Pt[]; count: number } {
+    const k = easeInOutSine(clamp01((t - ln.reveal[0]) / (ln.reveal[1] - ln.reveal[0])));
+    if (k <= 0) return { pts: ln.pts, count: 0 };
+    if (k >= 1) return { pts: ln.pts, count: ln.pts.length };
+    const reach = ln.total * k;
+    let i = 1;
+    while (i < ln.cum.length && ln.cum[i] <= reach) i++;
+    if (i >= ln.pts.length) return { pts: ln.pts, count: ln.pts.length };
+    const a = ln.pts[i - 1];
+    const b = ln.pts[i];
+    const seg = ln.cum[i] - ln.cum[i - 1] || 1;
+    const u = (reach - ln.cum[i - 1]) / seg;
+    const pts = ln.pts.slice(0, i);
+    pts.push([lerp(a[0], b[0], u), lerp(a[1], b[1], u)]);
+    return { pts, count: pts.length };
+  }
+
+  function pointAt(ln: MapLine, dist: number): Pt {
+    let lo = 0;
+    let hi = ln.cum.length - 1;
+    while (hi - lo > 1) {
+      const mid = (lo + hi) >> 1;
+      if (ln.cum[mid] <= dist) lo = mid;
+      else hi = mid;
+    }
+    const seg = ln.cum[hi] - ln.cum[lo] || 1;
+    const u = (dist - ln.cum[lo]) / seg;
+    return [lerp(ln.pts[lo][0], ln.pts[hi][0], u), lerp(ln.pts[lo][1], ln.pts[hi][1], u)];
+  }
+
+  // ---------- Setup ----------
+
   function sizeCanvas() {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    canvas.width = Math.round(width * dpr);
-    canvas.height = Math.round(height * dpr);
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
     ctx?.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
 
   function setup() {
     const m = measure();
-    width = m.width;
-    height = m.height;
+    W = m.width;
+    H = m.height;
     logoBox = m.logo;
     sizeCanvas();
-
-    const logo = sampleLogo(m.logo);
-    step = logo.step;
-    const want = logo.points.length * 1.12;
-    // Pick the block size so the city has a little more objects than the lettering has points.
-    let block = Math.sqrt((width * height * 1.17 * 7) / Math.max(want, 60));
-    let built = buildWorld(width, height, block, pal);
-    for (let tries = 0; tries < 3 && Math.abs(built.objs.length / want - 1) > 0.08; tries++) {
-      block *= Math.sqrt(built.objs.length / want);
-      built = buildWorld(width, height, block, pal);
-    }
-    world = built;
-
-    zoom0 = width < 640 ? 3.2 : 3;
-    pan0 = { x: width * 0.08, y: -height * 0.05 };
-    const rand = prng(7);
-    const reach = Math.hypot(width, height) * 0.5 * zoom0;
-    for (const obj of world.objs) {
-      const sx = (obj.x - pan0.x) * zoom0;
-      const sy = (obj.y - pan0.y) * zoom0;
-      obj.appear = 0.15 + Math.min(1, Math.hypot(sx, sy) / reach) * 1.9 + rand() * 0.25;
-      obj.twinkle = rand() * Math.PI * 2;
-    }
-
-    // Pair objects with points: the objects furthest from the centre are spare and melt away,
-    // the rest are matched left to right so the swarm doesn't cross itself.
-    const points = logo.points;
-    const byDistance = [...world.objs].sort((a, b) => Math.hypot(a.x, a.y * 1.4) - Math.hypot(b.x, b.y * 1.4));
-    const used = byDistance.slice(0, points.length);
-    byDistance.slice(points.length).forEach((obj) => (obj.spare = true));
-    used.sort((a, b) => a.x - b.x || a.y - b.y);
-    const sortedPoints = [...points].sort((a, b) => a.x - b.x || a.y - b.y);
-    const n = Math.max(1, used.length);
-    used.forEach((obj, i) => {
-      const p = sortedPoints[i];
-      obj.tx = p.x;
-      obj.ty = p.y;
-      const target = p.accent ? pal.accent : pal.ink;
-      obj.tc = mix(target, obj.color, p.accent ? 0.12 : 0.16);
-      obj.delay = (i / n) * FLY_SPREAD * 0.8 + rand() * FLY_SPREAD * 0.2;
-      obj.dur = FLY_DUR * (0.85 + rand() * 0.3);
-      obj.bend = (rand() - 0.5) * 0.7;
+    portrait = W < H;
+    f = portrait ? H * 1.5 : Math.min(H * 1.7, W * 1.12);
+    pan = portrait ? [-8.5, 8.5] : [-0.8, 0.8];
+    // At the top the whole MKAD fits the screen.
+    distTop = Math.max((f * 18.6) / (H * 0.45), (f * 15) / (W * 0.46));
+    // On a phone the camera pans along the skyline, so each landmark rises as it comes into view.
+    starts = SCENE.map((item) => {
+      if (!portrait) return item.start;
+      const e = clamp01((item.row[0] - 2.8 - pan[0]) / (pan[1] - pan[0]));
+      return Math.max(0.15, (SIDE_END * Math.acos(1 - 2 * e)) / Math.PI);
     });
-    for (const obj of world.objs) if (obj.spare) obj.delay = rand() * FLY_SPREAD;
-    flyers = used;
-    logoSpan = {
-      left: sortedPoints.length ? sortedPoints[0].x : 0,
-      right: sortedPoints.length ? sortedPoints[sortedPoints.length - 1].x : 0,
-    };
-    paired = true;
+    const logo = sampleLogo(m.logo);
+    targets = logo.points;
+    step = logo.step;
+    dots = [];
+    flyers = [];
   }
 
-  const cam = (t: number) => {
-    const e = easeInOutSine(clamp01(t / PULL_END));
-    // The background keeps drifting back a touch while the objects fly.
-    const extra = 1 - 0.05 * clamp01((t - PULL_END) / 1.5);
-    return {
-      zoom: (1 + (zoom0 - 1) * (1 - e)) * extra,
-      x: pan0.x * (1 - e),
-      y: pan0.y * (1 - e),
-    };
-  };
-
-  const carPos = (obj: Obj, t: number) => {
-    const travel = obj.dir * obj.speed * Math.max(0, t - 0.4);
-    const length = obj.hi - obj.lo;
-    const base = (obj.axis ? obj.y : obj.x) - obj.lo + travel;
-    const v = obj.lo + (((base % length) + length) % length);
-    return obj.axis ? { x: obj.x, y: v } : { x: v, y: obj.y };
-  };
-
-  function drawRoundRect(x: number, y: number, w: number, h: number, r: number) {
-    if (!ctx) return;
-    const rr = Math.min(r, w / 2, h / 2);
-    ctx.beginPath();
-    ctx.moveTo(x + rr, y);
-    ctx.arcTo(x + w, y, x + w, y + h, rr);
-    ctx.arcTo(x + w, y + h, x, y + h, rr);
-    ctx.arcTo(x, y + h, x, y, rr);
-    ctx.arcTo(x, y, x + w, y, rr);
-    ctx.closePath();
-    ctx.fill();
-  }
-
-  function drawWorld(t: number) {
-    if (!ctx || !world) return;
-    const { zoom, x: cx, y: cy } = cam(t);
-    const ground = 1 - easeInOutSine(clamp01((t - FLY_START) / 0.9));
-    const reveal = easeOutCubic(clamp01(t / 0.7));
-    ctx.save();
-    ctx.translate(width / 2, height / 2);
-    ctx.scale(zoom, zoom);
-    ctx.translate(-cx, -cy);
-    const view = { l: cx - width / 2 / zoom, r: cx + width / 2 / zoom, t: cy - height / 2 / zoom, b: cy + height / 2 / zoom };
-    const { half, road } = world;
-
-    if (ground > 0.01) {
-      ctx.globalAlpha = ground * reveal;
-      ctx.fillStyle = pal.block;
-      for (const b of world.blocks) if (!b.park) drawRoundRect(b.x, b.y, b.w, b.h, road * 0.35);
-      ctx.fillStyle = pal.park;
-      for (const b of world.blocks) if (b.park) drawRoundRect(b.x, b.y, b.w, b.h, road * 0.5);
-
-      // The river, with slow ripples moving downstream.
-      const { riverHalf } = world;
-      ctx.beginPath();
-      for (let x = -half.w; x <= half.w; x += 12) ctx.lineTo(x, riverY(x, width, height) - riverHalf);
-      for (let x = half.w; x >= -half.w; x -= 12) ctx.lineTo(x, riverY(x, width, height) + riverHalf);
-      ctx.closePath();
-      ctx.fillStyle = rgb(pal.river);
-      ctx.fill();
-      ctx.strokeStyle = pal.riverHi;
-      ctx.lineWidth = road * 0.12;
-      ctx.lineCap = 'round';
-      ctx.setLineDash([road * 1.6, road * 2.4]);
-      ctx.lineDashOffset = -t * road * 1.4;
-      for (const k of [-0.45, 0.15, 0.55]) {
-        ctx.beginPath();
-        for (let x = -half.w; x <= half.w; x += 12) ctx.lineTo(x, riverY(x, width, height) + riverHalf * k);
-        ctx.stroke();
+  // The flat map, frozen into dots that will fly: along every line, inside the parks, and the pins.
+  function buildDots() {
+    const proj = projector(cam(ASSEMBLE));
+    const sources: { sx: number; sy: number; size: number; color: RGB }[] = [];
+    const sourceLines = [lines.river, ...allLines];
+    const screenLines = sourceLines.map((ln) => ln.pts.map(([x, y]) => proj(x, y)));
+    const length = screenLines.reduce(
+      (sum, pts) => sum + pts.slice(1).reduce((s, p, i) => s + Math.hypot(p.sx - pts[i].sx, p.sy - pts[i].sy), 0),
+      0,
+    );
+    const spacing = Math.max(2.4, Math.min(9, length / (Math.max(targets.length, 60) * 1.45)));
+    sourceLines.forEach((ln, n) => {
+      const pts = screenLines[n];
+      const color = hex(ln.color);
+      let carry = 0;
+      for (let i = 1; i < pts.length; i++) {
+        const a = pts[i - 1];
+        const b = pts[i];
+        const seg = Math.hypot(b.sx - a.sx, b.sy - a.sy);
+        let d = carry;
+        while (d < seg) {
+          const u = d / seg;
+          sources.push({ sx: lerp(a.sx, b.sx, u), sy: lerp(a.sy, b.sy, u), size: Math.max(1.6, ln.width * 0.95), color });
+          d += spacing;
+        }
+        carry = d - seg;
       }
-      ctx.setLineDash([]);
-
-      ctx.fillStyle = pal.road;
-      for (const seg of world.segs) {
-        if (seg.axis) ctx.fillRect(seg.at - road / 2, seg.from, road, seg.to - seg.from);
-        else ctx.fillRect(seg.from, seg.at - road / 2, seg.to - seg.from, road);
-      }
-      ctx.strokeStyle = pal.roadLine;
-      ctx.lineWidth = Math.max(0.6, road * 0.06);
-      ctx.setLineDash([road * 0.5, road * 0.55]);
-      ctx.beginPath();
-      for (const seg of world.segs) {
-        if (seg.axis) {
-          ctx.moveTo(seg.at, seg.from);
-          ctx.lineTo(seg.at, seg.to);
-        } else {
-          ctx.moveTo(seg.from, seg.at);
-          ctx.lineTo(seg.to, seg.at);
+    });
+    const parkColor = hex(pal.park);
+    for (const { park } of parks) {
+      for (let x = park.c[0] - park.rx; x <= park.c[0] + park.rx; x += 0.55) {
+        for (let y = park.c[1] - park.ry; y <= park.c[1] + park.ry; y += 0.55) {
+          if (((x - park.c[0]) / park.rx) ** 2 + ((y - park.c[1]) / park.ry) ** 2 > 0.8) continue;
+          const p = proj(x, y);
+          sources.push({ sx: p.sx, sy: p.sy, size: 3, color: parkColor });
         }
       }
+    }
+    for (const item of SCENE) {
+      const p = proj(item.geo[0], item.geo[1]);
+      sources.push({ sx: p.sx, sy: p.sy, size: 7, color: pal.accent });
+    }
+
+    // Exactly one flying dot per point of the lettering, picked evenly over the map; the rest fade where they are.
+    const r = prng(11);
+    const order = sources.map((_, i) => ({ i, key: r() })).sort((a, b) => a.key - b.key).map((item) => item.i);
+    while (order.length < targets.length && sources.length) order.push(order[order.length % sources.length]);
+    dots = order.map((index, k) => {
+      const s = sources[index];
+      return { ...s, tx: 0, ty: 0, tc: s.color, delay: r() * 0.4, dur: FLY_DUR, bend: 0, spare: k >= targets.length };
+    });
+    flyers = dots.filter((dot) => !dot.spare).sort((a, b) => a.sx - b.sx || a.sy - b.sy);
+    const sorted = [...targets].sort((a, b) => a.x - b.x || a.y - b.y);
+    const n = Math.max(1, flyers.length);
+    flyers.forEach((dot, i) => {
+      const p = sorted[i];
+      dot.tx = p.x;
+      dot.ty = p.y;
+      dot.tc = mix(p.accent ? pal.accent : pal.ink, dot.color, 0.14);
+      dot.delay = (i / n) * FLY_SPREAD * 0.85 + r() * FLY_SPREAD * 0.15;
+      dot.dur = FLY_DUR * (0.85 + r() * 0.3);
+      dot.bend = (r() - 0.5) * 0.8;
+    });
+    logoSpan = { left: sorted.length ? sorted[0].x : 0, right: sorted.length ? sorted[sorted.length - 1].x : 0 };
+  }
+
+  // ---------- Drawing ----------
+
+  function drawSky(c: Cam, proj: Projector, t: number) {
+    if (!ctx) return;
+    const far = proj(c.tx, c.ty + 3000);
+    const horizon = far.depth > 0 ? far.sy : -1;
+    const fade = 1 - clamp01(c.rise * 1.6);
+    if (horizon > 0 && fade > 0) {
+      ctx.globalAlpha = fade;
+      const sky = ctx.createLinearGradient(0, 0, 0, horizon);
+      sky.addColorStop(0, pal.sky[0]);
+      sky.addColorStop(1, pal.sky[1]);
+      ctx.fillStyle = sky;
+      ctx.fillRect(0, 0, W, horizon);
+
+      if (pal.sun) {
+        const sx = W * 0.8;
+        const sy = horizon - H * 0.2;
+        const sun = ctx.createRadialGradient(sx, sy, 0, sx, sy, H * 0.22);
+        sun.addColorStop(0, 'rgba(255, 244, 214, 0.95)');
+        sun.addColorStop(0.18, 'rgba(255, 226, 180, 0.6)');
+        sun.addColorStop(1, 'rgba(255, 220, 200, 0)');
+        ctx.fillStyle = sun;
+        ctx.fillRect(sx - H * 0.22, sy - H * 0.22, H * 0.44, H * 0.44);
+      }
+      if (pal.stars) {
+        for (const s of stars) {
+          ctx.fillStyle = `rgba(255, 255, 255, ${(0.35 + 0.45 * Math.sin(t * 2 + s.p) ** 2).toFixed(3)})`;
+          ctx.fillRect(s.x * W, s.y * horizon * 0.95, s.r, s.r);
+        }
+        ctx.fillStyle = 'rgba(255, 244, 220, 0.9)';
+        ctx.beginPath();
+        ctx.arc(W * 0.82, horizon * 0.28, 16, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = pal.sky[0];
+        ctx.beginPath();
+        ctx.arc(W * 0.82 + 7, horizon * 0.28 - 4, 14, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.fillStyle = pal.cloud;
+      for (const cl of clouds) {
+        const x = (((cl.x + t * cl.v) % 1.3) - 0.15) * W;
+        const y = horizon - (0.3 - cl.y) * H - H * 0.08;
+        const s = cl.s * Math.min(W, H) * 0.07;
+        ctx.beginPath();
+        ctx.ellipse(x, y, s * 1.6, s * 0.55, 0, 0, Math.PI * 2);
+        ctx.ellipse(x - s * 0.7, y + s * 0.1, s * 0.8, s * 0.45, 0, 0, Math.PI * 2);
+        ctx.ellipse(x + s * 0.5, y - s * 0.3, s * 0.9, s * 0.6, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      // A small flock crossing the sky.
+      ctx.strokeStyle = pal.bird;
+      ctx.lineWidth = 1.4;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      for (let b = 0; b < 6; b++) {
+        const bx = (-0.1 + t * 0.09 + (b % 3) * 0.035) * W;
+        const by = horizon - H * (0.34 + (b % 2) * 0.03 + b * 0.008) + Math.sin(t * 1.3 + b) * 3;
+        const flap = Math.sin(t * 9 + b * 1.7) * 3;
+        const s = 5 + (b % 3);
+        ctx.moveTo(bx - s, by - flap);
+        ctx.quadraticCurveTo(bx - s * 0.4, by - 1, bx, by + 1);
+        ctx.quadraticCurveTo(bx + s * 0.4, by - 1, bx + s, by - flap);
+      }
       ctx.stroke();
-      ctx.setLineDash([]);
+      ctx.globalAlpha = 1;
+    }
+    // Far-off blocks of the city along the horizon, behind the landmarks.
+    if (horizon > 0 && fade > 0) {
+      ctx.globalAlpha = fade;
+      ctx.fillStyle = pal.distant;
+      const unit = Math.max(W, H) / 160;
+      let x = -((c.tx * f) / 40) % (unit * 6) - unit * 6;
+      let n = 0;
+      ctx.beginPath();
+      while (x < W + unit * 6) {
+        const w = unit * (2.2 + (skyline[n % skyline.length] * 3.4));
+        const h = unit * (1.2 + skyline[(n * 7 + 3) % skyline.length] * 5.5);
+        ctx.rect(x, horizon - h, w - unit * 0.35, h + 2);
+        x += w;
+        n++;
+      }
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+    // The ground: solid under a low camera, see-through once the map lies flat.
+    const groundTop = Math.max(0, horizon);
+    const groundAlpha = 1 - clamp01(c.rise * 1.25);
+    if (groundAlpha > 0) {
+      ctx.globalAlpha = groundAlpha;
+      const ground = ctx.createLinearGradient(0, groundTop, 0, H);
+      ground.addColorStop(0, pal.ground[0]);
+      ground.addColorStop(1, pal.ground[1]);
+      ctx.fillStyle = ground;
+      ctx.fillRect(0, groundTop, W, H - groundTop);
+      if (horizon > 0) {
+        const haze = ctx.createLinearGradient(0, horizon - 30, 0, horizon + 70);
+        haze.addColorStop(0, 'rgba(255,255,255,0)');
+        haze.addColorStop(0.35, pal.haze);
+        haze.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = haze;
+        ctx.fillRect(0, horizon - 30, W, 100);
+      }
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  function drawMap(c: Cam, proj: Projector, t: number, alpha: number) {
+    if (!ctx || alpha <= 0) return;
+    const widthScale = lerp(1.5, 1, c.rise) * (portrait ? 0.85 : 1);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    // The city inside MKAD and the TTK gets a light fill once the ring is drawn.
+    for (const ring of [lines.mkad, lines.ttk]) {
+      const k = clamp01((t - ring.reveal[1] + 0.2) / 0.5);
+      if (k <= 0) continue;
+      ctx.globalAlpha = alpha * k;
+      ctx.fillStyle = pal.city;
+      ctx.beginPath();
+      tracePath(proj, ring.pts, ring.pts.length);
+      ctx.fill();
+    }
+
+    // Parks bloom from their centres.
+    const bloom = easeOutCubic(clamp01((t - 3.7) / 1.1));
+    if (bloom > 0) {
+      ctx.globalAlpha = alpha * bloom * 0.9;
+      ctx.fillStyle = pal.park;
+      for (const { park, outline } of parks) {
+        const pts: Pt[] = outline.map(([x, y]) => [park.c[0] + (x - park.c[0]) * bloom, park.c[1] + (y - park.c[1]) * bloom]);
+        ctx.beginPath();
+        tracePath(proj, pts, pts.length);
+        ctx.fill();
+      }
+    }
+
+    // The river, with light ripples running downstream.
+    const river = revealed(lines.river, t);
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = pal.river;
+    ctx.lineWidth = lines.river.width * widthScale;
+    ctx.beginPath();
+    tracePath(proj, river.pts, river.count);
+    ctx.stroke();
+    ctx.strokeStyle = pal.riverCore;
+    ctx.lineWidth = 1.4 * widthScale;
+    ctx.setLineDash([10, 16]);
+    ctx.lineDashOffset = -t * 26;
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    const heads: { p: Proj; color: string }[] = [];
+    for (const ln of [...allLines, lines.river]) {
+      const part = ln === lines.river ? river : revealed(ln, t);
+      if (part.count < 2) continue;
+      if (ln !== lines.river) {
+        ctx.strokeStyle = ln.color;
+        ctx.lineWidth = ln.width * widthScale;
+        ctx.beginPath();
+        tracePath(proj, part.pts, part.count);
+        ctx.stroke();
+      }
+      if (part.count < ln.pts.length && ln.reveal[0] >= SIDE_END) {
+        const tip = part.pts[part.count - 1];
+        const p = proj(tip[0], tip[1]);
+        if (p.depth >= NEAR) heads.push({ p, color: ln.color });
+      }
+    }
+    // A glowing head runs in front of every line while it is being drawn.
+    for (const { p, color } of heads) {
+      ctx.globalAlpha = alpha * 0.35;
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(p.sx, p.sy, 9, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = '#FFFFFF';
+      ctx.beginPath();
+      ctx.arc(p.sx, p.sy, 2.6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = alpha;
+
+    const kremlin = clamp01((t - 4.2) / 0.5);
+    if (kremlin > 0) {
+      ctx.globalAlpha = alpha * kremlin;
+      ctx.fillStyle = pal.kremlin;
+      ctx.beginPath();
+      tracePath(proj, [...KREMLIN, KREMLIN[0]], KREMLIN.length + 1);
+      ctx.fill();
+    }
+
+    // Traffic: small lights running along the drawn parts of the rings and avenues.
+    ctx.globalAlpha = alpha;
+    for (const car of cars) {
+      const k = clamp01((t - car.line.reveal[0]) / (car.line.reveal[1] - car.line.reveal[0]));
+      if (k < 0.2) continue;
+      const along = car.offset + car.speed * t;
+      const wrapped = ((along % car.line.total) + car.line.total) % car.line.total;
+      if (wrapped > car.line.total * k) continue;
+      const [x, y] = pointAt(car.line, wrapped);
+      const p = proj(x, y);
+      if (p.depth < NEAR || p.sx < -10 || p.sx > W + 10 || p.sy < -10 || p.sy > H + 10) continue;
+      const r = Math.max(1, Math.min(3.2, (f / p.depth) * 0.09)) * (dark ? 1.2 : 1);
+      if (dark) {
+        ctx.fillStyle = car.color + '44';
+        ctx.beginPath();
+        ctx.arc(p.sx, p.sy, r * 2.6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.fillStyle = car.color;
+      ctx.beginPath();
+      ctx.arc(p.sx, p.sy, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawLandmarks(c: Cam, proj: Projector, t: number) {
+    if (!ctx) return;
+    const slide = easeInOutCubic(clamp01((c.rise - 0.2) / 0.6));
+    const fade = 1 - clamp01((c.pitch - 0.9) / 0.45);
+    const labels = 1 - clamp01(c.rise * 5);
+
+    const items = SCENE.map((item, i) => {
+      const x = lerp(item.row[0], item.geo[0], slide);
+      const y = lerp(item.row[1], item.geo[1], slide);
+      const h = item.h * lerp(1, 0.55, slide);
+      return { item, i, h, base: proj(x, y, 0), top: proj(x, y, h) };
+    }).sort((a, b) => b.base.depth - a.base.depth);
+
+    for (const { item, i, h, base, top } of items) {
+      if (base.depth < NEAR || fade <= 0) continue;
+      const lm = LANDMARKS[item.id];
+      const grow = easeOutCubic(clamp01((t - starts[i]) / 0.85));
+      if (grow <= 0) continue;
+      const detail = clamp01((t - starts[i] - 0.55) / 0.8);
+      const sx = ((f / base.depth) * h) / 100; // units → px across
+      const sy = (base.sy - top.sy) / 100; // units → px up, foreshortened as the camera climbs
+      if (sy <= 0.02) continue;
+      const halfPx = lm.half * sx;
+      if (base.sx + halfPx < -40 || base.sx - halfPx > W + 40) continue;
+
+      ctx.globalAlpha = fade;
+      // A soft shadow on the ground and, at night, a warm uplight.
+      ctx.fillStyle = pal.shadow;
+      ctx.beginPath();
+      ctx.ellipse(base.sx, base.sy, halfPx * 1.05, Math.max(2, halfPx * 0.08), 0, 0, Math.PI * 2);
+      ctx.fill();
+      if (dark && detail > 0) {
+        const glow = ctx.createRadialGradient(base.sx, base.sy, 0, base.sx, base.sy, halfPx * 1.3);
+        glow.addColorStop(0, `rgba(255, 190, 110, ${(0.28 * detail).toFixed(3)})`);
+        glow.addColorStop(1, 'rgba(255, 190, 110, 0)');
+        ctx.fillStyle = glow;
+        ctx.fillRect(base.sx - halfPx * 1.3, base.sy - halfPx * 1.3, halfPx * 2.6, halfPx * 1.4);
+      }
+
+      // Rise out of the ground: clip at the base line and slide up.
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(base.sx - halfPx - 30, -H, halfPx * 2 + 60, base.sy + H);
+      ctx.clip();
+      ctx.translate(base.sx, base.sy + (1 - grow) * sy * (lm.top + 6));
+      ctx.scale(sx, sy);
+      lm.draw(ctx, lc, detail, t);
+      ctx.restore();
+
+      // A bright seam on the ground while it rises.
+      if (grow < 1) {
+        ctx.strokeStyle = rgb(pal.accent, (1 - grow) * 0.8);
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(base.sx - halfPx, base.sy);
+        ctx.lineTo(base.sx + halfPx, base.sy);
+        ctx.stroke();
+      }
+
+      // The name, once it stands.
+      const la = clamp01((t - starts[i] - 0.8) / 0.35) * labels * fade;
+      if (la > 0) {
+        const fontPx = portrait ? 12 : Math.max(12, Math.min(15, W / 110));
+        ctx.font = `600 ${fontPx}px "Onest", "Segoe UI", system-ui, sans-serif`;
+        const tw = ctx.measureText(lm.name).width;
+        const ly = base.sy - (lm.top + 8) * sy - fontPx * 1.3;
+        const pw = tw + fontPx * 1.3;
+        const ph = fontPx * 1.9;
+        ctx.globalAlpha = la;
+        ctx.fillStyle = pal.labelBg;
+        ctx.beginPath();
+        ctx.roundRect(base.sx - pw / 2, ly - ph / 2, pw, ph, ph / 2);
+        ctx.fill();
+        ctx.fillStyle = pal.labelInk;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(lm.name, base.sx, ly + 0.5);
+        ctx.textAlign = 'start';
+        ctx.textBaseline = 'alphabetic';
+      }
       ctx.globalAlpha = 1;
     }
 
-    // Objects still on the ground: cars first, then houses and trees from back to front.
-    const pad = 60 / zoom;
-    for (const obj of world.objs) {
-      if (obj.kind !== 'car' || obj.launched) continue;
-      const grow = clamp01((t - obj.appear) / 0.4);
-      if (grow <= 0) continue;
-      const pos = carPos(obj, t);
-      if (pos.x < view.l - pad || pos.x > view.r + pad || pos.y < view.t - pad || pos.y > view.b + pad) continue;
-      const melt = obj.spare ? 1 - clamp01((t - FLY_START - obj.delay) / 0.5) : 1;
-      if (melt <= 0) continue;
-      ctx.globalAlpha = grow * melt;
-      const len = obj.w * melt;
-      const wid = obj.h * melt;
-      ctx.fillStyle = pal.shadow;
-      if (obj.axis) {
-        ctx.fillRect(pos.x - wid / 2 + wid * 0.25, pos.y - len / 2 + wid * 0.3, wid, len);
-        ctx.fillStyle = obj.fill;
-        drawRoundRect(pos.x - wid / 2, pos.y - len / 2, wid, len, wid * 0.35);
-        ctx.fillStyle = obj.sideFill;
-        ctx.fillRect(pos.x - wid * 0.32, pos.y - len * 0.12, wid * 0.64, len * 0.3);
-      } else {
-        ctx.fillRect(pos.x - len / 2 + wid * 0.25, pos.y - wid / 2 + wid * 0.3, len, wid);
-        ctx.fillStyle = obj.fill;
-        drawRoundRect(pos.x - len / 2, pos.y - wid / 2, len, wid, wid * 0.35);
-        ctx.fillStyle = obj.sideFill;
-        ctx.fillRect(pos.x - len * 0.12, pos.y - wid * 0.32, len * 0.3, wid * 0.64);
-      }
-    }
-    ctx.globalAlpha = 1;
-
-    for (const obj of world.objs) {
-      if (obj.kind === 'car' || obj.launched) continue;
-      const g = clamp01((t - obj.appear) / 0.55);
-      if (g <= 0) continue;
-      if (obj.x < view.l - pad - obj.w || obj.x > view.r + pad + obj.w || obj.y < view.t - pad - obj.ext || obj.y > view.b + pad + obj.h) continue;
-      const melt = obj.spare ? 1 - clamp01((t - FLY_START - obj.delay) / 0.5) : 1;
-      if (melt <= 0) continue;
-      if (obj.kind === 'tree') {
-        const r = (obj.w / 2) * easeOutBack(g) * melt;
-        ctx.globalAlpha = Math.min(1, g * 2) * melt;
-        ctx.fillStyle = pal.shadow;
+    // Pins take their place on the map as the buildings lie down.
+    const pins = clamp01((c.rise - 0.55) / 0.3);
+    if (pins > 0) {
+      for (const item of SCENE) {
+        const p = proj(item.geo[0], item.geo[1]);
+        if (p.depth < NEAR) continue;
+        const pulse = (t * 0.9 + item.geo[0] * 0.1 + 10) % 1;
+        ctx.globalAlpha = pins * (1 - pulse) * 0.6;
+        ctx.strokeStyle = rgb(pal.accent);
+        ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.arc(obj.x + r * 0.25, obj.y + r * 0.3, r, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = obj.fill;
+        ctx.arc(p.sx, p.sy, 5 + pulse * 14, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.globalAlpha = pins;
+        ctx.fillStyle = '#FFFFFF';
         ctx.beginPath();
-        ctx.arc(obj.x, obj.y, r, 0, Math.PI * 2);
+        ctx.arc(p.sx, p.sy, 6, 0, Math.PI * 2);
         ctx.fill();
-        if (r * zoom > 5) {
-          ctx.fillStyle = obj.hiFill;
-          ctx.beginPath();
-          ctx.arc(obj.x - r * 0.3, obj.y - r * 0.3, r * 0.38, 0, Math.PI * 2);
-          ctx.fill();
-        }
-        continue;
+        ctx.fillStyle = rgb(pal.accent);
+        ctx.beginPath();
+        ctx.arc(p.sx, p.sy, 4, 0, Math.PI * 2);
+        ctx.fill();
       }
-      // A house rises from its footprint: shadow, facade, then the roof.
-      const s = (0.7 + 0.3 * easeOutCubic(g)) * melt;
-      const w = obj.w * s;
-      const h = obj.h * s;
-      const ext = obj.ext * easeOutCubic(g) * melt;
-      const x = obj.x - w / 2;
-      const y = obj.y - h / 2;
-      ctx.globalAlpha = Math.min(1, g * 2.5) * melt;
-      ctx.fillStyle = pal.shadow;
-      ctx.fillRect(x + ext * 0.45, y + ext * 0.1, w, h);
-      ctx.fillStyle = obj.sideFill;
-      ctx.fillRect(x, y + h - ext, w, ext);
-      if (ext * zoom > 9 && w * zoom > 12) drawWindows(obj, x, y + h - ext, w, ext);
-      ctx.fillStyle = obj.fill;
-      ctx.fillRect(x, y - ext, w, h);
-    }
-    ctx.globalAlpha = 1;
-    ctx.restore();
-  }
-
-  function drawWindows(obj: Obj, x: number, y: number, w: number, ext: number) {
-    if (!ctx) return;
-    const size = Math.max(1.4, Math.min(w, ext) * 0.13);
-    const gapX = size * 1.9;
-    const gapY = size * 2;
-    const cols = Math.max(1, Math.floor((w - size) / gapX));
-    const rows = Math.max(1, Math.floor((ext - size) / gapY));
-    const startX = x + (w - (cols - 1) * gapX - size) / 2;
-    let seed = (obj.seed * 1e6) | 0;
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        seed = (seed * 16807) % 2147483647;
-        const lit = dark ? seed % 10 < 4 : seed % 10 < 7;
-        ctx.fillStyle = rgb(lit ? (obj.tower && !dark ? [238, 245, 255] : pal.window) : pal.windowOff);
-        ctx.fillRect(startX + c * gapX, y + size * 0.9 + r * gapY, size, size * 1.2);
-      }
+      ctx.globalAlpha = 1;
     }
   }
 
-  // Take-off: remember where and how big the object is on screen right now.
-  function launch(obj: Obj, t: number) {
-    if (!world) return;
-    const { zoom, x: cx, y: cy } = cam(t);
-    let wx = obj.x;
-    let wy = obj.y;
-    if (obj.kind === 'car') {
-      const pos = carPos(obj, t);
-      wx = pos.x;
-      wy = pos.y;
-    }
-    obj.sx = width / 2 + (wx - cx) * zoom;
-    obj.sy = height / 2 + (wy - cy) * zoom;
-    obj.sw = obj.w * zoom;
-    obj.sh = obj.h * zoom;
-    obj.sext = obj.ext * zoom;
-    obj.srot = obj.kind === 'car' && obj.axis ? Math.PI / 2 : 0;
-    obj.sc = obj.color;
-    if (obj.kind === 'house') obj.sy -= obj.sext / 2;
-    obj.launched = true;
-  }
-
-  function drawFlyers(t: number) {
+  function drawDots(t: number) {
     if (!ctx) return;
     const size = step * 0.86;
     const glintAt = FORMED < t && t < GLINT_END ? (t - FORMED) / (GLINT_END - FORMED) : -1;
-    const { left: logoLeft, right: logoRight } = logoSpan;
-    const band = logoLeft - 120 + (logoRight - logoLeft + 240) * glintAt;
-
-    for (const obj of flyers) {
-      if (!obj.launched) continue;
-      const p = clamp01((t - FLY_START - obj.delay) / obj.dur);
-      const e = easeInOutCubic(p);
-      // A gentle arc instead of a straight line.
-      const dx = obj.tx - obj.sx;
-      const dy = obj.ty - obj.sy;
-      const bend = obj.bend * Math.sin(Math.PI * e);
-      const x = obj.sx + dx * e - dy * bend * 0.35;
-      const y = obj.sy + dy * e + dx * bend * 0.35 - Math.sin(Math.PI * e) * 18;
-      let color = mix(obj.sc, obj.tc, clamp01(e * 1.15));
-      if (glintAt >= 0) {
-        const d = Math.abs(obj.tx + (obj.ty - logoLeft) * 0.25 - band);
-        if (d < 46) color = mix(color, pal.glint, (1 - d / 46) * 0.65);
-      }
-      ctx.fillStyle = rgb(color);
-
-      if (obj.kind === 'tree') {
-        const r = (obj.sw / 2) * (1 - e) + size * 0.55 * e;
+    const band = logoSpan.left - 120 + (logoSpan.right - logoSpan.left + 240) * glintAt;
+    for (const dot of dots) {
+      if (dot.spare) {
+        const k = clamp01((t - ASSEMBLE - dot.delay) / 0.45);
+        if (k >= 1) continue;
+        ctx.globalAlpha = 1 - k;
+        ctx.fillStyle = rgb(dot.color);
         ctx.beginPath();
-        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.arc(dot.sx + (dot.sx - W / 2) * 0.08 * k, dot.sy + (dot.sy - H / 2) * 0.08 * k, (dot.size / 2) * (1 - k * 0.5), 0, Math.PI * 2);
         ctx.fill();
         continue;
       }
-      const w = obj.sw * (1 - e) + size * e;
-      const h = obj.sh * (1 - e) + size * e;
-      if (obj.kind === 'car') {
-        const rot = obj.srot * (1 - e);
-        ctx.save();
-        ctx.translate(x, y);
-        ctx.rotate(rot);
-        drawRoundRect(-w / 2, -h / 2, w, h, Math.min(w, h) * 0.3);
-        ctx.restore();
-        continue;
+      const e = easeInOutCubic(clamp01((t - ASSEMBLE - dot.delay) / dot.dur));
+      const dx = dot.tx - dot.sx;
+      const dy = dot.ty - dot.sy;
+      const arc = Math.sin(Math.PI * e);
+      const x = dot.sx + dx * e - dy * dot.bend * arc * 0.35;
+      const y = dot.sy + dy * e + dx * dot.bend * arc * 0.35 - arc * 22;
+      let color = mix(dot.color, dot.tc, clamp01(e * 1.15));
+      if (glintAt >= 0) {
+        const d = Math.abs(dot.tx + (dot.ty - logoSpan.left) * 0.25 - band);
+        if (d < 46) color = mix(color, pal.glint, (1 - d / 46) * 0.65);
       }
-      const facade = obj.sext * Math.pow(1 - e, 2);
-      if (facade > 0.3) {
-        ctx.fillStyle = rgb(mix(obj.side, obj.tc, e));
-        ctx.fillRect(x - w / 2, y + h / 2 - facade / 2, w, facade);
-        ctx.fillStyle = rgb(color);
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = rgb(color);
+      const s = lerp(dot.size, size, e);
+      if (e > 0.6) ctx.fillRect(x - s / 2, y - s / 2, s, s);
+      else {
+        ctx.beginPath();
+        ctx.arc(x, y, s / 2, 0, Math.PI * 2);
+        ctx.fill();
       }
-      ctx.fillRect(x - w / 2, y - h / 2 - facade / 2, w, h);
     }
-  }
-
-  // The finished lettering, drawn without the city (reduced motion, skip, resize after the end).
-  function drawFormed(t: number) {
-    for (const obj of flyers) {
-      obj.launched = true;
-      obj.sx = obj.tx;
-      obj.sy = obj.ty;
-      obj.sw = step * 0.86;
-      obj.sh = step * 0.86;
-      obj.sext = 0;
-      obj.srot = 0;
-      obj.sc = obj.tc;
-    }
-    drawFlyers(t);
+    ctx.globalAlpha = 1;
   }
 
   function frame(now: number) {
@@ -740,18 +870,24 @@ export function startCitySplash({ canvas, measure, dark, reduced, onFormed }: Ci
       start = now - FORMED * 1000;
       t = FORMED;
     }
-    ctx.clearRect(0, 0, width, height);
+    ctx.clearRect(0, 0, W, H);
+    if (t >= ASSEMBLE && !dots.length) buildDots();
+
+    if (t < ASSEMBLE + 0.25) {
+      const c = cam(t);
+      const proj = projector(c);
+      const mapAlpha = (t < ASSEMBLE ? 1 : 1 - (t - ASSEMBLE) / 0.25) * lerp(0.55, 1, c.rise);
+      drawSky(c, proj, t);
+      drawMap(c, proj, t, mapAlpha);
+      if (t < ASSEMBLE) drawLandmarks(c, proj, t);
+    }
+    if (dots.length) drawDots(reduced ? FORMED : t);
+
     if (t >= FORMED) {
-      drawFormed(reduced ? 0 : t);
       sendFormed();
       if (t < GLINT_END && !reduced) raf = requestAnimationFrame(frame);
       return;
     }
-    if (world && paired) {
-      for (const obj of flyers) if (!obj.launched && t >= FLY_START + obj.delay) launch(obj, t);
-    }
-    drawWorld(t);
-    drawFlyers(t);
     raf = requestAnimationFrame(frame);
   }
 
@@ -768,16 +904,20 @@ export function startCitySplash({ canvas, measure, dark, reduced, onFormed }: Ci
     window.clearTimeout(resizeTimer);
     resizeTimer = window.setTimeout(() => {
       const m = measure();
-      if (Math.abs(m.width - width) < 2 && Math.abs(m.logo.w - logoBox.w) < 2) {
+      if (Math.abs(m.width - W) < 2 && Math.abs(m.logo.w - logoBox.w) < 2) {
         // Only the height changed (a phone's address bar): keep playing and move the lettering with the layout.
         const dx = m.logo.x - logoBox.x;
         const dy = m.logo.y - logoBox.y;
         logoBox = m.logo;
-        height = m.height;
+        H = m.height;
         sizeCanvas();
-        for (const obj of flyers) {
-          obj.tx += dx;
-          obj.ty += dy;
+        for (const p of targets) {
+          p.x += dx;
+          p.y += dy;
+        }
+        for (const dot of flyers) {
+          dot.tx += dx;
+          dot.ty += dy;
         }
         logoSpan = { left: logoSpan.left + dx, right: logoSpan.right + dx };
         cancelAnimationFrame(raf);

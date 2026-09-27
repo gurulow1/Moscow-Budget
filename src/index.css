@@ -62,6 +62,9 @@
   --mgb-streak-bg: #FDF1E1;
   --mgb-streak-ink: #A85A0B;
   --mgb-aurora-opacity: 0.7;
+  --mgb-hover: rgba(14, 21, 36, 0.05);
+  --mgb-glass-hover: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.62));
+  --mgb-shadow-hover: 0 2px 4px rgba(14, 21, 36, 0.06), 0 24px 40px -24px rgba(14, 21, 36, 0.55);
   color-scheme: light;
 }
 
@@ -93,6 +96,9 @@
   --mgb-streak-bg: rgba(255, 175, 87, 0.14);
   --mgb-streak-ink: #FFB561;
   --mgb-aurora-opacity: 0;
+  --mgb-hover: rgba(255, 255, 255, 0.06);
+  --mgb-glass-hover: linear-gradient(180deg, rgba(70, 78, 96, 0.72), rgba(36, 42, 56, 0.62));
+  --mgb-shadow-hover: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 24px 40px -22px rgba(0, 0, 0, 1);
   color-scheme: dark;
 }
 
@@ -291,6 +297,57 @@
     .mgb-flow-dots {
       animation: none;
     }
+  }
+}
+
+/* Hover feedback for mouse users, so every control shows that the pointer is on it. Unlayered on purpose:
+   it has to win over the utility backgrounds. Touch screens never see it. */
+@media (hover: hover) and (pointer: fine) {
+  :where(button, a[href], [role="button"], label[for], select, summary):not(:disabled):not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+
+  /* Rows, chips, segments and secondary buttons: a light tint laid over their own background. */
+  :is(button, a[href][class*="rounded"], [role="button"]):not(:disabled):not([aria-disabled="true"]):not(.mgb-card):not(.mgb-glass):not(.bg-accent-fill):not(.mgb-flows button):hover {
+    background-image: linear-gradient(var(--mgb-hover), var(--mgb-hover));
+  }
+
+  /* Plain text links get an underline. */
+  a[href]:not([class*="rounded"]):not(.mgb-card):hover {
+    text-decoration-line: underline;
+    text-underline-offset: 3px;
+  }
+
+  /* Filled red buttons light up and lift a little. */
+  :is(button, a[href]).bg-accent-fill {
+    transition: background-color 180ms ease-out, color 180ms ease-out, filter 180ms ease-out, box-shadow 180ms ease-out, transform 180ms ease-out;
+  }
+  :is(button, a[href]).bg-accent-fill:not([aria-disabled="true"]):hover {
+    filter: brightness(1.08) saturate(1.05);
+    box-shadow: 0 16px 28px -14px var(--mgb-accent);
+    transform: translateY(-1px);
+  }
+
+  /* Glass buttons get brighter glass. */
+  :is(button, a[href]).mgb-glass:hover {
+    background: var(--mgb-glass-hover);
+  }
+
+  /* Whole cards that are buttons rise. */
+  :is(button, a[href]).mgb-card {
+    transition: transform 200ms ease-out, box-shadow 200ms ease-out, border-color 200ms ease-out;
+  }
+  :is(button, a[href]).mgb-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--mgb-shadow-hover);
+  }
+
+  /* Sliders show a halo around the thumb. */
+  .mgb-range:hover::-webkit-slider-thumb {
+    box-shadow: 0 0 0 7px color-mix(in srgb, var(--mgb-c1) 22%, transparent), 0 1px 2px rgba(0, 0, 0, 0.25), 0 4px 12px -2px rgba(0, 0, 0, 0.3);
+  }
+  .mgb-range:hover::-moz-range-thumb {
+    box-shadow: 0 0 0 7px color-mix(in srgb, var(--mgb-c1) 22%, transparent), 0 1px 2px rgba(0, 0, 0, 0.25), 0 4px 12px -2px rgba(0, 0, 0, 0.3);
   }
 }
 
