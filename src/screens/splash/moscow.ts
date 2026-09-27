@@ -107,16 +107,6 @@ export const PARKS: { c: Pt; rx: number; ry: number }[] = [
   { c: [-2.1, -2.6], rx: 0.8, ry: 0.5 }, // Парк Горького
 ];
 
-export function parkOutline({ c, rx, ry }: (typeof PARKS)[number], seed: number): Pt[] {
-  const out: Pt[] = [];
-  for (let k = 0; k <= 24; k++) {
-    const a = (k / 24) * Math.PI * 2;
-    const wobble = 1 + 0.08 * Math.sin(a * 3 + seed) + 0.05 * Math.sin(a * 5 + seed * 2);
-    out.push([c[0] + Math.cos(a) * rx * wobble, c[1] + Math.sin(a) * ry * wobble]);
-  }
-  return out;
-}
-
 // The Kremlin's triangle: the river side, Alexander Garden and Red Square.
 export const KREMLIN: Pt[] = [[-0.45, -0.3], [0.35, -0.3], [0.12, 0.45]];
 

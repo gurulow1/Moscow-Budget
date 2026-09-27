@@ -48,7 +48,7 @@ export default function SplashScreen({ onEnter, onOpenAccessibility, accessibili
   const [leaving, setLeaving] = useState<boolean | null>(null);
   const [formed, setFormed] = useState(false);
   const stageRef = useRef<HTMLDivElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const layerRef = useRef<HTMLDivElement>(null);
   const logoRef = useRef<HTMLDivElement>(null);
   const enterRef = useRef<HTMLButtonElement>(null);
   const splashRef = useRef<ReturnType<typeof startCitySplash> | null>(null);
@@ -56,12 +56,12 @@ export default function SplashScreen({ onEnter, onOpenAccessibility, accessibili
   const law = getBudgetSource('budgetLaw2026');
 
   useEffect(() => {
-    const canvas = canvasRef.current;
+    const layer = layerRef.current;
     const stage = stageRef.current;
     const logo = logoRef.current;
-    if (!canvas || !stage || !logo) return;
+    if (!layer || !stage || !logo) return;
     const splash = startCitySplash({
-      canvas,
+      layer,
       dark: document.documentElement.classList.contains('dark'),
       reduced: reduceMotion || window.matchMedia('(prefers-reduced-motion: reduce)').matches,
       measure: () => {
@@ -98,7 +98,7 @@ export default function SplashScreen({ onEnter, onOpenAccessibility, accessibili
     >
       <Aurora />
       <div ref={stageRef} className="relative min-h-dvh w-full" onClick={() => skip()}>
-        <canvas ref={canvasRef} aria-hidden="true" className="pointer-events-none absolute inset-0 h-full w-full" />
+        <div ref={layerRef} aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden" />
 
         <div className="relative mx-auto flex min-h-dvh w-full max-w-[76rem] flex-col px-4 pb-[calc(1.25rem_+_env(safe-area-inset-bottom))] pt-[calc(0.75rem_+_env(safe-area-inset-top))] sm:px-8 lg:pb-8 lg:pt-6">
           <header className="flex min-h-11 items-center justify-between gap-3">
