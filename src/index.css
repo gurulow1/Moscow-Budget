@@ -341,6 +341,22 @@
   .mgb-verdict-ok { border-color: color-mix(in srgb, var(--mgb-ok-ink) 30%, transparent); }
   .mgb-verdict-bad { border-color: color-mix(in srgb, var(--mgb-accent) 30%, transparent); }
 
+  /* The map of Moscow: quiet tiles with hairline gaps, the river, parks and metro; the game's districts lit. */
+  .mgb-map { --map-tile: #E3E8F0; --map-gap: #F7F9FC; --map-water: #A9CBF4; --map-green: #D3EBDD; --map-pick: #F7D9DE; --map-pick-on: var(--mgb-accent); --map-ink: #1E2638; }
+  .dark .mgb-map { --map-tile: #1B212C; --map-gap: #0A0D13; --map-water: #1F3E6B; --map-green: #16302A; --map-pick: #3A1E26; --map-pick-on: #E0405A; --map-ink: #E9EDF4; }
+  .mgb-map path { vector-effect: non-scaling-stroke; }
+  .mgb-map-tile { fill: var(--map-tile); stroke: var(--map-gap); stroke-width: 1; }
+  .mgb-map-green { fill: var(--map-green); opacity: 0.9; pointer-events: none; }
+  .mgb-map-water { fill: var(--map-water); pointer-events: none; }
+  .mgb-map-metro path { fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; opacity: 0.55; pointer-events: none; }
+  .mgb-map-pick { cursor: pointer; outline: none; }
+  .mgb-map-pick path { fill: var(--map-pick); stroke: var(--map-gap); stroke-width: 1.2; transition: fill 250ms ease-out; }
+  .mgb-map-pick.is-done path { fill: color-mix(in srgb, var(--mgb-ok-ink) 26%, var(--map-tile)); }
+  .mgb-map-pick.is-hover path, .mgb-map-pick:focus-visible path { fill: color-mix(in srgb, var(--mgb-accent) 45%, var(--map-pick)); }
+  .mgb-map-pick.is-on path { fill: var(--map-pick-on); stroke: #fff; stroke-width: 1.6; }
+  .mgb-map-label { font: 700 calc(var(--k, 0.13) * 12.5px) var(--font-sans); fill: var(--map-ink); text-anchor: middle; dominant-baseline: middle; paint-order: stroke; stroke: var(--map-gap); stroke-width: calc(var(--k, 0.13) * 3.2px); stroke-linejoin: round; pointer-events: none; letter-spacing: -0.01em; }
+  .mgb-map-label.is-on { font-size: calc(var(--k, 0.13) * 15px); fill: #fff; stroke: color-mix(in srgb, var(--map-pick-on) 80%, #000); }
+
   @media (prefers-reduced-motion: reduce) {
     .mgb-coin-wait,
     .mgb-aurora span,
