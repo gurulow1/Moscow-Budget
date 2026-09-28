@@ -307,8 +307,9 @@
     cursor: pointer;
   }
 
-  /* Rows, chips, segments and secondary buttons: a light tint laid over their own background. */
-  :is(button, a[href][class*="rounded"], [role="button"]):not(:disabled):not([aria-disabled="true"]):not(.mgb-card):not(.mgb-glass):not(.bg-accent-fill):not(.mgb-flows button):hover {
+  /* Rows, chips, segments and secondary buttons: a light tint laid over their own background.
+     The start screen styles its own buttons for each scene. */
+  :is(button, a[href][class*="rounded"], [role="button"]):not(:disabled):not([aria-disabled="true"]):not(.mgb-card):not(.mgb-glass):not(.bg-accent-fill):not(.mgb-flows button, .mgb-splash button):hover {
     background-image: linear-gradient(var(--mgb-hover), var(--mgb-hover));
   }
 

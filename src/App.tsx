@@ -388,8 +388,9 @@ export default function App() {
 
       {showSplash && (
         <SplashScreen
-          onEnter={(withTour) => {
+          onEnter={(withTour, target) => {
             setShowSplash(false);
+            if (target) goTo(target);
             if (withTour) setTourStep(0);
           }}
           onOpenAccessibility={openAccessibility}
