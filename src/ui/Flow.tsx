@@ -1,5 +1,6 @@
 import { forwardRef, type ReactNode } from 'react';
-import { Check, ChevronLeft, X } from 'lucide-react';
+import { motion } from 'motion/react';
+import { ArrowRight, Check, ChevronLeft, X } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 // A full-screen step (quiz, meeting): no tab bar, the page scrolls, the main action floats at the bottom.
@@ -57,32 +58,32 @@ interface BottomActionProps {
   disabled?: boolean;
 }
 
-// aria-disabled keeps the button focusable, so a screen reader still hears why it is muted.
+// aria-disabled keeps the button focusable, so a screen reader still hears why it is muted. Muted, it is quiet
+// glass that says what to do; once it can be pressed it turns into the lit main action and pops once.
 export function BottomAction({ label, onClick, disabled }: BottomActionProps) {
   return (
-    <button
-      type="button"
-      aria-disabled={disabled || undefined}
-      onClick={() => !disabled && onClick()}
-      className={cn(
-        'fixed bottom-[calc(1.5rem_+_env(safe-area-inset-bottom))] left-1/2 z-40 h-14 w-[calc(min(100vw,30rem)_-_2rem)] -translate-x-1/2 rounded-full text-[1rem] font-semibold transition-colors duration-200 lg:w-[calc(min(100vw,44rem)_-_2rem)]',
-        disabled
-          ? 'cursor-default bg-track text-ink-3'
-          : 'bg-accent-fill text-white shadow-[0_12px_24px_-16px_var(--mgb-accent)]',
-      )}
-    >
-      {label}
-    </button>
+    <div className="pointer-events-none fixed inset-x-0 bottom-[calc(1.5rem_+_env(safe-area-inset-bottom))] z-40 flex justify-center px-4">
+      <motion.button
+        type="button"
+        aria-disabled={disabled || undefined}
+        onClick={() => !disabled && onClick()}
+        animate={disabled ? { scale: 1 } : { scale: [1, 1.04, 1] }}
+        transition={{ duration: 0.35, ease: 'easeOut' }}
+        className={cn(
+          'pointer-events-auto flex h-14 w-full max-w-[28rem] items-center justify-center gap-2 rounded-full text-[1rem] font-semibold lg:max-w-[42rem]',
+          disabled ? 'mgb-glass cursor-default text-ink-3' : 'mgb-cta',
+        )}
+      >
+        {label}
+        {!disabled && <ArrowRight size={19} strokeWidth={2.2} aria-hidden="true" className="mgb-cta-arrow" />}
+      </motion.button>
+    </div>
   );
 }
 
 export function PrimaryButton({ children, onClick }: { children: ReactNode; onClick: () => void }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex h-14 w-full items-center justify-center rounded-full bg-accent-fill text-[1rem] font-semibold text-white shadow-[0_12px_24px_-16px_var(--mgb-accent)]"
-    >
+    <button type="button" onClick={onClick} className="mgb-cta flex h-14 w-full items-center justify-center gap-2 rounded-full text-[1rem] font-semibold">
       {children}
     </button>
   );
@@ -90,11 +91,7 @@ export function PrimaryButton({ children, onClick }: { children: ReactNode; onCl
 
 export function SecondaryButton({ children, onClick }: { children: ReactNode; onClick: () => void }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex h-[3.25rem] w-full items-center justify-center rounded-full border border-line bg-card text-[1rem] font-semibold text-ink"
-    >
+    <button type="button" onClick={onClick} className="mgb-glass flex h-[3.25rem] w-full items-center justify-center rounded-full text-[1rem] font-semibold text-ink">
       {children}
     </button>
   );

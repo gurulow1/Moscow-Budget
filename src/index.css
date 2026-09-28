@@ -292,7 +292,57 @@
     border-radius: 0.625rem;
   }
 
+
+  /* The main action: a lit red pill with a little depth; its arrow leans forward under the mouse. */
+  .mgb-cta {
+    background: linear-gradient(180deg, #E53B50 0%, #CB1F34 100%);
+    color: #fff;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.34), inset 0 -2px 0 rgba(0, 0, 0, 0.12), 0 14px 26px -14px rgba(214, 38, 58, 0.8);
+    transition: transform 150ms ease-out, filter 200ms ease-out, box-shadow 200ms ease-out;
+  }
+  .dark .mgb-cta {
+    background: linear-gradient(180deg, #E8475C 0%, #C4263B 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), inset 0 -2px 0 rgba(0, 0, 0, 0.2), 0 16px 30px -16px rgba(255, 75, 96, 0.55);
+  }
+  .mgb-cta:active { transform: scale(0.98); }
+  .mgb-cta-arrow { transition: transform 200ms ease-out; }
+
+  /* A coin: struck gold with a raised rim, the same on the quiz bar and in the result. */
+  .mgb-coin {
+    background: radial-gradient(circle at 34% 28%, #FFF4C4 0%, #FFD864 34%, #E6AE35 70%, #BD861B 100%);
+    color: rgba(128, 78, 0, 0.62);
+    box-shadow: inset 0 0 0 2px rgba(255, 246, 205, 0.6), inset 0 -2px 3px rgba(128, 74, 0, 0.35), 0 5px 12px -5px rgba(190, 124, 18, 0.7);
+    line-height: 1;
+  }
+  .mgb-coin-wait { animation: mgb-coin-wait 1.6s ease-in-out infinite; }
+  @keyframes mgb-coin-wait {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.45; }
+  }
+
+  /* Answer cards of the quiz: a card that rises under the mouse; the right one fills with gold. */
+  .mgb-answer {
+    background: var(--mgb-card);
+    border: 1.5px solid var(--mgb-line);
+    box-shadow: var(--mgb-shadow);
+    transition: border-color 200ms ease-out, box-shadow 200ms ease-out;
+  }
+  .mgb-answer-fill {
+    background: linear-gradient(100deg, #FFF4CC 0%, #FFE38F 60%, #FFD65E 100%);
+    box-shadow: inset 0 0 0 1.5px #F0BF45;
+    border-radius: inherit;
+  }
+  /* At night the gold stays gold: a deep amber with a bright rim, never an olive wash. */
+  .dark .mgb-answer-fill {
+    background: linear-gradient(100deg, #3B2A08 0%, #5C4210 55%, #7A5714 100%);
+    box-shadow: inset 0 0 0 1.5px #E9B84A, 0 0 24px -6px rgba(255, 196, 64, 0.45);
+  }
+  .mgb-answer-bad { border-color: var(--mgb-accent); background: var(--mgb-accent-soft); }
+  .mgb-verdict-ok { border-color: color-mix(in srgb, var(--mgb-ok-ink) 30%, transparent); }
+  .mgb-verdict-bad { border-color: color-mix(in srgb, var(--mgb-accent) 30%, transparent); }
+
   @media (prefers-reduced-motion: reduce) {
+    .mgb-coin-wait,
     .mgb-aurora span,
     .mgb-flow-dots {
       animation: none;
@@ -309,7 +359,7 @@
 
   /* Rows, chips, segments and secondary buttons: a light tint laid over their own background.
      The start screen styles its own buttons for each scene. */
-  :is(button, a[href][class*="rounded"], [role="button"]):not(:disabled):not([aria-disabled="true"]):not(.mgb-card):not(.mgb-glass):not(.bg-accent-fill):not(.mgb-flows button, .mgb-splash button):hover {
+  :is(button, a[href][class*="rounded"], [role="button"]):not(:disabled):not([aria-disabled="true"]):not(.mgb-card):not(.mgb-glass):not(.bg-accent-fill):not(.mgb-flows button, .mgb-splash button, .mgb-bare, .mgb-answer, .mgb-cta):hover {
     background-image: linear-gradient(var(--mgb-hover), var(--mgb-hover));
   }
 
@@ -329,8 +379,21 @@
     transform: translateY(-1px);
   }
 
+  /* The main action lifts and its arrow leans forward. */
+  :is(button, a[href]).mgb-cta:not([aria-disabled="true"]):hover {
+    filter: brightness(1.06) saturate(1.05);
+    transform: translateY(-1px);
+  }
+  :is(button, a[href]).mgb-cta:hover .mgb-cta-arrow { transform: translateX(3px); }
+
+  /* Quiz answers rise and take a hint of the accent. */
+  button.mgb-answer:not([aria-pressed="true"]):not(.cursor-default):hover {
+    border-color: color-mix(in srgb, var(--mgb-accent) 40%, transparent);
+    box-shadow: var(--mgb-shadow-hover);
+  }
+
   /* Glass buttons get brighter glass. */
-  :is(button, a[href]).mgb-glass:hover {
+  :is(button, a[href]).mgb-glass:not([aria-disabled="true"]):hover {
     background: var(--mgb-glass-hover);
   }
 

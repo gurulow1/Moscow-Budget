@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import { cn, plural } from '../lib/utils';
 import {
   PILOT_POINTS_PER_ANSWER,
@@ -12,6 +13,10 @@ import {
   type QuizQuestion,
 } from '../data/quests';
 import { BottomAction, Divider, FlowPage, FlowTop, ListRow, Mark, PrimaryButton, SecondaryButton } from '../ui/Flow';
+import { amounts } from './quiz/amounts';
+import AnswerCards from './quiz/AnswerCards';
+import CoinStacks from './quiz/CoinStacks';
+import { Coin, CoinSlots, type CoinState } from './quiz/CoinSlots';
 
 interface QuizFlowProps {
   quiz: Quiz;
@@ -58,11 +63,18 @@ export default function QuizFlow({ quiz, ledger, onComplete, onDailyResult, onCl
   const [answers, setAnswers] = useState<number[]>([]);
   const [result, setResult] = useState<Result | null>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
+  const slotRefs = useRef<(HTMLSpanElement | null)[]>([]);
+  // A right answer sends a coin from the answer up into its slot; the slot turns gold when it lands.
+  const [flight, setFlight] = useState<{ from: [number, number]; to: [number, number] } | null>(null);
+  const [landed, setLanded] = useState(false);
+  const reduce = document.documentElement.dataset.a11yReduceMotion === 'true' || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const dark = document.documentElement.classList.contains('dark');
 
   const current = questions[index];
   const answered = picked !== null;
   const isLast = index === questions.length - 1;
   const need = passMark(questions.length);
+  const values = useMemo(() => amounts(current.options), [current]);
 
   // Each new question and the result start at the top with focus on their heading.
   useEffect(() => {
@@ -84,6 +96,8 @@ export default function QuizFlow({ quiz, ledger, onComplete, onDailyResult, onCl
     if (!isLast) {
       setIndex(index + 1);
       setPicked(null);
+      setLanded(false);
+      setFlight(null);
       return;
     }
     const score = questions.reduce((sum, question, i) => sum + (answers[i] === question.correct ? 1 : 0), 0);
@@ -97,9 +111,28 @@ export default function QuizFlow({ quiz, ledger, onComplete, onDailyResult, onCl
     setQuestions(quiz.questions.map(shuffleOptions));
     setIndex(0);
     setPicked(null);
+    setLanded(false);
+    setFlight(null);
     setAnswers([]);
     setResult(null);
   };
+
+  const right = answered && picked === current.correct;
+  const slotStates: CoinState[] = questions.map((question, i) =>
+    i < index ? (answers[i] === question.correct ? 'gold' : 'miss') : i > index ? 'empty' : !answered ? 'current' : right ? (landed ? 'gold' : 'current') : 'miss',
+  );
+
+  const reveal = useCallback(
+    (x: number, y: number) => {
+      const slot = slotRefs.current[index]?.getBoundingClientRect();
+      if (!right || reduce || !slot) {
+        setLanded(true);
+        return;
+      }
+      setFlight({ from: [x, y], to: [slot.left + slot.width / 2, slot.top + slot.height / 2] });
+    },
+    [index, right, reduce],
+  );
 
   if (result) {
     const todayPoints = todayEntry(ledger)?.points ?? result.score * PILOT_POINTS_PER_ANSWER;
@@ -107,10 +140,18 @@ export default function QuizFlow({ quiz, ledger, onComplete, onDailyResult, onCl
       <FlowPage className="pb-[calc(2rem_+_env(safe-area-inset-bottom))]">
         <FlowTop ref={titleRef} icon="close" label="Закрыть итог" onPress={onClose} title={daily ? 'Итог квиза дня' : 'Итог викторины'} />
         <div className="mt-[1.125rem] grid gap-3">
-          <section className="mgb-card px-5 py-[1.125rem]" aria-label="Результат">
-            {!daily && <p className="m-0 mb-1 text-[0.875rem] font-semibold text-ink-2">{quiz.title}</p>}
-            <p className="m-0 text-[0.875rem] text-ink-2">Верных ответов</p>
-            <p className="m-0 mt-0.5 flex items-baseline gap-2">
+          <section className="mgb-card px-5 pb-5 pt-6 text-center" aria-label="Результат">
+            {!daily && <p className="m-0 mb-3 text-[0.875rem] font-semibold text-ink-2">{quiz.title}</p>}
+            {/* The coins collected on the way, big. */}
+            <div aria-hidden="true" className="flex justify-center gap-3">
+              {questions.map((question, i) => (
+                <Fragment key={question.question}>
+                  <Coin state={answers[i] === question.correct ? 'gold' : 'miss'} size={64} delay={reduce ? 0 : 0.15 + i * 0.14} reduce={reduce} />
+                </Fragment>
+              ))}
+            </div>
+            <p className="m-0 mt-4 text-[0.875rem] text-ink-2">Верных ответов</p>
+            <p className="m-0 mt-0.5 flex items-baseline justify-center gap-2">
               <b className="text-[3rem] font-bold leading-[1.05] tracking-[-0.035em]">{result.score}</b>
               <span className="text-[1.25rem] font-semibold leading-tight text-ink-2">из {questions.length}</span>
             </p>
@@ -199,100 +240,106 @@ export default function QuizFlow({ quiz, ledger, onComplete, onDailyResult, onCl
     );
   }
 
-  const right = answered && picked === current.correct;
-
   return (
     <FlowPage>
       <FlowTop icon="close" label={daily ? 'Закрыть квиз' : 'Закрыть викторину'} onPress={onClose}>
-        <div aria-hidden="true" className="grid flex-1 gap-1.5" style={{ gridTemplateColumns: `repeat(${questions.length}, minmax(0, 1fr))` }}>
-          {questions.map((question, i) => (
-            <span
-              key={question.question}
-              className={cn('h-1.5 rounded-[3px] transition-colors duration-200', i < index ? 'bg-ink' : i === index ? 'bg-accent' : 'bg-track')}
-            />
-          ))}
-        </div>
-        <span className="shrink-0 text-[0.9375rem] font-semibold text-ink-2">
+        <CoinSlots states={slotStates} slotRefs={slotRefs} reduce={reduce} />
+        <span className="relative shrink-0 text-[0.9375rem] font-semibold text-ink-2">
           {index + 1} из {questions.length}
+          <AnimatePresence>
+            {daily && landed && right && (
+              <motion.span
+                key={index}
+                aria-hidden="true"
+                className="absolute -top-5 right-0 whitespace-nowrap text-[0.875rem] font-bold text-streak-ink"
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: [0, 1, 1, 0], y: [6, 0, -4, -10] }}
+                transition={{ duration: 1.4, times: [0, 0.15, 0.7, 1] }}
+              >
+                +{PILOT_POINTS_PER_ANSWER} баллов
+              </motion.span>
+            )}
+          </AnimatePresence>
         </span>
       </FlowTop>
 
-      {/* The question takes the free height, so the answers sit low, under the thumb. */}
-      <section className="mgb-card mt-4 flex min-h-[15rem] flex-1 flex-col px-[1.375rem] pb-5 pt-[1.375rem]" aria-labelledby="quiz-question">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[0.875rem] font-bold text-ink-2">{daily ? 'Квиз дня' : 'Викторина'}</span>
-          <span className="rounded-full bg-track px-2.5 py-1.5 text-[0.78125rem] font-semibold leading-none text-ink-2">
-            {current.topic ?? quiz.title}
-          </span>
-        </div>
-        <h1
-          ref={titleRef}
-          id="quiz-question"
-          tabIndex={-1}
-          className="m-0 mt-3.5 text-[1.625rem] font-bold leading-[1.28] tracking-[-0.02em] outline-none [text-wrap:pretty]"
-        >
-          {current.question}
-        </h1>
-        <div aria-live="polite" className="mt-auto border-t border-line pt-4">
-          {answered ? (
-            <>
-              <p className={cn('m-0 text-[1rem] font-bold', right ? 'text-ok-ink' : 'text-accent')}>{right ? 'Верно' : 'Неверно'}</p>
-              <p className="m-0 mt-1 text-[0.9375rem] leading-[1.45] text-ink-2 [text-wrap:pretty]">{current.explanation}</p>
-              <SourceLink question={current} withDate />
-            </>
-          ) : (
-            <p className="m-0 text-[0.875rem] leading-[1.45] text-ink-2 [text-wrap:pretty]">
-              {daily
-                ? `Выберите ответ ниже. За верный — ${PILOT_POINTS_PER_ANSWER}\u00A0баллов, после ответа покажем объяснение и источник.`
-                : 'Выберите ответ ниже. После ответа покажем объяснение и источник.'}
-            </p>
-          )}
-        </div>
-      </section>
+      <div className="mt-5 flex flex-wrap items-center gap-2">
+        <span className="text-[0.875rem] font-bold text-ink-2">{daily ? 'Квиз дня' : 'Викторина'}</span>
+        <span className="rounded-full bg-track px-2.5 py-1.5 text-[0.78125rem] font-semibold leading-none text-ink-2">{current.topic ?? quiz.title}</span>
+      </div>
+      <h1
+        ref={titleRef}
+        id="quiz-question"
+        tabIndex={-1}
+        className="m-0 mt-2.5 text-[1.625rem] font-bold leading-[1.2] tracking-[-0.025em] outline-none [text-wrap:balance] sm:text-[1.875rem]"
+      >
+        {current.question}
+      </h1>
 
-      <div role="group" aria-label="Варианты ответа" className="mt-3 grid gap-2.5">
-        {current.options.map((text, i) => {
-          const isRight = answered && i === current.correct;
-          const isMine = answered && i === picked;
-          return (
-            <button
-              key={text}
-              type="button"
-              aria-pressed={i === picked}
-              onClick={() => pick(i)}
-              className={cn(
-                'flex min-h-16 w-full items-center gap-3 rounded-[1.25rem] border-[1.5px] px-4 py-3 text-left text-ink transition-[background-color,border-color,opacity] duration-200',
-                isRight
-                  ? 'border-c3 bg-ok-soft'
-                  : isMine
-                    ? 'border-accent bg-accent-soft'
-                    : 'border-line bg-card shadow-[var(--mgb-shadow)]',
-                answered && !isRight && !isMine && 'opacity-55',
-                answered && 'cursor-default',
-              )}
-            >
-              <span
-                aria-hidden="true"
-                className={cn(
-                  'grid size-[1.875rem] shrink-0 place-items-center rounded-full text-[0.875rem] font-bold',
-                  isRight ? 'bg-c3 text-white' : isMine ? 'bg-accent text-white' : 'bg-track text-ink-2',
-                )}
-              >
-                {LETTERS[i]}
-              </span>
-              <span className="min-w-0 flex-1 text-[1.0625rem] font-semibold leading-[1.3] tracking-[-0.01em]">{text}</span>
-              {(isRight || isMine) && (
-                <span className={cn('shrink-0 text-[0.8125rem] font-semibold', isRight ? 'text-ok-ink' : 'text-accent')}>
-                  {isRight ? 'верный ответ' : 'ваш ответ'}
-                </span>
-              )}
-            </button>
-          );
-        })}
+      {/* The answers are the picture: sums as coin stacks to scale, words as big cards. They take the free height. */}
+      <div className="mt-4 flex min-h-[17rem] flex-1 flex-col">
+        <Fragment key={index}>
+          {values ? (
+            <CoinStacks options={current.options} values={values} picked={picked} correct={current.correct} onPick={pick} dark={dark} reduce={reduce} onReveal={reveal} />
+          ) : (
+            <AnswerCards options={current.options} picked={picked} correct={current.correct} onPick={pick} reduce={reduce} onReveal={reveal} />
+          )}
+        </Fragment>
       </div>
 
+      <div aria-live="polite" className="mt-3 min-h-[3rem]">
+        <AnimatePresence mode="wait" initial={false}>
+          {answered ? (
+            <motion.div
+              key="answer"
+              className={cn('mgb-card px-5 py-4', right ? 'mgb-verdict-ok' : 'mgb-verdict-bad')}
+              initial={reduce ? false : { opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35, ease: 'easeOut', delay: reduce ? 0 : 0.25 }}
+            >
+              <p className={cn('m-0 flex items-center gap-2 text-[1.0625rem] font-bold', right ? 'text-ok-ink' : 'text-accent')}>
+                <Mark ok={right} />
+                {right ? 'Верно' : `Неверно — правильный ответ ${LETTERS[current.correct]}`}
+              </p>
+              <p className="m-0 mt-1.5 text-[0.9375rem] leading-[1.45] text-ink-2 [text-wrap:pretty]">{current.explanation}</p>
+              <SourceLink question={current} withDate />
+            </motion.div>
+          ) : (
+            <motion.p key="hint" className="m-0 flex items-center justify-center gap-2 px-1 pt-2 text-center text-[0.9375rem] leading-[1.4] text-ink-3" exit={{ opacity: 0 }}>
+              <span aria-hidden="true" className="mgb-coin grid size-5 shrink-0 place-items-center rounded-full text-[0.625rem] font-extrabold">
+                ₽
+              </span>
+              <span className="[text-wrap:balance]">
+                {values ? 'Стопки в одном масштабе. За верный ответ — монета' : 'За верный ответ — монета'}
+                {daily && ` и ${PILOT_POINTS_PER_ANSWER}\u00A0баллов`}
+              </span>
+            </motion.p>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {flight && (
+        <motion.span
+          aria-hidden="true"
+          className="mgb-coin pointer-events-none fixed left-0 top-0 z-[60] grid size-[30px] place-items-center rounded-full text-[15px] font-extrabold"
+          initial={{ x: flight.from[0] - 15, y: flight.from[1] - 15, scale: 1.25 }}
+          animate={{
+            x: [flight.from[0] - 15, (flight.from[0] + flight.to[0]) / 2 - 15, flight.to[0] - 15],
+            y: [flight.from[1] - 15, Math.min(flight.from[1], flight.to[1]) - 90, flight.to[1] - 15],
+            scale: [1.25, 1.1, 1],
+          }}
+          transition={{ duration: 0.75, ease: 'easeInOut' }}
+          onAnimationComplete={() => {
+            setLanded(true);
+            setFlight(null);
+          }}
+        >
+          ₽
+        </motion.span>
+      )}
+
       <BottomAction
-        label={!answered ? 'Выберите ответ' : isLast ? 'Показать итог' : 'Дальше'}
+        label={!answered ? (values ? 'Выберите стопку' : 'Выберите ответ') : isLast ? 'Показать итог' : 'Дальше'}
         disabled={!answered}
         onClick={next}
       />
