@@ -1,4 +1,5 @@
 import { BUDGET, clamp01, el, outCubic, rgba, type MountScene } from '../kit';
+import { ledText } from './ledFont';
 
 // A stadium LED board: how much the budget spends on each resident in a year.
 const AMBER = [255, 178, 52];
@@ -32,7 +33,7 @@ export const mountScoreboard: MountScene = (ctx) => {
   let cache: Record<string, Glyphs> = {};
   let lastKey = '';
 
-  // Text into LED on/off cells: drawn large, then averaged down to the grid.
+  // The big figure: the font drawn large, then averaged down to the grid (the seven-row lines use ledText).
   function raster(text: string, rows: number): Glyphs {
     if (cache[text + rows]) return cache[text + rows];
     const SS = 6;
@@ -95,7 +96,7 @@ export const mountScoreboard: MountScene = (ctx) => {
     glow.width = cv.width;
     glow.height = cv.height;
     cache = {};
-    marq = raster(MARQ, 7);
+    marq = ledText(MARQ);
     lastKey = '';
   }
 
@@ -124,8 +125,8 @@ export const mountScoreboard: MountScene = (ctx) => {
       }
       return raster(text, 5);
     };
-    const l1 = raster(LINE1, 7);
-    const l2 = raster(LINE2, 7);
+    const l1 = ledText(LINE1);
+    const l2 = ledText(LINE2);
     put(l1, 3, 3, false);
     put(l2, cols - 3 - l2.w, 3, false);
     // The big number counts up to 481 000 in whole thousands.
