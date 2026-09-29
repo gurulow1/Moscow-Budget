@@ -230,7 +230,7 @@ export default function App() {
 
   const HEADINGS: Record<AppTab, { title: string; sub: string }> = {
     home: { title: 'Бюджет Москвы', sub: '2026 год · закон № 39 от 01.11.2025' },
-    calc: { title: 'Налоговый вычет', sub: 'за учёбу и спорт · ставка 13 %' },
+    calc: { title: 'Налоговый вычет', sub: 'за учёбу и спорт · при доходе до 2,4 млн ₽ в год' },
     quests: { title: 'Квесты', sub: `Уровень ${level.level} · ${totalXp} из ${level.nextLevelXp} баллов` },
     data: {
       title: 'Куда идут деньги',
@@ -300,6 +300,10 @@ export default function App() {
 
   // The start screen opens on every visit: it is the way into the app, not a one-time intro.
   const [showSplash, setShowSplash] = useState(true);
+  // Exhibits under the start screen wait for this to play their entrance.
+  useEffect(() => {
+    if (!showSplash) window.dispatchEvent(new Event('mgb:enter'));
+  }, [showSplash]);
 
   return (
     <MotionConfig reducedMotion={reducedMotion}>
@@ -342,6 +346,7 @@ export default function App() {
               <section hidden={tab !== 'home'} aria-label="Главная">
                 <HomeScreen
                   savedCalculation={savedCalculation}
+                  ledger={ledger}
                   learningPostUnlocked={hasLearningPractice}
                   onStartDailyQuiz={startDailyQuiz}
                 />

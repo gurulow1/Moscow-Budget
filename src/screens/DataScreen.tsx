@@ -14,6 +14,11 @@ import { formatRub, type TaxCalculation } from '../lib/deduction';
 import { cn, safeLocalStorage } from '../lib/utils';
 import { SECTOR_COLOR, SECTOR_NAME } from '../ui/sectors';
 import Sheet from '../ui/Sheet';
+import FlapBoard from '../ui/exhibits/FlapBoard';
+import Receipt from '../ui/exhibits/Receipt';
+import SceneCard from '../ui/exhibits/SceneCard';
+import { reducedMotion } from '../ui/exhibits/useEntrance';
+import { YEAR } from './splash/scenes/hourglass';
 
 interface DataScreenProps {
   savedCalculation: TaxCalculation | null;
@@ -120,6 +125,74 @@ function Flows({ onPick }: { onPick: (id: SectorId) => void }) {
   );
 }
 
+/// ---------- The programs board: a departures board of the city's programs ----------
+
+const PROGRAMS: [string, number][] = [
+  ['ТРАНСПОРТ', BUDGET_FACTS.transport.amountBillion],
+  ['ОБРАЗОВАНИЕ', BUDGET_FACTS.education.amountBillion],
+  ['СОЦПОДДЕРЖКА', BUDGET_FACTS.socialSupport.amountBillion],
+  ['ЗДРАВООХРАНЕНИЕ', BUDGET_FACTS.healthcare.amountBillion],
+  ['ГОРОДСКАЯ СРЕДА', BUDGET_FACTS.urbanEnvironment.amountBillion],
+  ['ЦИФРОВАЯ СРЕДА', BUDGET_FACTS.digital.amountBillion],
+  ['СПОРТ', BUDGET_FACTS.sport.amountBillion],
+];
+const flapAmount = (value: number) => billions(value).replace(/\s/g, ' ');
+const WIDE_COLS = 24;
+const WIDE_ROWS = PROGRAMS.map(([name, value]) => name.padEnd(WIDE_COLS - 7) + flapAmount(value).padStart(7));
+const BOARD_LABEL = `Табло госпрограмм 2026 года, млрд рублей: ${PROGRAMS.map(([name, value]) => `${name.toLowerCase()} — ${billions(value)}`).join(', ')}.`;
+
+// A phone has room for one program at a time: the board flips to the next every few seconds.
+function useProgramIndex() {
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    if (reducedMotion()) return;
+    const timer = window.setInterval(() => {
+      if (!document.hidden) setI((n) => (n + 1) % PROGRAMS.length);
+    }, 3600);
+    return () => window.clearInterval(timer);
+  }, []);
+  return i;
+}
+
+function ProgramsBoard() {
+  const i = useProgramIndex();
+  const [name, value] = PROGRAMS[i];
+  return (
+    <section className="mgb-card mgb-board border-0 px-5 py-5 xl:col-span-12 lg:px-9 lg:py-8" aria-labelledby="programs-title">
+      <div className="relative flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
+        <h2 id="programs-title" className="m-0 text-[1.375rem] font-bold leading-tight tracking-[-0.03em] text-[#F7F4EE] lg:text-[2rem]">
+          Табло госпрограмм
+        </h2>
+        <p className="m-0 text-[0.875rem] text-[rgba(243,239,230,0.6)] lg:text-[1rem]">расходы 2026 года, млрд{NB}₽</p>
+      </div>
+      <div className="relative mt-4 hidden justify-between md:flex lg:mt-6">
+        <span className="mgb-board-label text-[0.6875rem] lg:text-[0.75rem]">Программа</span>
+        <span className="mgb-board-label text-[0.6875rem] lg:text-[0.75rem]">млрд ₽</span>
+      </div>
+      <div className="relative mt-2 hidden [container-type:inline-size] md:block">
+        <FlapBoard rows={WIDE_ROWS} cols={WIDE_COLS} amberFrom={WIDE_COLS - 7} label={BOARD_LABEL} className="[--cw:calc(100cqw/26.3)]" />
+      </div>
+      <div className="relative mt-4 [container-type:inline-size] md:hidden">
+        <FlapBoard
+          rows={[name, `${flapAmount(value)} МЛРД`]}
+          cols={15}
+          amber={[1]}
+          label={BOARD_LABEL}
+          className="[--cw:calc(100cqw/16.4)]"
+        />
+        <div aria-hidden="true" className="mt-3 flex gap-1.5">
+          {PROGRAMS.map(([program], n) => (
+            <span key={program} className={cn('size-1.5 rounded-full transition-colors duration-300', n === i ? 'bg-[#FFB547]' : 'bg-[rgba(243,239,230,0.2)]')} />
+          ))}
+        </div>
+      </div>
+      <p className="relative m-0 mt-4 text-[0.8125rem] leading-snug text-[rgba(243,239,230,0.55)] lg:mt-6 lg:text-[0.875rem]">
+        Здравоохранение — без учёта денег Фонда ОМС. Городская среда, цифровая среда и спорт входят в «Другие программы».
+      </p>
+    </section>
+  );
+}
+
 // ---------- Screen ----------
 
 export default function DataScreen({ savedCalculation, active }: DataScreenProps) {
@@ -137,7 +210,6 @@ export default function DataScreen({ savedCalculation, active }: DataScreenProps
   const receiptTotal = personal ? deduction : 1000;
   const receipt = splitByShares(receiptTotal);
   const perThousand = splitByShares(1000);
-  const leader = SECTORS.filter((sector) => sector.id !== 'other').sort((a, b) => b.amountBillion - a.amountBillion)[0].id;
 
   const toggleMyDistrict = (id: string) => {
     const next = myDistrict === id ? '' : id;
@@ -154,7 +226,7 @@ export default function DataScreen({ savedCalculation, active }: DataScreenProps
 
   return (
     <div className="grid gap-3 px-4 pt-4 xl:grid-cols-12 lg:items-start lg:gap-5 lg:px-0 lg:pt-7">
-      <section className="mgb-card px-5 py-[1.125rem] xl:col-span-7 xl:row-span-2 lg:px-8 lg:py-7" aria-labelledby="flows-title">
+      <section className="mgb-card px-5 py-[1.125rem] xl:col-span-7 lg:px-8 lg:py-7" aria-labelledby="flows-title">
         <h2 id="flows-title" className="sr-only">
           Расходы по направлениям. Нажмите на направление, чтобы открыть подробности
         </h2>
@@ -165,9 +237,13 @@ export default function DataScreen({ savedCalculation, active }: DataScreenProps
         </p>
       </section>
 
-      <section className="mgb-card px-5 py-[1.125rem] xl:col-span-5 lg:px-7 lg:py-6" aria-labelledby="receipt-title">
+      {/* The same split as a paper receipt: 1 000 ₽ of spending, or the user's own deduction. */}
+      <section className="flex flex-col items-center gap-3 xl:col-span-5 lg:gap-4" aria-labelledby="receipt-title">
+        <h2 id="receipt-title" className="sr-only">
+          {personal ? `Ваш вычет ${formatRub(deduction)} по долям расходов` : `Чек на 1${NB}000${NB}₽ расходов`}
+        </h2>
         {deduction > 0 && (
-          <div role="group" aria-label="Сумма чека" className="mb-3.5 flex rounded-[0.875rem] bg-track p-[3px]">
+          <div role="group" aria-label="Сумма чека" className="flex w-full max-w-[24rem] rounded-[0.875rem] bg-track p-[3px]">
             {[
               { id: 'thousand' as const, label: `На 1${NB}000${NB}₽` },
               { id: 'mine' as const, label: 'На ваш вычет' },
@@ -187,70 +263,74 @@ export default function DataScreen({ savedCalculation, active }: DataScreenProps
             ))}
           </div>
         )}
-        <h2 id="receipt-title" className="m-0 mb-2 text-[1rem] font-semibold leading-snug lg:mb-3 lg:text-[1.125rem]">
-          {personal ? `Ваш вычет ${formatRub(deduction)} по тем же долям` : `Условный чек на 1${NB}000${NB}₽ расходов`}
-        </h2>
-        <ul className="m-0 list-none p-0 font-mono text-[0.8125rem] leading-[1.55] lg:text-[0.9375rem] lg:leading-[1.7]">
-          {SECTORS.map((sector) => (
-            <li key={sector.id}>
-              <button
-                type="button"
-                onClick={() => setSheet({ kind: 'sector', id: sector.id as SectorId })}
-                className="flex w-full gap-1.5 py-0.5 text-left text-ink-2"
-              >
-                <span className={cn(sector.id === leader && 'font-semibold text-ink')}>{SECTOR_NAME[sector.id]}</span>
-                <span aria-hidden="true" className="flex-1 -translate-y-1 border-b border-dotted border-ink-3 opacity-70" />
-                <span className="font-semibold text-ink">{rubles(receipt[sector.id as SectorId])}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
-        <p className="m-0 mt-2 text-[0.8125rem] leading-snug text-ink-3">
+        <Receipt
+          size="lg"
+          className="-mb-4"
+          title="ЧЕК ГОРОДА"
+          sub={personal ? 'ваш вычет по долям расходов' : 'на 1 000 ₽ расходов · 2026'}
+          lines={SECTORS.map((sector) => ({ label: SECTOR_NAME[sector.id], value: rubles(receipt[sector.id as SectorId]) }))}
+          totalLabel="ИТОГО"
+          total={rubles(receiptTotal)}
+          foot="СПАСИБО ЗА ПОКУПКИ ГОРОДУ"
+          label={`Чек на ${rubles(receiptTotal)}: ${SECTORS.map((sector) => `${SECTOR_NAME[sector.id].toLowerCase()} ${rubles(receipt[sector.id as SectorId])}`).join(', ')}.`}
+        />
+        <p className="m-0 max-w-[24rem] px-2 text-center text-[0.8125rem] leading-snug text-ink-3 lg:text-[0.875rem]">
           {personal
             ? 'Для сравнения масштаба: вычет возвращает уплаченный НДФЛ, а не оплачивает эти расходы.'
-            : 'Учебная модель по структуре расходов 2026 года'}
+            : 'Учебная модель: каждые 1 000 ₽ расходов по долям направлений 2026 года.'}
+          {deduction === 0 && (
+            <>
+              {' '}
+              <a href="#calc" className="font-semibold text-ink underline underline-offset-2">
+                Сохраните расчёт вычета — покажем ваш чек
+              </a>
+            </>
+          )}
         </p>
-        {deduction === 0 && (
-          <a href="#calc" className="mt-2 inline-block text-[0.8125rem] font-semibold leading-snug text-ink underline underline-offset-2">
-            Сохраните расчёт вычета — покажем ваш чек
-          </a>
-        )}
       </section>
 
-      <section className="mgb-card xl:col-span-5" aria-labelledby="districts-title">
-        <div className="px-5 pb-1 pt-4 lg:px-7 lg:pt-6">
-          <h2 id="districts-title" className="m-0 text-[1rem] font-semibold leading-snug lg:text-[1.125rem]">
+      <ProgramsBoard />
+
+      <SceneCard id="scoreboard" className="self-stretch xl:col-span-7" source={`Жителей — 13${NB}274${NB}285 (Росстат, 1${NB}января 2025).`} />
+      {YEAR.f < 1 && <SceneCard id="hourglass" className="self-stretch xl:col-span-5" source="Расчёт: годовой бюджет × доля прошедшего года." />}
+      <SceneCard id="forecast" layout="side" className={YEAR.f < 1 ? 'xl:col-span-12' : 'xl:col-span-5'} source={`Плановый период Закона г.${NB}Москвы №${NB}39.`} />
+
+      <section className="mgb-card xl:col-span-12" aria-labelledby="districts-title">
+        <div className="px-5 pb-1 pt-4 lg:px-8 lg:pt-7">
+          <h2 id="districts-title" className="m-0 text-[1rem] font-semibold leading-snug lg:text-[1.25rem]">
             Сценарии округов
           </h2>
-          <p className="m-0 mt-0.5 text-[0.8125rem] leading-snug text-ink-2">Условные значения для сравнения масштаба, не данные бюджета</p>
+          <p className="m-0 mt-0.5 text-[0.8125rem] leading-snug text-ink-2 lg:text-[0.9375rem]">Условные значения для сравнения масштаба, не данные бюджета</p>
         </div>
-        {DISTRICT_SCENARIOS.map((district, i) => (
-          <div key={district.id}>
-            {i > 0 && <div aria-hidden="true" className="mx-5 h-px bg-line lg:mx-7" />}
-            <button
-              type="button"
-              onClick={() => setSheet({ kind: 'district', id: district.id })}
-              className="flex min-h-[4.25rem] w-full items-center gap-3 px-5 py-3 text-left text-ink lg:px-7"
-            >
-              <span className="grid min-w-0 flex-1 gap-0.5">
-                <span className="flex items-center gap-2 text-[1rem] font-semibold leading-snug">
-                  {district.id}
-                  {myDistrict === district.id && (
-                    <span className="rounded-full bg-streak-bg px-2 py-[0.1875rem] text-[0.6875rem] font-semibold leading-none text-streak-ink">
-                      мой округ
-                    </span>
-                  )}
+        <div className="xl:grid xl:grid-cols-5 xl:gap-3 xl:px-8 xl:pb-7 xl:pt-4">
+          {DISTRICT_SCENARIOS.map((district, i) => (
+            <div key={district.id}>
+              {i > 0 && <div aria-hidden="true" className="mx-5 h-px bg-line lg:mx-8 xl:hidden" />}
+              <button
+                type="button"
+                onClick={() => setSheet({ kind: 'district', id: district.id })}
+                className="flex min-h-[4.25rem] w-full items-center gap-3 px-5 py-3 text-left text-ink lg:px-8 xl:h-full xl:flex-col xl:items-start xl:gap-2 xl:rounded-[1.25rem] xl:bg-track/60 xl:px-5 xl:py-4"
+              >
+                <span className="grid min-w-0 flex-1 gap-0.5">
+                  <span className="flex items-center gap-2 text-[1rem] font-semibold leading-snug xl:text-[1.375rem] xl:font-bold xl:tracking-[-0.02em]">
+                    {district.id}
+                    {myDistrict === district.id && (
+                      <span className="rounded-full bg-streak-bg px-2 py-[0.1875rem] text-[0.6875rem] font-semibold leading-none text-streak-ink">
+                        мой округ
+                      </span>
+                    )}
+                  </span>
+                  <span className="line-clamp-1 text-[0.8125rem] leading-snug text-ink-2 xl:line-clamp-3">{district.priority}</span>
                 </span>
-                <span className="line-clamp-1 text-[0.8125rem] leading-snug text-ink-2">{district.priority}</span>
-              </span>
-              <span className="grid shrink-0 justify-items-end">
-                <b className="whitespace-nowrap text-[0.9375rem] font-semibold">{rubles(district.perCapita)}</b>
-                <span className="text-[0.75rem] text-ink-3">на жителя</span>
-              </span>
-              <ChevronRight size={18} strokeWidth={2} aria-hidden="true" className="shrink-0 text-ink-3" />
-            </button>
-          </div>
-        ))}
+                <span className="grid shrink-0 justify-items-end xl:justify-items-start">
+                  <b className="whitespace-nowrap text-[0.9375rem] font-semibold xl:text-[1.0625rem]">{rubles(district.perCapita)}</b>
+                  <span className="text-[0.75rem] text-ink-3">на жителя</span>
+                </span>
+                <ChevronRight size={18} strokeWidth={2} aria-hidden="true" className="shrink-0 text-ink-3 xl:hidden" />
+              </button>
+            </div>
+          ))}
+        </div>
       </section>
 
       <p className="m-0 px-2 pb-2 pt-1 text-[0.8125rem] leading-relaxed text-ink-3 xl:col-span-12 lg:px-1 lg:text-[0.875rem]">

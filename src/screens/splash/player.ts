@@ -51,7 +51,10 @@ function snapshot(node: HTMLElement) {
   };
 }
 
-export function playScene({ root, wrap, stage, bg, mount, pre, dark, reduce, plain }: PlayOptions) {
+/** Takes the scene down; pause() and resume() hold and restart its clock (a card that scrolls out of view). */
+export type ScenePlayback = (() => void) & { pause(): void; resume(): void };
+
+export function playScene({ root, wrap, stage, bg, mount, pre, dark, reduce, plain }: PlayOptions): ScenePlayback {
   // Development captures: `?seek` stops the clock and window.__splashSeek(t) draws any moment.
   const seek = import.meta.env.DEV && new URLSearchParams(window.location.search).has('seek');
   const reveals: Reveal[] = [];
@@ -124,6 +127,7 @@ export function playScene({ root, wrap, stage, bg, mount, pre, dark, reduce, pla
 
   let alive = true;
   let ready = false;
+  let paused = false;
   let dirty = true;
   let raf = 0;
   let last = -1;
@@ -166,10 +170,10 @@ export function playScene({ root, wrap, stage, bg, mount, pre, dark, reduce, pla
         draw();
       };
       draw();
-    } else raf = requestAnimationFrame(tick);
+    } else if (!paused) raf = requestAnimationFrame(tick);
   });
 
-  return () => {
+  const stop = () => {
     alive = false;
     cancelAnimationFrame(raf);
     observer.disconnect();
@@ -177,4 +181,17 @@ export function playScene({ root, wrap, stage, bg, mount, pre, dark, reduce, pla
     cleanups.forEach((undo) => undo());
     if (seek) delete (window as SeekWindow).__splashSeek;
   };
+  return Object.assign(stop, {
+    pause() {
+      if (paused || seek) return;
+      paused = true;
+      cancelAnimationFrame(raf);
+    },
+    resume() {
+      if (!paused || !alive) return;
+      paused = false;
+      last = -1;
+      if (ready) raf = requestAnimationFrame(tick);
+    },
+  });
 }
