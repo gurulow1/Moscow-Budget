@@ -19,6 +19,7 @@ type Key = (typeof PARTS)[number]['key'];
 type Plan = Record<Key, number>;
 
 const START: Plan = { industry: 25, social: 45, transport: 30 };
+const SHY = '\u00AD';
 const pct = (value: number) => `${value} %`;
 
 interface VesselProps {
@@ -63,7 +64,8 @@ function Vessel({ label, color, value, mark, onChange }: VesselProps) {
           className="v-input"
         />
       </div>
-      <span className="v-label">{label}</span>
+      {/* A soft hyphen lets «Промышленность» break as «Промыш-ленность» under a narrow vessel. */}
+      <span className="v-label">{label.replace('Промышленность', 'Промыш' + SHY + 'ленность')}</span>
       <div className="v-steps">
         <button type="button" aria-label={`${label}: меньше`} onClick={() => set(value - STEP)} className="mgb-glass grid place-items-center text-ink">
           <Minus size={16} strokeWidth={2.4} aria-hidden="true" />
@@ -114,16 +116,18 @@ export default function BudgetBalancer(props: GameProps) {
       headline="Разлейте бюджет по трём сосудам"
       task={`Всего ${pct(100)}: ничего не должно остаться и перелиться. Социальной сфере — не меньше ${pct(SOCIAL_MIN)}.`}
       note="Тяните жидкость вверх и вниз или нажимайте − и +."
+      sideFirst
       side={
-        <div aria-live="polite">
-          <p className="m-0 flex items-baseline gap-2">
-            <b className={cn('text-[2.75rem] font-bold leading-none tracking-[-0.045em] lg:text-[4rem]', total !== 100 && 'text-accent')}>{total}</b>
-            <span className="text-[1.25rem] font-semibold text-ink-2 lg:text-[1.5rem]">из 100 %</span>
+        // A phone shows it as one row above the vessels: the total, then the two checks.
+        <div aria-live="polite" className="flex items-center gap-4 lg:block">
+          <p className="m-0 flex shrink-0 items-baseline gap-1.5 lg:gap-2">
+            <b className={cn('text-[2.25rem] font-bold leading-none tracking-[-0.045em] lg:text-[4rem]', total !== 100 && 'text-accent')}>{total}</b>
+            <span className="text-[1rem] font-semibold text-ink-2 lg:text-[1.5rem]">из 100 %</span>
           </p>
-          <div className="mt-3 grid gap-1.5 text-[0.9375rem] font-semibold leading-snug lg:text-[1rem]">
+          <div className="grid min-w-0 gap-1 text-[0.8125rem] font-semibold leading-snug lg:mt-3 lg:gap-1.5 lg:text-[1rem]">
             <p className={cn('m-0 flex items-center gap-2', total === 100 ? 'text-ok-ink' : 'text-accent')}>
               <Mark ok={total === 100} />
-              {total === 100 ? 'Разлито ровно 100 %' : total > 100 ? `Перелили ${pct(total - 100)}` : `Не разлито ${pct(100 - total)}`}
+              {total === 100 ? `Разлито ровно ${pct(100)}` : total > 100 ? `Перелили ${pct(total - 100)}` : `Не разлито ${pct(100 - total)}`}
             </p>
             <p className={cn('m-0 flex items-center gap-2', socialOk ? 'text-ok-ink' : 'text-accent')}>
               <Mark ok={socialOk} />

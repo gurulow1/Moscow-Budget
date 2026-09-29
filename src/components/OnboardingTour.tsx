@@ -407,7 +407,7 @@ export default function OnboardingTour({ onClose, activeStep, setActiveStep, set
             ref={nextRef}
             type="button"
             onClick={() => go(activeStep + 1)}
-            className="flex h-11 items-center gap-1 rounded-full bg-accent-fill px-5 text-[0.9375rem] font-semibold text-white shadow-[0_10px_20px_-14px_var(--mgb-accent)]"
+            className="flex h-11 shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-accent-fill px-5 text-[0.9375rem] font-semibold text-white shadow-[0_10px_20px_-14px_var(--mgb-accent)]"
           >
             {activeStep === 0 ? 'Начать экскурсию' : last ? 'Поехали!' : 'Далее'}
             {!last && <ChevronRight size={17} strokeWidth={2.4} aria-hidden="true" />}

@@ -132,18 +132,23 @@ export function playScene({ root, wrap, stage, bg, mount, pre, dark, reduce, pla
   let raf = 0;
   let last = -1;
   const draw = () => {
+    // A scene card in a hidden tab has no size: nothing to draw, and it measures again once it is shown.
+    if (!stage.clientWidth || !stage.clientHeight) {
+      dirty = true;
+      return false;
+    }
     if (dirty) {
       dirty = false;
       scene.resize();
     }
     applyReveals(clock);
     scene.frame(clock);
+    return true;
   };
-  // The clock only runs while frames are drawn: a hidden tab resumes where it was, so the entrance is never missed.
+  // The clock only runs while frames are drawn: a hidden tab or card resumes where it was, so the entrance is never missed.
   const tick = (now: number) => {
     if (last >= 0) clock += Math.min((now - last) / 1000, 0.1);
-    last = now;
-    draw();
+    last = draw() ? now : -1;
     raf = requestAnimationFrame(tick);
   };
 

@@ -41,7 +41,7 @@ export default function HomeScreen({ savedCalculation, ledger, learningPostUnloc
   const calc = savedCalculation ?? { education: example.education, sport: example.sport, deduction: calcDeduction(example.education, example.sport) };
 
   return (
-    <div className="grid gap-3 px-4 pt-4 xl:grid-cols-12 lg:gap-5 lg:px-0 lg:pt-7">
+    <div className="grid grid-cols-1 gap-3 px-4 pt-4 xl:grid-cols-12 lg:gap-5 lg:px-0 lg:pt-7">
       <section className="mgb-card px-5 pb-5 pt-5 xl:col-span-12 lg:px-9 lg:pb-8 lg:pt-8" aria-labelledby="home-spend-title">
         <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end md:gap-8">
           <div className="min-w-0">

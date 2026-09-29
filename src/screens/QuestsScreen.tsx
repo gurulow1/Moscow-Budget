@@ -180,8 +180,8 @@ export default function QuestsScreen({ calculatorDone, completedActivities, ledg
   };
 
   return (
-    <div className={cn('grid gap-3 px-4 pt-4 transition-opacity duration-200 lg:gap-5 lg:px-0 lg:pt-7', tourClassName)}>
-      <div className="grid gap-3 lg:grid-cols-2 lg:gap-5">
+    <div className={cn('grid grid-cols-1 gap-3 px-4 pt-4 transition-opacity duration-200 lg:gap-5 lg:px-0 lg:pt-7', tourClassName)}>
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-5">
         <DailyQuizBoard ledger={ledger} onStart={() => onOpen('daily')} />
 
         <section className="mgb-card flex flex-col px-5 py-[1.125rem] lg:px-7 lg:py-7" aria-labelledby="route-title">

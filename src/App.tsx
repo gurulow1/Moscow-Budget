@@ -343,7 +343,7 @@ export default function App() {
 
             {/* Every screen stays mounted, so switching tabs never loses a half-finished quiz or calculation. */}
             <main>
-              <section hidden={tab !== 'home'} aria-label="Главная">
+              <section hidden={tab !== 'home'} aria-label="Главная" className="mgb-page-in">
                 <HomeScreen
                   savedCalculation={savedCalculation}
                   ledger={ledger}
@@ -351,7 +351,7 @@ export default function App() {
                   onStartDailyQuiz={startDailyQuiz}
                 />
               </section>
-              <section hidden={tab !== 'calc'} aria-label="Налоговый вычет">
+              <section hidden={tab !== 'calc'} aria-label="Налоговый вычет" className="mgb-page-in">
                 <DeductionScreen
                   savedCalculation={savedCalculation}
                   isCompleted={calculatorTaskCompleted}
@@ -360,7 +360,7 @@ export default function App() {
                   tourCalculatorClass={getTourClass(3)}
                 />
               </section>
-              <section hidden={tab !== 'quests'} aria-label="Квесты" id="tour-quests">
+              <section hidden={tab !== 'quests'} aria-label="Квесты" id="tour-quests" className="mgb-page-in">
                 <QuestsScreen
                   calculatorDone={calculatorTaskCompleted}
                   completedActivities={completedActivities}
@@ -373,7 +373,7 @@ export default function App() {
                 hidden={tab !== 'data'}
                 aria-label="Куда идут деньги"
                 id="tour-analytics"
-                className={cn('transition-opacity duration-200', getTourClass(5))}
+                className={cn('mgb-page-in transition-opacity duration-200', getTourClass(5))}
               >
                 <DataScreen savedCalculation={savedCalculation} active={tab === 'data' && flowView === null} />
               </section>

@@ -49,9 +49,31 @@ export default function AppHeader({
     // On a wide screen the title and the actions share one row.
     <header className={cn('px-5 pt-3 lg:flex lg:items-center lg:justify-between lg:gap-6 lg:px-0 lg:pt-7', className)}>
       <div className="flex min-h-11 flex-wrap items-center justify-between gap-x-3 gap-y-2 lg:order-2 lg:shrink-0">
-        <p className="m-0 text-[0.875rem] font-bold tracking-[-0.01em] text-ink-2 lg:hidden">
-          МосГорБюджет<span className="text-accent">.Трек</span>
-        </p>
+        {/* New points take the brand's place for a moment, so the note never lands on the title. */}
+        <AnimatePresence mode="wait" initial={false}>
+          {gained !== null ? (
+            <motion.span
+              key="gained"
+              role="status"
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              className="whitespace-nowrap rounded-full bg-ok-soft px-2.5 py-1 text-[0.8125rem] font-semibold text-ok-ink"
+            >
+              +{gained} баллов
+            </motion.span>
+          ) : (
+            <motion.p
+              key="brand"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="m-0 text-[0.875rem] font-bold tracking-[-0.01em] text-ink-2 lg:hidden"
+            >
+              МосГорБюджет<span className="text-accent">.Трек</span>
+            </motion.p>
+          )}
+        </AnimatePresence>
         <div className="relative ml-auto flex items-center gap-2">
           <button
             id="tour-ai"
@@ -95,19 +117,6 @@ export default function AppHeader({
               <UserRound size={17} strokeWidth={1.8} aria-hidden="true" />
             </button>
           </div>
-          <AnimatePresence>
-            {gained !== null && (
-              <motion.span
-                role="status"
-                initial={{ opacity: 0, y: -4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -4 }}
-                className="absolute right-0 top-full z-20 mt-2 whitespace-nowrap rounded-full bg-ok-soft px-2.5 py-1 text-[0.8125rem] font-semibold text-ok-ink"
-              >
-                +{gained} баллов
-              </motion.span>
-            )}
-          </AnimatePresence>
         </div>
       </div>
       <div className="lg:order-1 lg:min-w-0">

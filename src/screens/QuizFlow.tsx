@@ -116,102 +116,104 @@ export default function QuizFlow({ quiz, ledger, onComplete, onDailyResult, onCl
   if (result) {
     const todayPoints = todayEntry(ledger)?.points ?? result.score * PILOT_POINTS_PER_ANSWER;
     return (
-      <FlowPage className="pb-[calc(2rem_+_env(safe-area-inset-bottom))]">
-        <FlowTop ref={titleRef} icon="close" label="Закрыть итог" onPress={onClose} title={daily ? 'Итог квиза дня' : 'Итог викторины'} />
-        <div className="mt-[1.125rem] grid gap-3">
-          <section className="mgb-card mgb-board border-0 px-5 pb-5 pt-5 lg:px-7 lg:pb-7 lg:pt-6" aria-label="Результат">
-            <div className="relative flex items-center justify-between gap-3">
-              <span className="mgb-board-label text-[0.6875rem] lg:text-[0.75rem]">{daily ? 'Квиз дня' : 'Викторина'}</span>
-              <span className="flex gap-1.5" aria-hidden="true">
-                {questions.map((question, i) => (
-                  <span key={question.question} className={cn('size-2 rounded-full', answers[i] === question.correct ? 'bg-[#FFB547]' : 'bg-[rgba(243,239,230,0.2)]')} />
-                ))}
-              </span>
-            </div>
-            {!daily && <p className="relative m-0 mt-2 text-[1.125rem] font-bold leading-snug tracking-[-0.02em] text-[#F7F4EE] lg:text-[1.375rem]">{quiz.title}</p>}
-            <div className="relative mt-4 [container-type:inline-size]">
-              <FlapBoard
-                rows={[`ВЕРНО ${result.score} ИЗ ${questions.length}`, result.passed ? 'ЗАСЧИТАНО' : `НУЖНО ${need} ИЗ ${questions.length}`]}
-                cols={13}
-                amber={[1]}
-                label={`Верных ответов: ${result.score} из ${questions.length}. ${result.passed ? 'Засчитано' : `Не засчитано: нужно ${need} из ${questions.length}`}.`}
-                className="[--cw:min(2.5rem,calc(100cqw/14.2))]"
+      <Fragment key="result">
+        <FlowPage className="pb-[calc(2rem_+_env(safe-area-inset-bottom))]">
+          <FlowTop ref={titleRef} icon="close" label="Закрыть итог" onPress={onClose} title={daily ? 'Итог квиза дня' : 'Итог викторины'} />
+          <div className="mt-[1.125rem] grid gap-3">
+            <section className="mgb-card mgb-board border-0 px-5 pb-5 pt-5 lg:px-7 lg:pb-7 lg:pt-6" aria-label="Результат">
+              <div className="relative flex items-center justify-between gap-3">
+                <span className="mgb-board-label text-[0.6875rem] lg:text-[0.75rem]">{daily ? 'Квиз дня' : 'Викторина'}</span>
+                <span className="flex gap-1.5" aria-hidden="true">
+                  {questions.map((question, i) => (
+                    <span key={question.question} className={cn('size-2 rounded-full', answers[i] === question.correct ? 'bg-[#FFB547]' : 'bg-[rgba(243,239,230,0.2)]')} />
+                  ))}
+                </span>
+              </div>
+              {!daily && <p className="relative m-0 mt-2 text-[1.125rem] font-bold leading-snug tracking-[-0.02em] text-[#F7F4EE] lg:text-[1.375rem]">{quiz.title}</p>}
+              <div className="relative mt-4 [container-type:inline-size]">
+                <FlapBoard
+                  rows={[`ВЕРНО ${result.score} ИЗ ${questions.length}`, result.passed ? 'ЗАСЧИТАНО' : `НУЖНО ${need} ИЗ ${questions.length}`]}
+                  cols={13}
+                  amber={[1]}
+                  label={`Верных ответов: ${result.score} из ${questions.length}. ${result.passed ? 'Засчитано' : `Не засчитано: нужно ${need} из ${questions.length}`}.`}
+                  className="[--cw:min(2.5rem,calc(100cqw/14.2))]"
+                />
+              </div>
+            </section>
+
+            <section className="mgb-card" aria-label="Награды">
+              <ListRow
+                title="Учебные баллы"
+                note={
+                  !result.passed
+                    ? `начисляются от ${need} верных ответов`
+                    : result.awarded
+                      ? daily
+                        ? 'за пройденный квиз, один раз в день'
+                        : 'за первое прохождение викторины'
+                      : daily
+                        ? 'сегодня уже начислены'
+                        : 'за эту викторину уже начислены'
+                }
+                right={<b className="shrink-0 text-[1.0625rem] font-bold">{result.awarded ? `+${quiz.reward}` : '0'}</b>}
               />
-            </div>
-          </section>
+              {daily && (
+                <>
+                  <Divider />
+                  <ListRow
+                    title="Городской пилот"
+                    note={
+                      result.firstToday
+                        ? `${PILOT_POINTS_PER_ANSWER} за верный ответ · пока не передаются в городские сервисы`
+                        : 'засчитан первый результат дня'
+                    }
+                    right={<b className="shrink-0 text-[1.0625rem] font-bold">{todayPoints > 0 ? `+${todayPoints}` : '0'}</b>}
+                  />
+                  <Divider />
+                  <ListRow
+                    title="Серия"
+                    note="квиз дня без пропусков"
+                    right={<b className="shrink-0 whitespace-nowrap text-[1.0625rem] font-bold">{days(ledger.streak)}</b>}
+                  />
+                </>
+              )}
+            </section>
 
-          <section className="mgb-card" aria-label="Награды">
-            <ListRow
-              title="Учебные баллы"
-              note={
-                !result.passed
-                  ? `начисляются от ${need} верных ответов`
-                  : result.awarded
-                    ? daily
-                      ? 'за пройденный квиз, один раз в день'
-                      : 'за первое прохождение викторины'
-                    : daily
-                      ? 'сегодня уже начислены'
-                      : 'за эту викторину уже начислены'
-              }
-              right={<b className="shrink-0 text-[1.0625rem] font-bold">{result.awarded ? `+${quiz.reward}` : '0'}</b>}
-            />
-            {daily && (
-              <>
-                <Divider />
-                <ListRow
-                  title="Городской пилот"
-                  note={
-                    result.firstToday
-                      ? `${PILOT_POINTS_PER_ANSWER} за верный ответ · пока не передаются в городские сервисы`
-                      : 'засчитан первый результат дня'
-                  }
-                  right={<b className="shrink-0 text-[1.0625rem] font-bold">{todayPoints > 0 ? `+${todayPoints}` : '0'}</b>}
-                />
-                <Divider />
-                <ListRow
-                  title="Серия"
-                  note="квиз дня без пропусков"
-                  right={<b className="shrink-0 whitespace-nowrap text-[1.0625rem] font-bold">{days(ledger.streak)}</b>}
-                />
-              </>
-            )}
-          </section>
-
-          <section className="mgb-card" aria-labelledby="quiz-review-title">
-            <h2 id="quiz-review-title" className="m-0 px-5 pb-0.5 pt-4 text-[0.875rem] font-normal text-ink-2">
-              Разбор ответов
-            </h2>
-            {questions.map((question, i) => {
-              const mine = answers[i];
-              const ok = mine === question.correct;
-              return (
-                <div key={question.question}>
-                  {i > 0 && <Divider />}
-                  <div className="flex gap-3 px-5 py-3.5">
-                    <Mark ok={ok} size={28} />
-                    <div className="min-w-0 flex-1">
-                      <p className="m-0 text-[0.9375rem] font-semibold leading-snug">{question.question}</p>
-                      <p className="m-0 mt-1 text-[0.875rem] leading-snug text-ink-2">
-                        Ответ: <b className="font-semibold text-ink">{question.options[question.correct]}</b>
-                      </p>
-                      {!ok && (
-                        <p className="m-0 mt-0.5 text-[0.875rem] leading-snug text-accent">
-                          Ваш ответ: {mine === undefined ? '—' : question.options[mine]}
+            <section className="mgb-card" aria-labelledby="quiz-review-title">
+              <h2 id="quiz-review-title" className="m-0 px-5 pb-0.5 pt-4 text-[0.875rem] font-normal text-ink-2">
+                Разбор ответов
+              </h2>
+              {questions.map((question, i) => {
+                const mine = answers[i];
+                const ok = mine === question.correct;
+                return (
+                  <div key={question.question}>
+                    {i > 0 && <Divider />}
+                    <div className="flex gap-3 px-5 py-3.5">
+                      <Mark ok={ok} size={28} />
+                      <div className="min-w-0 flex-1">
+                        <p className="m-0 text-[0.9375rem] font-semibold leading-snug">{question.question}</p>
+                        <p className="m-0 mt-1 text-[0.875rem] leading-snug text-ink-2">
+                          Ответ: <b className="font-semibold text-ink">{question.options[question.correct]}</b>
                         </p>
-                      )}
-                      <SourceLink question={question} />
+                        {!ok && (
+                          <p className="m-0 mt-0.5 text-[0.875rem] leading-snug text-accent">
+                            Ваш ответ: {mine === undefined ? '—' : question.options[mine]}
+                          </p>
+                        )}
+                        <SourceLink question={question} />
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </section>
+                );
+              })}
+            </section>
 
-          <PrimaryButton onClick={onToQuests}>К квестам</PrimaryButton>
-          <SecondaryButton onClick={restart}>Пройти ещё раз</SecondaryButton>
-        </div>
-      </FlowPage>
+            <PrimaryButton onClick={onToQuests}>К квестам</PrimaryButton>
+            <SecondaryButton onClick={restart}>Пройти ещё раз</SecondaryButton>
+          </div>
+        </FlowPage>
+      </Fragment>
     );
   }
 

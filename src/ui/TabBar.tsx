@@ -44,35 +44,38 @@ function TabIcon({ id, icon: Icon, questsBadge, size }: { id: AppTab; icon: Luci
 // The floating bottom bar is for phones and tablets; a wide screen gets SideNav instead.
 export default function TabBar({ active, questsBadge, dimmed }: TabBarProps) {
   return (
-    <nav
-      aria-label="Разделы"
-      className={cn(
-        'mgb-glass fixed bottom-[calc(1.25rem_+_env(safe-area-inset-bottom))] left-1/2 z-40 flex h-[4.25rem] w-[calc(min(100vw,30rem)_-_2rem)] -translate-x-1/2 overflow-hidden rounded-[2.125rem] p-1.5 lg:hidden',
-        'a11y-mobile-navigation transition-opacity duration-200',
-        dimmed && 'pointer-events-none opacity-20',
-      )}
-    >
-      <Glow />
-      {APP_TABS.map(({ id, label, icon }) => {
-        const isActive = id === active;
-        return (
-          <a
-            key={id}
-            href={`#${id}`}
-            aria-current={isActive ? 'page' : undefined}
-            className={cn(
-              'relative z-[1] grid flex-1 content-center justify-items-center gap-[3px] rounded-[1.75rem] text-[0.6875rem] leading-normal no-underline transition-colors duration-200',
-              isActive ? ACTIVE : 'font-medium text-ink-3',
-            )}
-            style={isActive ? { background: 'var(--mgb-blob)' } : undefined}
-          >
-            <TabIcon id={id} icon={icon} questsBadge={questsBadge} size={23} />
-            {label}
-            {id === 'quests' && questsBadge > 0 && <span className="sr-only">, новых викторин: {questsBadge}</span>}
-          </a>
-        );
-      })}
-    </nav>
+    <>
+      <div aria-hidden="true" className="mgb-bottom-veil [--veil:7.5rem] lg:hidden" />
+      <nav
+        aria-label="Разделы"
+        className={cn(
+          'mgb-glass fixed bottom-[calc(1.25rem_+_env(safe-area-inset-bottom))] left-1/2 z-40 flex h-[4.25rem] w-[calc(min(100vw,30rem)_-_2rem)] -translate-x-1/2 overflow-hidden rounded-[2.125rem] p-1.5 lg:hidden',
+          'a11y-mobile-navigation transition-opacity duration-200',
+          dimmed && 'pointer-events-none opacity-20',
+        )}
+      >
+        <Glow />
+        {APP_TABS.map(({ id, label, icon }) => {
+          const isActive = id === active;
+          return (
+            <a
+              key={id}
+              href={`#${id}`}
+              aria-current={isActive ? 'page' : undefined}
+              className={cn(
+                'relative z-[1] grid flex-1 content-center justify-items-center gap-[3px] rounded-[1.75rem] text-[0.6875rem] leading-normal no-underline transition-colors duration-200',
+                isActive ? ACTIVE : 'font-medium text-ink-3',
+              )}
+              style={isActive ? { background: 'var(--mgb-blob)' } : undefined}
+            >
+              <TabIcon id={id} icon={icon} questsBadge={questsBadge} size={23} />
+              {label}
+              {id === 'quests' && questsBadge > 0 && <span className="sr-only">, новых викторин: {questsBadge}</span>}
+            </a>
+          );
+        })}
+      </nav>
+    </>
   );
 }
 

@@ -206,7 +206,7 @@ export default function DeductionScreen({
 
       <div
         id="tour-calculator"
-        className={cn('grid gap-3 px-4 pt-3 transition-opacity duration-200 xl:grid-cols-12 lg:gap-5 lg:px-0 lg:pt-5', tourCalculatorClass)}
+        className={cn('grid grid-cols-1 gap-3 px-4 pt-3 transition-opacity duration-200 xl:grid-cols-12 lg:gap-5 lg:px-0 lg:pt-5', tourCalculatorClass)}
       >
         <div className="mgb-card px-5 py-[1.125rem] xl:col-span-7 lg:px-8 lg:py-8">
           <LimitMeter education={education} sport={sport} />

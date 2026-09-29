@@ -416,9 +416,32 @@
     .mgb-map-label.is-on { height: 2.125rem; font-size: 1rem; }
   }
 
+  /* A soft veil under the floating bottom bar and the main button: the page blurs and fades into it, so words scrolling
+     under the translucent glass never read as text on text. --veil is how high it reaches above the screen's edge. */
+  .mgb-bottom-veil {
+    position: fixed; inset-inline: 0; bottom: 0; z-index: 39; pointer-events: none;
+    height: calc(var(--veil, 7rem) + env(safe-area-inset-bottom));
+    background: linear-gradient(to top, color-mix(in srgb, var(--mgb-page) 72%, transparent) 0%, color-mix(in srgb, var(--mgb-page) 40%, transparent) 55%, transparent 100%);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    -webkit-mask-image: linear-gradient(to top, #000 50%, transparent 100%);
+    mask-image: linear-gradient(to top, #000 50%, transparent 100%);
+  }
+
+  /* A screen arrives softly: a tab when it is opened, a step (quiz, meeting, game) when it starts or moves on.
+     `top`, not transform: a transform would make the page the frame of its fixed bottom button while it plays.
+     A tab is hidden with display: none, so the animation plays again every time it is shown. Once played it lets go
+     of opacity (backwards, not both), so the tour can still dim a tab. */
+  .mgb-page-in { position: relative; animation: mgb-page-in 460ms cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+  @keyframes mgb-page-in {
+    from { opacity: 0; top: 14px; }
+    to { opacity: 1; top: 0; }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .mgb-aurora span,
-    .mgb-flow-dots {
+    .mgb-flow-dots,
+    .mgb-page-in {
       animation: none;
     }
   }

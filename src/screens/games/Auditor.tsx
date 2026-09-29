@@ -109,6 +109,7 @@ export default function Auditor(props: GameProps) {
       headline="Найдите ордер, который нельзя оплатить"
       task="В одном из трёх ордеров выплата не подтверждена документами. Проверьте нижнюю часть каждого бланка."
       note="Ответ даётся один раз. Компании и номера вымышленные."
+      sideFirst
       side={
         checked && picked !== null ? (
           <p aria-live="polite" className={cn('m-0 text-[1rem] font-semibold leading-snug lg:text-[1.125rem]', picked === RIGHT ? 'text-ok-ink' : 'text-accent')}>

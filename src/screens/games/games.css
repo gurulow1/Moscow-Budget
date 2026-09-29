@@ -3,13 +3,13 @@
 @layer components {
   .mgb-vessel, .mgb-story { --wave-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 12' preserveAspectRatio='none'%3E%3Cpath d='M0 12V6Q15 0 30 6T60 6T90 6T120 6V12Z'/%3E%3C/svg%3E"); }
 
-  /* ---------- measuring vessels (Балансировщик) ---------- */
+  /* ---------- measuring vessels (Балансировщик); on a phone they shrink with the screen, so − and + stay above the bottom button ---------- */
   .mgb-vessels { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem; align-items: end; }
-  .mgb-vessel { display: grid; justify-items: center; gap: 0.5rem; min-width: 0; }
+  .mgb-vessel { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; gap: 0.5rem; min-width: 0; }
   .mgb-vessel .v-read { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.035em; line-height: 1; font-variant-numeric: tabular-nums; }
   .mgb-vessel .v-read span { font-size: 0.6em; color: var(--mgb-ink-2); margin-left: 0.06em; }
   .mgb-vessel .v-glass {
-    position: relative; width: 100%; max-width: 7rem; height: 15rem; border-radius: 0.75rem 0.75rem 1.75rem 1.75rem;
+    position: relative; width: 100%; max-width: 7rem; height: clamp(10rem, calc(100dvh - 39rem), 15rem); border-radius: 0.75rem 0.75rem 1.75rem 1.75rem;
     background: linear-gradient(90deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.18) 45%, rgba(255, 255, 255, 0.4) 100%);
     box-shadow: inset 0 0 0 1.5px rgba(14, 21, 36, 0.12), inset 0 -10px 20px -12px rgba(14, 21, 36, 0.25), 0 18px 30px -22px rgba(14, 21, 36, 0.45);
     overflow: hidden; isolation: isolate;
@@ -55,7 +55,8 @@
   .mgb-vessel .v-input::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 7rem; height: 1rem; }
   .mgb-vessel .v-input::-moz-range-thumb { width: 7rem; height: 1rem; border: 0; }
   .mgb-vessel:has(.v-input:focus-visible) .v-glass { outline: 2px solid var(--mgb-accent); outline-offset: 4px; }
-  .mgb-vessel .v-label { font-size: 0.875rem; font-weight: 600; text-align: center; line-height: 1.2; }
+  /* A long word («Промышленность») is hyphenated on a narrow phone instead of pushing the vessels into each other. */
+  .mgb-vessel .v-label { max-width: 100%; font-size: clamp(0.75rem, 3.4vw, 0.875rem); font-weight: 600; text-align: center; line-height: 1.2; hyphens: auto; overflow-wrap: anywhere; }
   .mgb-vessel .v-steps { display: flex; gap: 0.375rem; }
   .mgb-vessel .v-steps button { width: 2.25rem; height: 2.25rem; border-radius: 999px; font-size: 1.125rem; font-weight: 600; line-height: 1; }
   @media (min-width: 1024px) {
@@ -127,8 +128,9 @@
 
   /* ---------- the well (Вычет-клик): blocks fall in, a rim at the limit ---------- */
   .mgb-well-wrap { position: relative; display: grid; grid-template-columns: auto 1fr; gap: 0.75rem; }
+  /* On a phone the well gives way to the three expenses under it, so they fit above the bottom button. */
   .mgb-well {
-    position: relative; height: 20rem; border-radius: 0 0 1.25rem 1.25rem; padding: 0 0.375rem;
+    position: relative; height: clamp(10.5rem, calc(100dvh - 39rem), 20rem); border-radius: 0 0 1.25rem 1.25rem; padding: 0 0.375rem;
     border: 3px solid color-mix(in srgb, var(--mgb-ink) 28%, transparent); border-top: 0;
     background: color-mix(in srgb, var(--mgb-ink) 3%, transparent);
     display: flex; flex-direction: column-reverse; gap: 4px;

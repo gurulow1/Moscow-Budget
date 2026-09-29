@@ -1,5 +1,6 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import type { QuestItem } from '../../data/quests';
+import { cn } from '../../lib/utils';
 import { Divider, FlowPage, FlowTop, ListRow, Mark, PrimaryButton, SecondaryButton } from '../../ui/Flow';
 import Stamp from '../../ui/exhibits/Stamp';
 
@@ -31,6 +32,8 @@ interface GamePageProps {
   note?: ReactNode;
   /** Status under the task on a wide screen, under the object on a phone. */
   side?: ReactNode;
+  /** On a phone, put the status above the object, where the bottom button cannot cover it. */
+  sideFirst?: boolean;
   step?: string;
   /** The game's object. */
   children: ReactNode;
@@ -38,14 +41,20 @@ interface GamePageProps {
 
 // Every game has one object to play with. Phone: the task, the object, the status. Wide screen, like the start
 // screen: the words on the left, the object on the right.
-export function GamePage({ item, onClose, headline, task, note, side, step, children }: GamePageProps) {
+export function GamePage({ item, onClose, headline, task, note, side, sideFirst, step, children }: GamePageProps) {
   useEffect(() => {
     window.scrollTo({ top: 0 });
   }, []);
   return (
     <FlowPage className="lg:max-w-[76rem]">
       <FlowTop icon="close" label="Закрыть игру" onPress={onClose} title={item.title} step={step} />
-      <div className="mt-4 grid flex-1 grid-rows-[auto_1fr_auto] [grid-template-areas:'t'_'o'_'s'] lg:mt-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:grid-rows-[auto_1fr] lg:gap-x-16 lg:[grid-template-areas:'t_o'_'s_o']">
+      <div
+        className={cn(
+          'mt-4 grid flex-1 lg:mt-10',
+          sideFirst ? "grid-rows-[auto_auto_1fr] [grid-template-areas:'t'_'s'_'o']" : "grid-rows-[auto_1fr_auto] [grid-template-areas:'t'_'o'_'s']",
+          "lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:grid-rows-[auto_1fr] lg:gap-x-16 lg:[grid-template-areas:'t_o'_'s_o']",
+        )}
+      >
         <div className="[grid-area:t]">
           <p className="m-0 text-[0.875rem] font-bold text-ink-2 lg:text-[1rem]">Задание</p>
           <h2 className="m-0 mt-1.5 text-[1.625rem] font-bold leading-[1.12] tracking-[-0.03em] [text-wrap:balance] lg:mt-3 lg:text-[2.625rem] lg:leading-[1.05] lg:tracking-[-0.04em]">
@@ -83,16 +92,19 @@ export function GameResult({ item, outcome, title, message, onRetry, retryLabel,
       <FlowTop ref={titleRef} icon="close" label="Закрыть итог" onPress={onClose} title="Итог игры" />
       <div className="mt-[1.125rem] grid gap-3 lg:mt-10 lg:grid-cols-2 lg:items-start lg:gap-8">
         {/* The verdict on paper, stamped. */}
-        <section className="mgb-paper px-6 pb-40 pt-6 lg:px-8 lg:pb-36 lg:pt-8" aria-label="Итог">
+        {/* The stamp has its own row under the words, so a long verdict never runs under it. */}
+        <section className="mgb-paper px-6 pb-4 pt-6 lg:px-8 lg:pb-6 lg:pt-8" aria-label="Итог">
           <p className="mgb-paper-head m-0">Итог · {item.title}</p>
           <h2 className="m-0 mt-3 text-[1.875rem] font-bold leading-[1.1] tracking-[-0.03em] lg:text-[2.375rem]">{title}</h2>
           <div className="mt-3 text-[0.9375rem] leading-[1.5] text-[#4E5462] [text-wrap:pretty] lg:text-[1.0625rem]">{message}</div>
-          <Stamp
-            word={outcome.win ? 'ЗАСЧИТАНО' : 'ДОРАБОТАТЬ'}
-            sub={outcome.win ? 'УЧЕБНЫЙ ЗАЧЁТ' : 'ЕЩЁ ОДНА ПОПЫТКА'}
-            tone={outcome.win ? 'ok' : 'bad'}
-            className="absolute bottom-4 right-5 lg:bottom-6 lg:right-7"
-          />
+          <div className="mt-2 flex justify-end">
+            <Stamp
+              word={outcome.win ? 'ЗАСЧИТАНО' : 'ДОРАБОТАТЬ'}
+              sub={outcome.win ? 'УЧЕБНЫЙ ЗАЧЁТ' : 'ЕЩЁ ОДНА ПОПЫТКА'}
+              tone={outcome.win ? 'ok' : 'bad'}
+              className="shrink-0"
+            />
+          </div>
         </section>
 
         <div className="grid gap-3">

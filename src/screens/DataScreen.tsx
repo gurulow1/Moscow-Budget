@@ -225,7 +225,7 @@ export default function DataScreen({ savedCalculation, active }: DataScreenProps
   const districtSheet = sheet?.kind === 'district' ? DISTRICT_SCENARIOS.find((item) => item.id === sheet.id)! : null;
 
   return (
-    <div className="grid gap-3 px-4 pt-4 xl:grid-cols-12 lg:items-start lg:gap-5 lg:px-0 lg:pt-7">
+    <div className="grid grid-cols-1 gap-3 px-4 pt-4 xl:grid-cols-12 lg:items-start lg:gap-5 lg:px-0 lg:pt-7">
       <section className="mgb-card px-5 py-[1.125rem] xl:col-span-7 lg:px-8 lg:py-7" aria-labelledby="flows-title">
         <h2 id="flows-title" className="sr-only">
           Расходы по направлениям. Нажмите на направление, чтобы открыть подробности
@@ -309,7 +309,7 @@ export default function DataScreen({ savedCalculation, active }: DataScreenProps
               <button
                 type="button"
                 onClick={() => setSheet({ kind: 'district', id: district.id })}
-                className="flex min-h-[4.25rem] w-full items-center gap-3 px-5 py-3 text-left text-ink lg:px-8 xl:h-full xl:flex-col xl:items-start xl:gap-2 xl:rounded-[1.25rem] xl:bg-track/60 xl:px-5 xl:py-4"
+                className="flex min-h-[4.25rem] w-full items-center gap-3 px-5 py-3 text-left text-ink lg:px-8 xl:relative xl:h-full xl:flex-col xl:items-start xl:gap-2 xl:rounded-[1.25rem] xl:bg-track/60 xl:px-5 xl:py-4"
               >
                 <span className="grid min-w-0 flex-1 gap-0.5">
                   <span className="flex items-center gap-2 text-[1rem] font-semibold leading-snug xl:text-[1.375rem] xl:font-bold xl:tracking-[-0.02em]">
@@ -326,7 +326,8 @@ export default function DataScreen({ savedCalculation, active }: DataScreenProps
                   <b className="whitespace-nowrap text-[0.9375rem] font-semibold xl:text-[1.0625rem]">{rubles(district.perCapita)}</b>
                   <span className="text-[0.75rem] text-ink-3">на жителя</span>
                 </span>
-                <ChevronRight size={18} strokeWidth={2} aria-hidden="true" className="shrink-0 text-ink-3 xl:hidden" />
+                {/* On a wide screen the arrow sits in the card's corner: the card opens the district's sheet. */}
+                <ChevronRight size={18} strokeWidth={2} aria-hidden="true" className="shrink-0 text-ink-3 xl:absolute xl:right-4 xl:top-5" />
               </button>
             </div>
           ))}
