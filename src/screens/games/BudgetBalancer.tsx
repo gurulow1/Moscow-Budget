@@ -1,11 +1,13 @@
-import { Fragment, useState } from 'react';
+import { Fragment, useState, type CSSProperties } from 'react';
+import { Minus, Plus } from 'lucide-react';
 import { BUDGET_FACTS } from '../../data/budgetFacts';
 import { cn } from '../../lib/utils';
 import { BottomAction, Mark } from '../../ui/Flow';
-import RangeField from '../../ui/RangeField';
-import { GamePage, GameResult, Task, finish, type GameProps, type Outcome } from './GameKit';
+import { GamePage, GameResult, finish, type GameProps, type Outcome } from './GameKit';
+import './games.css';
 
 const SOCIAL_MIN = 50;
+const STEP = 5;
 
 const PARTS = [
   { key: 'industry', label: 'Промышленность', color: 'var(--mgb-c4)' },
@@ -13,10 +15,66 @@ const PARTS = [
   { key: 'transport', label: 'Транспорт', color: 'var(--mgb-c1)' },
 ] as const;
 
-type Plan = Record<(typeof PARTS)[number]['key'], number>;
+type Key = (typeof PARTS)[number]['key'];
+type Plan = Record<Key, number>;
 
 const START: Plan = { industry: 25, social: 45, transport: 30 };
-const pct = (value: number) => `${value}\u00A0%`;
+const pct = (value: number) => `${value} %`;
+
+interface VesselProps {
+  label: string;
+  color: string;
+  value: number;
+  /** A line on the glass: the least this vessel must hold. */
+  mark?: number;
+  onChange: (value: number) => void;
+}
+
+// A measuring vessel of glass: the share is the liquid in it. Drag the liquid, use the arrows, or the − and + under it.
+function Vessel({ label, color, value, mark, onChange }: VesselProps) {
+  const set = (next: number) => onChange(Math.min(100, Math.max(0, next)));
+  return (
+    <div className="mgb-vessel" style={{ '--c': color, '--v': value } as CSSProperties}>
+      <span className="v-read" aria-hidden="true">
+        {value}
+        <span>%</span>
+      </span>
+      <div className="v-glass">
+        <div className="v-liquid" />
+        <div className="v-ticks" aria-hidden="true">
+          {Array.from({ length: 9 }, (_, i) => (
+            <i key={i} style={{ bottom: `${(i + 1) * 10}%` }} />
+          ))}
+        </div>
+        {mark !== undefined && (
+          <div className={cn('v-mark', value >= mark && 'is-ok')} style={{ bottom: `${mark}%` }} aria-hidden="true">
+            <b>от {pct(mark)}</b>
+          </div>
+        )}
+        <input
+          type="range"
+          min={0}
+          max={100}
+          step={STEP}
+          value={value}
+          aria-label={label}
+          aria-valuetext={pct(value)}
+          onChange={(event) => set(Number(event.target.value))}
+          className="v-input"
+        />
+      </div>
+      <span className="v-label">{label}</span>
+      <div className="v-steps">
+        <button type="button" aria-label={`${label}: меньше`} onClick={() => set(value - STEP)} className="mgb-glass grid place-items-center text-ink">
+          <Minus size={16} strokeWidth={2.4} aria-hidden="true" />
+        </button>
+        <button type="button" aria-label={`${label}: больше`} onClick={() => set(value + STEP)} className="mgb-glass grid place-items-center text-ink">
+          <Plus size={16} strokeWidth={2.4} aria-hidden="true" />
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export default function BudgetBalancer(props: GameProps) {
   const [plan, setPlan] = useState<Plan>(START);
@@ -38,11 +96,11 @@ export default function BudgetBalancer(props: GameProps) {
         }
         onRetry={() => setOutcome(null)}
       >
-        <section className="mgb-card px-5 py-[1.125rem]" aria-label="Как в жизни">
+        <section className="mgb-card px-5 py-[1.125rem] lg:px-7 lg:py-6" aria-label="Как в жизни">
           <p className="m-0 text-[0.875rem] text-ink-2">Как в бюджете Москвы</p>
-          <p className="m-0 mt-1 text-[0.9375rem] leading-[1.45] [text-wrap:pretty]">
-            На социальную сферу в широком смысле в 2026 году предусмотрено около 3,2{'\u00A0'}трлн{'\u00A0'}₽ — примерно {socialShare}
-            {'\u00A0'}% всех расходов.
+          <p className="m-0 mt-1 text-[0.9375rem] leading-[1.45] [text-wrap:pretty] lg:text-[1.0625rem]">
+            На социальную сферу в широком смысле в 2026 году предусмотрено около 3,2{' '}трлн{' '}₽ — примерно {socialShare}
+            {' '}% всех расходов.
           </p>
         </section>
       </GameResult>
@@ -50,49 +108,46 @@ export default function BudgetBalancer(props: GameProps) {
   }
 
   return (
-    <GamePage item={props.item} onClose={props.onClose}>
-      <Task>
-        Разделите {pct(100)} условного бюджета между тремя направлениями. Социальная сфера должна получить не меньше {pct(SOCIAL_MIN)}.
-      </Task>
-
-      <section className="mgb-card px-5 py-[1.125rem]" aria-label="Распределение">
-        <p className="m-0 flex items-baseline gap-1.5">
-          <b className={cn('text-[2.5rem] font-bold leading-[1.05] tracking-[-0.035em]', total !== 100 && 'text-accent')}>{total}</b>
-          <span className="text-[1.25rem] font-semibold leading-tight text-ink-2">из 100 %</span>
-        </p>
-        <div aria-hidden="true" className="relative mt-3.5 flex h-3 gap-[3px] overflow-hidden rounded-md bg-track">
-          {PARTS.map((part) => (
-            <span key={part.key} style={{ flex: `${plan[part.key]} 1 0`, background: part.color }} />
-          ))}
-          {total < 100 && <span className="bg-track" style={{ flex: `${100 - total} 1 0` }} />}
-        </div>
-        <div aria-live="polite" className="mt-2.5 grid gap-1 text-[0.875rem] font-semibold leading-snug">
-          <p className={cn('m-0 flex items-center gap-2', total === 100 ? 'text-ok-ink' : 'text-accent')}>
-            <Mark ok={total === 100} />
-            {total === 100 ? 'Ровно 100 %' : total > 100 ? `Лишние ${pct(total - 100)}` : `Не распределено ${pct(100 - total)}`}
+    <GamePage
+      item={props.item}
+      onClose={props.onClose}
+      headline="Разлейте бюджет по трём сосудам"
+      task={`Всего ${pct(100)}: ничего не должно остаться и перелиться. Социальной сфере — не меньше ${pct(SOCIAL_MIN)}.`}
+      note="Тяните жидкость вверх и вниз или нажимайте − и +."
+      side={
+        <div aria-live="polite">
+          <p className="m-0 flex items-baseline gap-2">
+            <b className={cn('text-[2.75rem] font-bold leading-none tracking-[-0.045em] lg:text-[4rem]', total !== 100 && 'text-accent')}>{total}</b>
+            <span className="text-[1.25rem] font-semibold text-ink-2 lg:text-[1.5rem]">из 100 %</span>
           </p>
-          <p className={cn('m-0 flex items-center gap-2', socialOk ? 'text-ok-ink' : 'text-accent')}>
-            <Mark ok={socialOk} />
-            Социальная сфера {pct(plan.social)} {socialOk ? '— приоритет соблюдён' : `— нужно от ${pct(SOCIAL_MIN)}`}
-          </p>
+          <div className="mt-3 grid gap-1.5 text-[0.9375rem] font-semibold leading-snug lg:text-[1rem]">
+            <p className={cn('m-0 flex items-center gap-2', total === 100 ? 'text-ok-ink' : 'text-accent')}>
+              <Mark ok={total === 100} />
+              {total === 100 ? 'Разлито ровно 100 %' : total > 100 ? `Перелили ${pct(total - 100)}` : `Не разлито ${pct(100 - total)}`}
+            </p>
+            <p className={cn('m-0 flex items-center gap-2', socialOk ? 'text-ok-ink' : 'text-accent')}>
+              <Mark ok={socialOk} />
+              Социальная сфера {pct(plan.social)} {socialOk ? '— приоритет соблюдён' : `— нужно от ${pct(SOCIAL_MIN)}`}
+            </p>
+          </div>
         </div>
-        <div className="mt-3 grid gap-1 border-t border-line pt-3">
+      }
+    >
+      <div className="mgb-card px-4 pb-5 pt-6 lg:px-10 lg:pb-8 lg:pt-10">
+        <div className="mgb-vessels">
           {PARTS.map((part) => (
             <Fragment key={part.key}>
-              <RangeField
+              <Vessel
                 label={part.label}
                 color={part.color}
-                min={0}
-                max={100}
-                step={5}
                 value={plan[part.key]}
-                valueText={pct(plan[part.key])}
+                mark={part.key === 'social' ? SOCIAL_MIN : undefined}
                 onChange={(value) => setPlan((current) => ({ ...current, [part.key]: value }))}
               />
             </Fragment>
           ))}
         </div>
-      </section>
+      </div>
 
       <BottomAction
         label={total === 100 ? 'Утвердить план' : 'Нужно ровно 100 %'}

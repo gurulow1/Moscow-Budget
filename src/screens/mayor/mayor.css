@@ -1,0 +1,139 @@
+/* «Виртуальный мэр»: the mayor's console (dials, the budget tank, faders) and the district's raised tile. */
+@layer components {
+  /* The console: dark metal in both themes, like the departures board. */
+  .mgb-console {
+    position: relative;
+    background: linear-gradient(180deg, #1A1D23 0%, #101216 100%);
+    color: #F3EFE6;
+    border-radius: 1.75rem;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 2px 4px rgba(0, 0, 0, 0.12), 0 30px 50px -30px rgba(10, 14, 30, 0.6);
+    isolation: isolate;
+    overflow: hidden;
+  }
+  .dark .mgb-console { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 0 0 1px rgba(255, 255, 255, 0.06), 0 34px 60px -30px rgba(0, 0, 0, 0.9); }
+  .mgb-console::before {
+    content: ''; position: absolute; inset: 0; pointer-events: none; z-index: -1;
+    background: linear-gradient(118deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0) 40%);
+  }
+  .mgb-console-label { font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(243, 239, 230, 0.5); }
+  .mgb-console-rule { border-top: 1px solid rgba(255, 255, 255, 0.08); }
+
+  /* ---------- dials ---------- */
+  .mgb-gauge { position: relative; display: grid; justify-items: center; min-width: 0; }
+  .mgb-gauge svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .mgb-gauge .g-track { fill: none; stroke: rgba(255, 255, 255, 0.09); stroke-width: 12; stroke-linecap: round; }
+  .mgb-gauge .g-value { fill: none; stroke-width: 12; stroke-linecap: round; transition: stroke-dasharray 650ms cubic-bezier(0.22, 1, 0.36, 1), stroke 300ms ease-out; }
+  .mgb-gauge.is-ok .g-value { stroke: #34CF9C; }
+  .mgb-gauge.is-bad .g-value { stroke: #FF5A6E; }
+  .mgb-gauge .g-zone { fill: none; stroke: rgba(52, 207, 156, 0.55); stroke-width: 3; stroke-linecap: round; }
+  .mgb-gauge .g-tick { stroke: rgba(255, 255, 255, 0.28); stroke-width: 1.4; stroke-linecap: round; }
+  .mgb-gauge .g-needle { transform-box: view-box; transform-origin: 100px 100px; transition: transform 800ms cubic-bezier(0.34, 1.56, 0.64, 1); }
+  .mgb-gauge .g-needle path { fill: #F7F4EE; filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.6)); }
+  .mgb-gauge .g-needle.is-ghost path { fill: #FFB547; opacity: 0.75; filter: none; }
+  .mgb-gauge .g-hub { fill: #2A2E36; stroke: rgba(255, 255, 255, 0.25); stroke-width: 1.2; }
+  .mgb-gauge .g-hub-dot { fill: #F7F4EE; }
+  .mgb-gauge .g-read { display: grid; justify-items: center; margin-top: -0.25rem; text-align: center; line-height: 1.15; }
+  .mgb-gauge .g-read b { font-size: 1.625rem; font-weight: 700; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+  .mgb-gauge .g-read b span { font-size: 0.6em; margin-left: 0.08em; opacity: 0.7; }
+  .mgb-gauge.is-bad .g-read b { color: #FF7384; }
+  .mgb-gauge .g-label { margin-top: 0.125rem; font-size: 0.8125rem; font-weight: 600; color: rgba(243, 239, 230, 0.85); white-space: nowrap; }
+  .mgb-gauge .g-target { font-size: 0.6875rem; color: rgba(243, 239, 230, 0.45); white-space: nowrap; }
+  @media (min-width: 1024px) {
+    .mgb-gauge .g-read b { font-size: 2.125rem; }
+    .mgb-gauge .g-label { font-size: 0.9375rem; }
+    .mgb-gauge .g-target { font-size: 0.75rem; }
+  }
+
+  /* ---------- the budget tank: segments of 5 mln, a line at the limit, the overspend striped red ---------- */
+  .mgb-tank { display: flex; gap: 3px; height: 2.25rem; }
+  .mgb-tank > span {
+    flex: 1 1 0; min-width: 0; border-radius: 3px;
+    background: rgba(255, 255, 255, 0.07);
+    transition: background-color 200ms ease-out;
+  }
+  .mgb-tank > span[data-c] {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0) 55%, rgba(0, 0, 0, 0.15) 100%), var(--c);
+    box-shadow: 0 0 10px -3px var(--c);
+  }
+  .mgb-tank > span[data-over] {
+    background: repeating-linear-gradient(-45deg, #FF5A6E 0 3px, #8E1F2E 3px 6px);
+    box-shadow: 0 0 10px -2px #FF5A6E;
+  }
+  .mgb-tank > i { flex: none; width: 2px; margin: -0.3rem 1px; border-radius: 1px; background: #F7F4EE; }
+  @media (min-width: 1024px) {
+    .mgb-tank { height: 2.75rem; gap: 4px; }
+  }
+
+  /* ---------- faders ---------- */
+  .mgb-fader { display: grid; justify-items: center; gap: 0.375rem; min-width: 0; }
+  .mgb-fader .fd-value { font-size: 1.125rem; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .mgb-fader .fd-body { position: relative; display: flex; gap: 0.625rem; height: 11rem; }
+  .mgb-fader .fd-scale { display: flex; flex-direction: column; justify-content: space-between; padding-block: 0.875rem; }
+  .mgb-fader .fd-scale i { display: block; width: 0.5rem; height: 1.5px; background: rgba(255, 255, 255, 0.25); }
+  .mgb-fader .fd-scale i:nth-child(odd) { width: 0.75rem; background: rgba(255, 255, 255, 0.4); }
+  .mgb-fader .fd-slot { position: relative; width: 3rem; }
+  .mgb-fader .fd-slot::before {
+    content: ''; position: absolute; left: 50%; top: 0.5rem; bottom: 0.5rem; width: 0.5rem; margin-left: -0.25rem; border-radius: 0.25rem;
+    background: #07080A; box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.9), 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+  .mgb-fader .fd-fill {
+    position: absolute; left: 50%; bottom: 0.5rem; width: 0.5rem; margin-left: -0.25rem; border-radius: 0.25rem;
+    height: calc(var(--f) * (100% - 1rem));
+    background: var(--c); box-shadow: 0 0 12px 1px color-mix(in srgb, var(--c) 70%, transparent);
+  }
+  .mgb-fader .fd-cap {
+    position: absolute; left: 0; right: 0; height: 1.75rem; bottom: calc(var(--f) * (100% - 1.75rem));
+    border-radius: 0.4375rem;
+    background:
+      repeating-linear-gradient(180deg, transparent 0 5px, rgba(0, 0, 0, 0.22) 5px 6px, rgba(255, 255, 255, 0.35) 6px 7px, transparent 7px 12px) center / 70% 12px no-repeat,
+      linear-gradient(180deg, #F4F1EA 0%, #C9C5BC 100%);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.6) inset, 0 6px 12px -4px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(0, 0, 0, 0.35);
+  }
+  .mgb-fader .fd-cap::after { content: ''; position: absolute; left: 12%; right: 12%; top: 50%; height: 2px; margin-top: -1px; border-radius: 1px; background: var(--c); }
+  .mgb-fader .fd-input {
+    position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: grab;
+    -webkit-appearance: none; appearance: none; writing-mode: vertical-lr; direction: rtl; touch-action: none;
+  }
+  .mgb-fader .fd-input:active { cursor: grabbing; }
+  .mgb-fader .fd-input::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 3rem; height: 1.75rem; }
+  .mgb-fader .fd-input::-moz-range-thumb { width: 3rem; height: 1.75rem; border: 0; }
+  .mgb-fader:has(.fd-input:focus-visible) .fd-cap { outline: 2px solid #FFB547; outline-offset: 3px; }
+  .mgb-fader .fd-label { margin-top: 0.25rem; font-size: 0.875rem; font-weight: 600; text-align: center; line-height: 1.2; color: rgba(243, 239, 230, 0.9); }
+  .mgb-fader .fd-demand { font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.04em; color: rgba(243, 239, 230, 0.5); white-space: nowrap; }
+  .mgb-fader .fd-demand.is-hot { color: #FFB547; }
+  @media (min-width: 1024px) {
+    .mgb-fader .fd-body { height: 14rem; }
+    .mgb-fader .fd-value { font-size: 1.375rem; }
+    .mgb-fader .fd-label { font-size: 1rem; }
+    .mgb-fader .fd-demand { font-size: 0.75rem; }
+  }
+
+  /* ---------- the district's raised tile ---------- */
+  .mgb-shape { display: block; overflow: visible; }
+  .mgb-shape path { vector-effect: non-scaling-stroke; }
+  .mgb-shape .s-edge { fill: #8E1624; }
+  .mgb-shape .s-top { stroke: rgba(255, 255, 255, 0.55); stroke-width: 1.2; }
+  .mgb-shape .s-top-a { stop-color: #FF6B7D; }
+  .mgb-shape .s-top-b { stop-color: #C81E33; }
+  .mgb-shape.is-ok .s-edge { fill: #0B6A4E; }
+  .mgb-shape.is-ok .s-top-a { stop-color: #4FE0B0; }
+  .mgb-shape.is-ok .s-top-b { stop-color: #13A37C; }
+  .mgb-shape.is-ghost .s-edge { fill: color-mix(in srgb, var(--mgb-ink) 16%, transparent); }
+  .mgb-shape.is-ghost .s-top-a { stop-color: color-mix(in srgb, var(--mgb-ink) 8%, var(--mgb-card)); }
+  .mgb-shape.is-ghost .s-top-b { stop-color: color-mix(in srgb, var(--mgb-ink) 14%, var(--mgb-card)); }
+  .mgb-shape.is-ghost .s-top { stroke: color-mix(in srgb, var(--mgb-ink) 18%, transparent); }
+
+  /* A district badge: the tile inside an enamel medallion. */
+  .mgb-medal {
+    display: grid; place-items: center; aspect-ratio: 1; border-radius: 50%;
+    background: radial-gradient(circle at 35% 28%, #FFFFFF 0%, #EEF1F6 45%, #D5DAE3 100%);
+    box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.9), inset 0 0 0 5px rgba(14, 21, 36, 0.08), 0 10px 22px -12px rgba(14, 21, 36, 0.5);
+  }
+  .dark .mgb-medal { background: radial-gradient(circle at 35% 28%, #3A4150 0%, #232834 55%, #171B23 100%); box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.12), 0 12px 24px -12px rgba(0, 0, 0, 0.9); }
+  .mgb-medal .mgb-shape { width: 62%; height: 62%; }
+  .mgb-medal.is-empty { background: color-mix(in srgb, var(--mgb-ink) 5%, transparent); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--mgb-ink) 14%, transparent); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .mgb-gauge .g-needle, .mgb-gauge .g-value { transition: none; }
+  }
+}

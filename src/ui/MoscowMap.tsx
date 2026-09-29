@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { cn } from '../lib/utils';
-import MAP from '../data/moscowDistricts.json';
+import { DISTRICTS, MOSCOW as MAP, bbox } from './mapGeo';
 
 // Moscow inside MKAD and just beyond it, from OpenStreetMap (scripts/moscow-districts.py): every district as a tile,
 // the river and ponds, the large parks, the metro lines. Some districts can be picked out; the chosen one is lit and the
@@ -19,45 +19,17 @@ interface MoscowMapProps {
   onSelect: (id: string) => void;
   /** Glide the view to the chosen district instead of always showing the whole city. */
   follow?: boolean;
+  /** The view when not following: x, y, width, height in km; the whole map by default. */
+  frame?: number[];
   className?: string;
 }
 
-interface District {
-  name: string;
-  okrug: string;
-  d: string;
-  c: number[];
-  area: number;
-}
-
-const DISTRICTS = MAP.districts as District[];
 const [MIN_X, MIN_Y, MAX_X, MAX_Y] = MAP.bounds as number[];
 const PAD = 1.2;
 const CITY = [MIN_X - PAD, MIN_Y - PAD, MAX_X - MIN_X + PAD * 2, MAX_Y - MIN_Y + PAD * 2];
 const ease = (x: number) => 1 - Math.pow(1 - x, 3);
 
-// The bounding box of a path's points, from its absolute moves and relative lines.
-function bbox(d: string) {
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  for (const part of d.split('M').slice(1)) {
-    const [head, rel = ''] = part.replace(/z/g, '').split('l');
-    let [x, y] = head.trim().split(/\s+/).map(Number);
-    const nums = rel.trim() ? rel.trim().split(/\s+/).map(Number) : [];
-    const visit = () => {
-      minX = Math.min(minX, x); maxX = Math.max(maxX, x);
-      minY = Math.min(minY, y); maxY = Math.max(maxY, y);
-    };
-    visit();
-    for (let i = 0; i + 1 < nums.length; i += 2) {
-      x += nums[i];
-      y += nums[i + 1];
-      visit();
-    }
-  }
-  return [minX, minY, maxX, maxY];
-}
-
-export default function MoscowMap({ picks, selected, onSelect, follow = true, className }: MoscowMapProps) {
+export default function MoscowMap({ picks, selected, onSelect, follow = true, frame, className }: MoscowMapProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [hover, setHover] = useState<string | null>(null);
   const byName = useMemo(() => new Map(DISTRICTS.map((d) => [d.name, d])), []);
@@ -66,15 +38,15 @@ export default function MoscowMap({ picks, selected, onSelect, follow = true, cl
 
   // The view: the whole city, or the chosen district with the city around it. It glides between the two.
   const target = useMemo(() => {
-    if (!follow || !chosenDistrict) return CITY;
+    if (!follow || !chosenDistrict) return frame ?? CITY;
     const [x0, y0, x1, y1] = bbox(chosenDistrict.d);
     const w = Math.max(x1 - x0, 5.5) * 2.6;
     const h = w * (CITY[3] / CITY[2]);
     const cx = (x0 + x1) / 2;
     const cy = (y0 + y1) / 2;
     return [cx - w / 2, cy - h / 2, w, h];
-  }, [follow, chosenDistrict]);
-  const view = useRef(CITY.slice());
+  }, [follow, chosenDistrict, frame]);
+  const view = useRef((frame ?? CITY).slice());
   // Labels and outlines keep their size on screen at any zoom and map width: --k is map units per screen pixel.
   const scale = () => {
     const svg = svgRef.current;
@@ -113,7 +85,7 @@ export default function MoscowMap({ picks, selected, onSelect, follow = true, cl
   return (
     <svg
       ref={svgRef}
-      viewBox={CITY.join(' ')}
+      viewBox={(frame ?? CITY).join(' ')}
       preserveAspectRatio="xMidYMid meet"
       role="group"
       aria-label="Карта районов Москвы"

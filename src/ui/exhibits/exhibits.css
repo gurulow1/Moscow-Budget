@@ -176,6 +176,31 @@
   .mgb-steps li:not(:last-child)::after { top: 1.5rem; left: 6rem; }
 }
 
+/* ---------- the stamp: lands with a thud, ink multiplied into the paper ---------- */
+.mgb-stamp { --ink: #2B4BB5; --stamp-paper: #FFFEFA; color: var(--ink); width: 9.5rem; aspect-ratio: 1; transform: rotate(-12deg); opacity: 0; mix-blend-mode: multiply; pointer-events: none; }
+.mgb-stamp.is-bad { --ink: #CF2A3D; }
+.mgb-stamp svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.mgb-stamp.is-in { animation: mgb-stamp 460ms cubic-bezier(0.2, 0.9, 0.25, 1) 350ms both; }
+.mgb-stamp.is-still { opacity: 0.95; }
+@keyframes mgb-stamp {
+  0% { opacity: 0; transform: rotate(-24deg) scale(2); filter: blur(4px); }
+  65% { opacity: 1; transform: rotate(-11deg) scale(0.96); filter: blur(0); }
+  100% { opacity: 0.95; transform: rotate(-12deg) scale(1); }
+}
+
+/* ---------- a sheet of paper: game results, decrees, forms ---------- */
+.mgb-paper {
+  position: relative;
+  background: linear-gradient(180deg, #F6F4EE 0%, #FFFEFA 12%, #FFFEFA 100%);
+  color: #22262E;
+  border-radius: 0.375rem;
+  box-shadow: 0 1px 2px rgba(20, 28, 50, 0.08), 0 22px 40px -24px rgba(20, 28, 50, 0.45), inset 0 0 0 1px rgba(34, 38, 46, 0.06);
+}
+.dark .mgb-paper { background: linear-gradient(180deg, #DAD7CF 0%, #ECE9E1 12%, #ECE9E1 100%); box-shadow: 0 26px 50px -24px rgba(0, 0, 0, 0.9); }
+.dark .mgb-paper .mgb-stamp { --stamp-paper: #ECE9E1; }
+.mgb-paper-head { font-family: var(--font-mono); font-size: 0.75rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #6D7280; }
+.mgb-paper-rule { border-top: 1.5px dashed #C3C6CD; }
+
 /* ---------- quests as a transit map: a coloured line per kind, tasks as its stations ---------- */
 .mgb-line-badge {
   display: grid; place-items: center; width: 1.75rem; height: 1.75rem; flex: none; border-radius: 50%;
@@ -229,6 +254,7 @@
   .mgb-waffle.is-in > span { animation: none; opacity: 1; }
   .mgb-pulse i + i { animation: none; opacity: 0; }
   .mgb-route-stop[data-state="now"] { animation: none; }
+  .mgb-stamp.is-in { animation: none; opacity: 0.9; }
 }
 }
 

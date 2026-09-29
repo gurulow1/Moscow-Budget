@@ -1,57 +1,73 @@
-import { Fragment, useState } from 'react';
-import { Check, ChevronDown } from 'lucide-react';
+import { useEffect, useState, type CSSProperties } from 'react';
+import { Check, ChevronLeft, ChevronRight } from 'lucide-react';
 import { BUDGET_FACTS } from '../../data/budgetFacts';
 import { sourceLink } from '../../data/quests';
 import { cn } from '../../lib/utils';
 import { BottomAction } from '../../ui/Flow';
-import { Choice, GamePage, GameResult, Task, finish, type GameProps, type Outcome } from './GameKit';
+import { reducedMotion } from '../../ui/exhibits/useEntrance';
+import AnswerCards from '../quiz/AnswerCards';
+import { GamePage, GameResult, finish, type GameProps, type Outcome } from './GameKit';
+import './games.css';
 
-const bn = (value: number) => `${value.toLocaleString('ru-RU', { maximumFractionDigits: 1 })}\u00A0млрд\u00A0₽`;
+const NB = ' ';
+const bn = (value: number) => `${value.toLocaleString('ru-RU', { maximumFractionDigits: 1 })}${NB}млрд${NB}₽`;
+const figure = (value: number) => value.toLocaleString('ru-RU', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
-const SECTIONS = [
+// Three sections as stories: a big figure on the direction's colour, waves running under it.
+const STORIES = [
   {
     id: 'health',
     title: 'Здравоохранение',
     color: 'var(--mgb-c4)',
-    text: `На развитие здравоохранения в 2026 году предусмотрено ${bn(BUDGET_FACTS.healthcare.amountBillion)} — без учёта оплаты медицинской помощи из Фонда ОМС. Это поликлиники, больницы и цифровая медицина (ЕМИАС).`,
+    value: BUDGET_FACTS.healthcare.amountBillion,
+    text: 'Без учёта оплаты медицинской помощи из Фонда ОМС. Это поликлиники, больницы и цифровая медицина (ЕМИАС).',
   },
   {
     id: 'transport',
     title: 'Транспорт',
     color: 'var(--mgb-c1)',
-    text: `Развитие транспортной системы — ${bn(BUDGET_FACTS.transport.amountBillion)}. Строятся и продлеваются линии метро, город закупает электробусы и трамваи, развивает МЦД.`,
+    value: BUDGET_FACTS.transport.amountBillion,
+    text: 'Строятся и продлеваются линии метро, город закупает электробусы и трамваи, развивает МЦД.',
   },
   {
     id: 'education',
     title: 'Образование',
     color: 'var(--mgb-c2)',
-    text: `Развитие образования — ${bn(BUDGET_FACTS.education.amountBillion)}. Школы переходят на единый московский стандарт, работает «Московская электронная школа» (МЭШ).`,
+    value: BUDGET_FACTS.education.amountBillion,
+    text: 'Школы переходят на единый московский стандарт, работает «Московская электронная школа» (МЭШ).',
   },
 ];
 
 const QUESTION = {
   text: 'Какая программа получит больше всего денег в 2026 году?',
-  options: [
-    { label: 'Развитие транспортной системы', amount: BUDGET_FACTS.transport.amountBillion },
-    { label: 'Развитие городской среды', amount: BUDGET_FACTS.urbanEnvironment.amountBillion },
-    { label: 'Спорт Москвы', amount: BUDGET_FACTS.sport.amountBillion },
-  ],
+  options: ['Развитие транспортной системы', 'Развитие городской среды', 'Спорт Москвы'],
   right: 0,
 };
 
+const DWELL = 6000;
+
 export default function AnalyticSurfing(props: GameProps) {
-  const [open, setOpen] = useState<string | null>(null);
-  const [read, setRead] = useState<string[]>([]);
+  const [index, setIndex] = useState(0);
+  const [read, setRead] = useState<string[]>([STORIES[0].id]);
   const [asking, setAsking] = useState(false);
   const [picked, setPicked] = useState<number | null>(null);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
-  const allRead = read.length === SECTIONS.length;
+  const allRead = read.length === STORIES.length;
   const source = sourceLink('openBudget2026');
+  const story = STORIES[index];
 
-  const toggle = (id: string) => {
-    setOpen(open === id ? null : id);
-    if (!read.includes(id)) setRead([...read, id]);
+  const go = (next: number) => {
+    const i = Math.min(STORIES.length - 1, Math.max(0, next));
+    setIndex(i);
+    setRead((current) => (current.includes(STORIES[i].id) ? current : [...current, STORIES[i].id]));
   };
+
+  // Like stories: each one moves on by itself after a few seconds, unless motion is reduced.
+  useEffect(() => {
+    if (asking || reducedMotion() || index === STORIES.length - 1) return;
+    const timer = window.setTimeout(() => go(index + 1), DWELL);
+    return () => window.clearTimeout(timer);
+  }, [index, asking]);
 
   if (outcome) {
     return (
@@ -71,25 +87,20 @@ export default function AnalyticSurfing(props: GameProps) {
 
   if (asking) {
     return (
-      <GamePage item={props.item} onClose={props.onClose}>
-        <section className="mgb-card px-5 py-[1.125rem]" aria-labelledby="surf-question">
-          <p className="m-0 text-[0.875rem] text-ink-2">Контрольный вопрос</p>
-          <h2 id="surf-question" className="m-0 mt-1 text-[1.375rem] font-bold leading-tight tracking-[-0.02em]">
-            {QUESTION.text}
-          </h2>
-        </section>
-        <div role="radiogroup" aria-label="Варианты ответа" className="grid gap-2.5">
-          {QUESTION.options.map((option, i) => (
-            <Fragment key={option.label}>
-              <Choice checked={picked === i} onClick={() => setPicked(i)} title={option.label} />
-            </Fragment>
-          ))}
-        </div>
-        <a href={source.url} target="_blank" rel="noopener noreferrer" className="px-2 text-[0.8125rem] text-ink-3 underline underline-offset-[3px]">
-          {source.label} · проверено {source.checked} ↗
-        </a>
+      <GamePage
+        item={props.item}
+        onClose={props.onClose}
+        headline={QUESTION.text}
+        task="Контрольный вопрос по разделам, которые вы прочитали."
+        side={
+          <a href={source.url} target="_blank" rel="noopener noreferrer" className="text-[0.8125rem] text-ink-3 underline underline-offset-[3px] lg:text-[0.875rem]">
+            {source.label} · проверено {source.checked} ↗
+          </a>
+        }
+      >
+        <AnswerCards options={QUESTION.options} picked={picked} correct={QUESTION.right} onPick={setPicked} reduce={reducedMotion()} />
         <BottomAction
-          label={picked === null ? 'Выберите ответ' : 'Проверить'}
+          label={picked === null ? 'Выберите ответ' : 'Показать итог'}
           disabled={picked === null}
           onClick={() => setOutcome(finish(props, picked === QUESTION.right))}
         />
@@ -98,41 +109,89 @@ export default function AnalyticSurfing(props: GameProps) {
   }
 
   return (
-    <GamePage item={props.item} onClose={props.onClose}>
-      <Task note={`Прочитано ${read.length} из ${SECTIONS.length}`}>
-        Откройте и прочитайте три раздела о крупных направлениях бюджета. Потом ответьте на один вопрос.
-      </Task>
-
-      <section className="mgb-card" aria-label="Разделы">
-        {SECTIONS.map((section, i) => {
-          const isOpen = open === section.id;
-          const isRead = read.includes(section.id);
-          return (
-            <div key={section.id}>
-              {i > 0 && <div aria-hidden="true" className="mx-5 h-px bg-line" />}
-              <button
-                type="button"
-                aria-expanded={isOpen}
-                onClick={() => toggle(section.id)}
-                className="flex min-h-[3.75rem] w-full items-center gap-3 px-5 py-3 text-left text-ink"
-              >
-                <span aria-hidden="true" className="size-2.5 shrink-0 rounded-full" style={{ background: section.color }} />
-                <span className="flex-1 text-[1rem] font-semibold">{section.title}</span>
-                {isRead && (
-                  <span className="grid size-6 place-items-center rounded-full bg-ok-soft text-ok-ink">
-                    <Check size={13} strokeWidth={3} aria-hidden="true" />
-                    <span className="sr-only">прочитано</span>
+    <GamePage
+      item={props.item}
+      onClose={props.onClose}
+      headline="Пролистайте три раздела бюджета"
+      task="Крупнейшие направления 2026 года — по одному на экран. Потом один вопрос."
+      side={
+        <ol className="m-0 grid list-none gap-1.5 p-0">
+          {STORIES.map((item, i) => {
+            const done = read.includes(item.id);
+            return (
+              <li key={item.id}>
+                <button
+                  type="button"
+                  onClick={() => go(i)}
+                  aria-current={i === index ? 'step' : undefined}
+                  className={cn(
+                    'flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left text-ink transition-colors duration-200',
+                    i === index ? 'bg-card shadow-[var(--mgb-seg-shadow)]' : 'bg-transparent',
+                  )}
+                >
+                  <span aria-hidden="true" className="size-3 shrink-0 rounded-full" style={{ background: item.color }} />
+                  <span className="flex-1 text-[1rem] font-semibold">{item.title}</span>
+                  <span className="text-[0.875rem] text-ink-3">{bn(item.value)}</span>
+                  <span className={cn('grid size-6 shrink-0 place-items-center rounded-full', done ? 'bg-ok-soft text-ok-ink' : 'bg-track')}>
+                    {done && <Check size={13} strokeWidth={3} aria-hidden="true" />}
+                    <span className="sr-only">{done ? 'прочитано' : 'не прочитано'}</span>
                   </span>
-                )}
-                <ChevronDown size={18} aria-hidden="true" className={cn('shrink-0 text-ink-3 transition-transform', isOpen && 'rotate-180')} />
-              </button>
-              {isOpen && <p className="m-0 px-5 pb-4 text-[0.9375rem] leading-[1.5] text-ink-2 [text-wrap:pretty]">{section.text}</p>}
-            </div>
-          );
-        })}
+                </button>
+              </li>
+            );
+          })}
+        </ol>
+      }
+    >
+      <section
+        className="mgb-story"
+        style={{ '--c': story.color } as CSSProperties}
+        aria-roledescription="история"
+        aria-label={`${story.title}, ${index + 1} из ${STORIES.length}`}
+      >
+        <div className="s-bars" aria-hidden="true">
+          {STORIES.map((item, i) => (
+            <span key={item.id} className={cn(i < index && 'is-done', i === index && (index === STORIES.length - 1 || reducedMotion() ? 'is-done' : 'is-now'))}>
+              <i key={i === index ? `now-${index}` : 'x'} />
+            </span>
+          ))}
+        </div>
+        <p className="s-kicker m-0">
+          Раздел {index + 1} из {STORIES.length}
+        </p>
+        <p className="s-num m-0" aria-live="polite">
+          {figure(story.value)}
+        </p>
+        <p className="s-unit m-0">млрд ₽ в 2026 году</p>
+        <h3 className="s-title m-0">{story.title}</h3>
+        <p className="s-text m-0">{story.text}</p>
+        <div className="s-waves" aria-hidden="true">
+          <i />
+          <i />
+        </div>
+        <div className="absolute right-4 top-9 z-[2] flex gap-2">
+          <button
+            type="button"
+            onClick={() => go(index - 1)}
+            disabled={index === 0}
+            aria-label="Предыдущий раздел"
+            className="grid size-10 place-items-center rounded-full bg-white/20 text-white backdrop-blur disabled:opacity-35"
+          >
+            <ChevronLeft size={20} strokeWidth={2.4} aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            onClick={() => go(index + 1)}
+            disabled={index === STORIES.length - 1}
+            aria-label="Следующий раздел"
+            className="grid size-10 place-items-center rounded-full bg-white/20 text-white backdrop-blur disabled:opacity-35"
+          >
+            <ChevronRight size={20} strokeWidth={2.4} aria-hidden="true" />
+          </button>
+        </div>
       </section>
 
-      <BottomAction label={allRead ? 'К вопросу' : 'Прочитайте все разделы'} disabled={!allRead} onClick={() => setAsking(true)} />
+      <BottomAction label={allRead ? 'К вопросу' : `Прочитано ${read.length} из ${STORIES.length}`} disabled={!allRead} onClick={() => setAsking(true)} />
     </GamePage>
   );
 }

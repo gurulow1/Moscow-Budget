@@ -1,8 +1,7 @@
 import { useEffect, useRef, type ReactNode } from 'react';
-import { Check } from 'lucide-react';
-import { cn } from '../../lib/utils';
 import type { QuestItem } from '../../data/quests';
 import { Divider, FlowPage, FlowTop, ListRow, Mark, PrimaryButton, SecondaryButton } from '../../ui/Flow';
+import Stamp from '../../ui/exhibits/Stamp';
 
 export interface GameProps {
   item: QuestItem;
@@ -23,88 +22,42 @@ export const finish = (props: GameProps, win: boolean): Outcome => ({
   awarded: win && props.item.reward ? props.onComplete(props.item.id, props.item.reward) : false,
 });
 
-export function GamePage({ item, onClose, children }: { item: QuestItem; onClose: () => void; children: ReactNode }) {
+interface GamePageProps {
+  item: QuestItem;
+  onClose: () => void;
+  /** The task in a few words, set big like the start screen's headline. */
+  headline: ReactNode;
+  task?: ReactNode;
+  note?: ReactNode;
+  /** Status under the task on a wide screen, under the object on a phone. */
+  side?: ReactNode;
+  step?: string;
+  /** The game's object. */
+  children: ReactNode;
+}
+
+// Every game has one object to play with. Phone: the task, the object, the status. Wide screen, like the start
+// screen: the words on the left, the object on the right.
+export function GamePage({ item, onClose, headline, task, note, side, step, children }: GamePageProps) {
   useEffect(() => {
     window.scrollTo({ top: 0 });
   }, []);
   return (
-    <FlowPage>
-      <FlowTop icon="close" label="Закрыть игру" onPress={onClose} title={item.title} />
-      <div className="mt-4 grid gap-3">{children}</div>
+    <FlowPage className="lg:max-w-[76rem]">
+      <FlowTop icon="close" label="Закрыть игру" onPress={onClose} title={item.title} step={step} />
+      <div className="mt-4 grid flex-1 grid-rows-[auto_1fr_auto] [grid-template-areas:'t'_'o'_'s'] lg:mt-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:grid-rows-[auto_1fr] lg:gap-x-16 lg:[grid-template-areas:'t_o'_'s_o']">
+        <div className="[grid-area:t]">
+          <p className="m-0 text-[0.875rem] font-bold text-ink-2 lg:text-[1rem]">Задание</p>
+          <h2 className="m-0 mt-1.5 text-[1.625rem] font-bold leading-[1.12] tracking-[-0.03em] [text-wrap:balance] lg:mt-3 lg:text-[2.625rem] lg:leading-[1.05] lg:tracking-[-0.04em]">
+            {headline}
+          </h2>
+          {task && <p className="m-0 mt-2 text-[1rem] leading-[1.45] text-ink-2 [text-wrap:pretty] lg:mt-4 lg:text-[1.125rem]">{task}</p>}
+          {note && <p className="m-0 mt-2 text-[0.8125rem] leading-snug text-ink-3 lg:text-[0.875rem]">{note}</p>}
+        </div>
+        <div className="mt-5 min-w-0 [grid-area:o] lg:mt-0">{children}</div>
+        {side && <div className="mt-4 min-w-0 [grid-area:s] lg:mt-8">{side}</div>}
+      </div>
     </FlowPage>
-  );
-}
-
-export function Task({ children, note }: { children: ReactNode; note?: ReactNode }) {
-  return (
-    <section className="mgb-card px-5 py-[1.125rem]" aria-label="Задание">
-      <p className="m-0 text-[0.875rem] text-ink-2">Задание</p>
-      <p className="m-0 mt-1 text-[1rem] leading-[1.45] [text-wrap:pretty]">{children}</p>
-      {note && <p className="m-0 mt-2 text-[0.8125rem] leading-snug text-ink-3">{note}</p>}
-    </section>
-  );
-}
-
-interface ChoiceProps {
-  kind?: 'radio' | 'checkbox';
-  checked: boolean;
-  onClick: () => void;
-  title: ReactNode;
-  text?: ReactNode;
-  /** After the answer: ok — right, bad — wrong; the card shows it instead of the selection. */
-  tone?: 'ok' | 'bad' | null;
-  tag?: string;
-  /** Extra lines shown under the card text, e.g. the explanation after the answer */
-  children?: ReactNode;
-  locked?: boolean;
-}
-
-// A selectable card: a radio for one answer, a checkbox for several.
-export function Choice({ kind = 'radio', checked, onClick, title, text, tone, tag, children, locked }: ChoiceProps) {
-  return (
-    <button
-      type="button"
-      role={kind}
-      aria-checked={checked}
-      aria-disabled={locked || undefined}
-      onClick={() => !locked && onClick()}
-      className={cn(
-        'grid w-full gap-1.5 rounded-3xl border-[1.5px] px-[1.125rem] py-4 text-left text-ink transition-[border-color,box-shadow,background-color,opacity] duration-200',
-        tone === 'ok'
-          ? 'border-c3 bg-ok-soft'
-          : tone === 'bad'
-            ? 'border-accent bg-accent-soft'
-            : checked
-              ? 'border-accent bg-card shadow-[0_0_0_3px_var(--mgb-accent-soft),var(--mgb-shadow)]'
-              : 'border-line bg-card shadow-[var(--mgb-shadow)]',
-        locked && !tone && 'opacity-55',
-        locked && 'cursor-default',
-      )}
-    >
-      <span className="flex items-center gap-3">
-        <span
-          aria-hidden="true"
-          className={cn(
-            'grid size-6 shrink-0 place-items-center border-2',
-            kind === 'radio' ? 'rounded-full' : 'rounded-[0.4375rem]',
-            tone === 'ok' ? 'border-c3 bg-c3 text-white' : tone === 'bad' ? 'border-accent bg-accent text-white' : checked ? 'border-accent' : 'border-track',
-            kind === 'checkbox' && checked && !tone && 'bg-accent text-white',
-          )}
-        >
-          {kind === 'radio' && !tone ? (
-            <span className={cn('size-2.5 rounded-full bg-accent transition-opacity', checked ? 'opacity-100' : 'opacity-0')} />
-          ) : (
-            (checked || tone) && <Check size={14} strokeWidth={3} />
-          )}
-        </span>
-        <span className="min-w-0 flex-1 text-[1.0625rem] font-semibold leading-tight tracking-[-0.01em]">{title}</span>
-        {tag && (
-          <span className={cn('shrink-0 text-[0.8125rem] font-semibold', tone === 'bad' ? 'text-accent' : 'text-ok-ink')}>{tag}</span>
-        )}
-      </span>
-      {text && <span className="text-[0.875rem] leading-[1.45] text-ink-2 [text-wrap:pretty]">{text}</span>}
-      {children}
-    </button>
   );
 }
 
@@ -126,41 +79,47 @@ export function GameResult({ item, outcome, title, message, onRetry, retryLabel,
   }, []);
 
   return (
-    <FlowPage className="pb-[calc(2rem_+_env(safe-area-inset-bottom))]">
+    <FlowPage className="pb-[calc(2rem_+_env(safe-area-inset-bottom))] lg:max-w-[68rem]">
       <FlowTop ref={titleRef} icon="close" label="Закрыть итог" onPress={onClose} title="Итог игры" />
-      <div className="mt-[1.125rem] grid gap-3">
-        <section className="mgb-card px-5 py-[1.125rem]" aria-label="Итог">
-          <p className="m-0 text-[0.875rem] text-ink-2">{item.title}</p>
-          <div className="mt-2.5 flex items-center gap-3">
-            <Mark ok={outcome.win} size={40} />
-            <h2 className="m-0 text-[1.75rem] font-bold leading-[1.15] tracking-[-0.025em]">{title}</h2>
-          </div>
-          <div className="mt-2.5 text-[0.9375rem] leading-[1.45] text-ink-2 [text-wrap:pretty]">{message}</div>
+      <div className="mt-[1.125rem] grid gap-3 lg:mt-10 lg:grid-cols-2 lg:items-start lg:gap-8">
+        {/* The verdict on paper, stamped. */}
+        <section className="mgb-paper px-6 pb-40 pt-6 lg:px-8 lg:pb-36 lg:pt-8" aria-label="Итог">
+          <p className="mgb-paper-head m-0">Итог · {item.title}</p>
+          <h2 className="m-0 mt-3 text-[1.875rem] font-bold leading-[1.1] tracking-[-0.03em] lg:text-[2.375rem]">{title}</h2>
+          <div className="mt-3 text-[0.9375rem] leading-[1.5] text-[#4E5462] [text-wrap:pretty] lg:text-[1.0625rem]">{message}</div>
+          <Stamp
+            word={outcome.win ? 'ЗАСЧИТАНО' : 'ДОРАБОТАТЬ'}
+            sub={outcome.win ? 'УЧЕБНЫЙ ЗАЧЁТ' : 'ЕЩЁ ОДНА ПОПЫТКА'}
+            tone={outcome.win ? 'ok' : 'bad'}
+            className="absolute bottom-4 right-5 lg:bottom-6 lg:right-7"
+          />
         </section>
 
-        {children}
+        <div className="grid gap-3">
+          {children}
 
-        {item.reward && (
-          <section className="mgb-card" aria-label="Награда">
-            <ListRow
-              title="Учебные баллы"
-              note={!outcome.win ? 'начисляются, когда задание выполнено' : outcome.awarded ? 'за первое прохождение' : 'за это задание уже начислены'}
-              right={<b className="shrink-0 text-[1.0625rem] font-bold">{outcome.awarded ? `+${item.reward}` : '0'}</b>}
-            />
-          </section>
-        )}
+          {item.reward && (
+            <section className="mgb-card" aria-label="Награда">
+              <ListRow
+                title="Учебные баллы"
+                note={!outcome.win ? 'начисляются, когда задание выполнено' : outcome.awarded ? 'за первое прохождение' : 'за это задание уже начислены'}
+                right={<b className="shrink-0 text-[1.0625rem] font-bold">{outcome.awarded ? `+${item.reward}` : '0'}</b>}
+              />
+            </section>
+          )}
 
-        {outcome.win ? (
-          <>
-            <PrimaryButton onClick={onToQuests}>К квестам</PrimaryButton>
-            <SecondaryButton onClick={onRetry}>{retryLabel ?? 'Сыграть ещё раз'}</SecondaryButton>
-          </>
-        ) : (
-          <>
-            <PrimaryButton onClick={onRetry}>{retryLabel ?? 'Попробовать ещё раз'}</PrimaryButton>
-            <SecondaryButton onClick={onToQuests}>К квестам</SecondaryButton>
-          </>
-        )}
+          {outcome.win ? (
+            <>
+              <PrimaryButton onClick={onToQuests}>К квестам</PrimaryButton>
+              <SecondaryButton onClick={onRetry}>{retryLabel ?? 'Сыграть ещё раз'}</SecondaryButton>
+            </>
+          ) : (
+            <>
+              <PrimaryButton onClick={onRetry}>{retryLabel ?? 'Попробовать ещё раз'}</PrimaryButton>
+              <SecondaryButton onClick={onToQuests}>К квестам</SecondaryButton>
+            </>
+          )}
+        </div>
       </div>
     </FlowPage>
   );
