@@ -291,9 +291,13 @@ export default function DataScreen({ savedCalculation, active }: DataScreenProps
 
       <ProgramsBoard />
 
-      <SceneCard id="scoreboard" className="self-stretch xl:col-span-7" source={`Жителей — 13${NB}274${NB}285 (Росстат, 1${NB}января 2025).`} />
-      {YEAR.f < 1 && <SceneCard id="hourglass" className="self-stretch xl:col-span-5" source="Расчёт: годовой бюджет × доля прошедшего года." />}
-      <SceneCard id="forecast" layout="side" className={YEAR.f < 1 ? 'xl:col-span-12' : 'xl:col-span-5'} source={`Плановый период Закона г.${NB}Москвы №${NB}39.`} />
+      {/* On a phone the three scenes sit side by side in a swipe row instead of three screens of scrolling; from lg on
+          the wrapper steps aside (display: contents) and the cards take their places in the grid. */}
+      <div className="mgb-swipe lg:contents">
+        <SceneCard id="scoreboard" className="self-stretch xl:col-span-7" source={`Жителей — 13${NB}274${NB}285 (Росстат, 1${NB}января 2025).`} />
+        {YEAR.f < 1 && <SceneCard id="hourglass" className="self-stretch xl:col-span-5" source="Расчёт: годовой бюджет × доля прошедшего года." />}
+        <SceneCard id="forecast" layout="side" className={YEAR.f < 1 ? 'xl:col-span-12' : 'xl:col-span-5'} source={`Плановый период Закона г.${NB}Москвы №${NB}39.`} />
+      </div>
 
       <section className="mgb-card xl:col-span-12" aria-labelledby="districts-title">
         <div className="px-5 pb-1 pt-4 lg:px-8 lg:pt-7">

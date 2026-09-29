@@ -29,8 +29,10 @@ export function tilesOf(parts: WafflePart[]) {
 interface WaffleProps {
   parts: WafflePart[];
   label: string;
-  /** 10 × 10 square filled row by row, or a 25 × 4 band filled column by column (the parts then read left to right). */
+  /** 10 × 10 square filled row by row, or a band filled column by column (the parts then read left to right). */
   shape?: 'square' | 'band';
+  /** A band's height: 4 rows (25 × 4) or 5 rows (20 × 5, for a phone). */
+  rows?: 4 | 5;
   /** The part to light up; the other tiles fade. */
   active?: string | null;
   onActive?: (id: string | null) => void;
@@ -38,7 +40,7 @@ interface WaffleProps {
 }
 
 // A hundred tiles: every tile is one ruble of each hundred.
-export default function Waffle({ parts, label, shape = 'square', active, onActive, className }: WaffleProps) {
+export default function Waffle({ parts, label, shape = 'square', rows = 4, active, onActive, className }: WaffleProps) {
   const [ref, entrance] = useEntrance<HTMLDivElement>(0.35);
   const tiles = tilesOf(parts);
   const cells = parts.flatMap((part, p) => Array.from({ length: tiles[p] }, () => part));
@@ -49,7 +51,7 @@ export default function Waffle({ parts, label, shape = 'square', active, onActiv
       ref={ref}
       role="img"
       aria-label={label}
-      className={cn('mgb-waffle', band && 'band', entrance === 'in' && 'is-in', entrance === 'still' && 'is-still', className)}
+      className={cn('mgb-waffle', band && 'band', band && rows === 5 && 'r5', entrance === 'in' && 'is-in', entrance === 'still' && 'is-still', className)}
       onPointerOver={(event) => {
         if (event.pointerType !== 'mouse' || !onActive) return;
         const id = (event.target as HTMLElement).dataset.s;
@@ -63,7 +65,7 @@ export default function Waffle({ parts, label, shape = 'square', active, onActiv
           data-s={part.id}
           className={part.ghost ? 'ghost' : undefined}
           data-dim={active && active !== part.id ? '' : undefined}
-          style={{ '--c': part.color, '--i': band ? Math.floor(i / 4) * 2.4 + (i % 4) : i } as CSSProperties}
+          style={{ '--c': part.color, '--i': band ? Math.floor(i / rows) * 2.4 + (i % rows) : i } as CSSProperties}
         />
       ))}
     </div>

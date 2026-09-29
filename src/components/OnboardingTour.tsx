@@ -79,11 +79,11 @@ interface Box {
 }
 
 // Fini: floats, blinks now and then and waves on the greeting steps.
-function Fini({ mood }: { mood: Mood }) {
+function Fini({ mood, small }: { mood: Mood; small?: boolean }) {
   const uid = useId().replace(/:/g, '');
   const eye = mood === 'thinking' ? '#F5A524' : mood === 'waving' ? '#5E9BFF' : '#34D399';
   return (
-    <div aria-hidden="true" className="relative size-16 shrink-0 select-none">
+    <div aria-hidden="true" className={cn('relative shrink-0 select-none', small ? 'size-12' : 'size-16')}>
       <motion.span
         className="absolute inset-1 rounded-full bg-accent"
         animate={{ scale: [1, 1.18, 1], opacity: [0.28, 0, 0.28] }}
@@ -171,14 +171,8 @@ function visibleBox(rect: DOMRect, vw: number, vh: number): Box {
 const clamp = (v: number, min: number, max: number) => Math.min(Math.max(v, min), Math.max(min, max));
 
 // Beside the target if it fits, otherwise below or above, otherwise in the corner away from the sidebar.
-function placeCard(spot: Box | null, card: { w: number; h: number }, vw: number, vh: number, mobile: boolean) {
+function placeCard(spot: Box | null, card: { w: number; h: number }, vw: number, vh: number) {
   const { w, h } = card;
-  if (mobile) {
-    const left = (vw - w) / 2;
-    const bottom = vh - h - 12;
-    const coversTarget = spot !== null && spot.top + spot.height > bottom - 8;
-    return { left, top: coversTarget && spot.top > h + 24 ? 12 : bottom };
-  }
   if (!spot) return { left: (vw - w) / 2, top: (vh - h) / 2 };
 
   const midY = clamp(spot.top + spot.height / 2 - h / 2, MARGIN, vh - h - MARGIN);
@@ -195,8 +189,12 @@ function placeCard(spot: Box | null, card: { w: number; h: number }, vw: number,
   return pick ?? { left: vw - w - MARGIN, top: vh - h - MARGIN };
 }
 
+// The visible height: on a phone the browser's bars take part of the window, and visualViewport knows how much.
+const viewport = () => ({ vw: window.innerWidth, vh: window.visualViewport?.height ?? window.innerHeight });
+const CARD_GAP = 12;
+
 export default function OnboardingTour({ onClose, activeStep, setActiveStep, setActiveTab }: OnboardingTourProps) {
-  const [view, setView] = useState({ vw: window.innerWidth, vh: window.innerHeight });
+  const [view, setView] = useState(viewport);
   const [spot, setSpot] = useState<Box | null>(null);
   const [cardSize, setCardSize] = useState({ w: 400, h: 320 });
   const [direction, setDirection] = useState(1);
@@ -225,9 +223,13 @@ export default function OnboardingTour({ onClose, activeStep, setActiveStep, set
   }, [activeStep, setActiveTab]);
 
   useEffect(() => {
-    const onResize = () => setView({ vw: window.innerWidth, vh: window.innerHeight });
+    const onResize = () => setView(viewport());
     window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
+    window.visualViewport?.addEventListener('resize', onResize);
+    return () => {
+      window.removeEventListener('resize', onResize);
+      window.visualViewport?.removeEventListener('resize', onResize);
+    };
   }, []);
 
   // Follow the target: scroll it into view once, then keep the spotlight on it while the page moves.
@@ -242,9 +244,12 @@ export default function OnboardingTour({ onClose, activeStep, setActiveStep, set
       if (!el) return;
       if (scroll) {
         const rect = el.getBoundingClientRect();
-        el.scrollIntoView({ behavior: 'auto', block: rect.height > window.innerHeight * 0.6 ? 'start' : 'center' });
+        // A phone keeps the card at the bottom, so the target goes to the top of the screen.
+        if (window.innerWidth < 768) window.scrollTo({ top: Math.max(0, window.scrollY + rect.top - CARD_GAP), behavior: 'auto' });
+        else el.scrollIntoView({ behavior: 'auto', block: rect.height > window.innerHeight * 0.6 ? 'start' : 'center' });
       }
-      setSpot(visibleBox(el.getBoundingClientRect(), window.innerWidth, window.innerHeight));
+      const { vw, vh } = viewport();
+      setSpot(visibleBox(el.getBoundingClientRect(), vw, vh));
     };
     // The tab switch needs a moment to lay out.
     const first = window.setTimeout(() => measure(true), 220);
@@ -297,9 +302,22 @@ export default function OnboardingTour({ onClose, activeStep, setActiveStep, set
 
   const { vw, vh } = view;
   const width = mobile ? Math.min(vw - 24, 480) : Math.min(416, vw - 32);
-  const place = placeCard(spot, { w: width, h: cardSize.h }, vw, vh, mobile);
+  // Small phones get a tighter card, so more of the page stays in sight.
+  const compact = mobile && (vh < 720 || vw < 380);
+  const place = placeCard(spot, { w: width, h: cardSize.h }, vw, vh);
   const spring = { type: 'spring' as const, stiffness: 190, damping: 28 };
-  const hole = spot ?? { top: vh / 2, left: vw / 2, width: 0, height: 0 };
+  // On a phone the card is pinned to the bottom edge (to the top when the target sits down there) by CSS, so the
+  // browser's bars can't push it off screen, and the spotlight stops short of it: the two never overlap.
+  const cardTop = vh - CARD_GAP - cardSize.h;
+  const atTop = mobile && spot !== null && spot.top > cardTop - 24;
+  let lit = spot;
+  if (mobile && spot) {
+    const top = atTop ? Math.max(spot.top, CARD_GAP + cardSize.h + 10) : spot.top;
+    const bottom = atTop ? spot.top + spot.height : Math.min(spot.top + spot.height, cardTop - 10);
+    lit = { ...spot, top, height: Math.max(0, bottom - top) };
+  }
+  const hole = lit ?? { top: vh / 2, left: vw / 2, width: 0, height: 0 };
+  const edge = `calc(${CARD_GAP}px + env(safe-area-inset-${atTop ? 'top' : 'bottom'}))`;
 
   return (
     <div className="pointer-events-none fixed inset-0 z-[230]">
@@ -311,11 +329,11 @@ export default function OnboardingTour({ onClose, activeStep, setActiveStep, set
         animate={{ opacity: 1, ...hole }}
         transition={{ ...spring, opacity: { duration: 0.25 } }}
       />
-      {spot && (
+      {lit && (
         <motion.div
           className="fixed rounded-[1.375rem] border-2 border-accent"
           initial={false}
-          animate={{ ...spot, opacity: 1 }}
+          animate={{ ...lit, opacity: 1 }}
           transition={spring}
         >
           <motion.span
@@ -333,10 +351,17 @@ export default function OnboardingTour({ onClose, activeStep, setActiveStep, set
         aria-labelledby="onboarding-title"
         aria-describedby="onboarding-description"
         tabIndex={-1}
-        className="mgb-card pointer-events-auto fixed flex flex-col gap-4 px-5 pb-4 pt-5 text-ink outline-none"
-        style={{ width }}
-        initial={{ opacity: 0, scale: 0.94, top: place.top, left: place.left }}
-        animate={{ opacity: 1, scale: 1, top: place.top, left: place.left }}
+        className={cn(
+          'mgb-card is-solid pointer-events-auto fixed flex flex-col text-ink outline-none',
+          compact ? 'gap-3 px-4 pb-3.5 pt-4' : 'gap-4 px-5 pb-4 pt-5',
+        )}
+        style={
+          mobile
+            ? { width, left: (vw - width) / 2, top: atTop ? edge : 'auto', bottom: atTop ? 'auto' : edge, maxHeight: `calc(100dvh - ${CARD_GAP * 2}px)`, overflowY: 'auto' }
+            : { width }
+        }
+        initial={mobile ? { opacity: 0, y: atTop ? -16 : 16 } : { opacity: 0, scale: 0.94, top: place.top, left: place.left }}
+        animate={mobile ? { opacity: 1, y: 0 } : { opacity: 1, scale: 1, top: place.top, left: place.left }}
         transition={{ ...spring, opacity: { duration: 0.2 } }}
       >
         <button
@@ -356,20 +381,20 @@ export default function OnboardingTour({ onClose, activeStep, setActiveStep, set
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -18 * direction }}
             transition={{ duration: 0.16, ease: 'easeOut' }}
-            className="grid gap-3"
+            className={cn('grid', compact ? 'gap-2' : 'gap-3')}
           >
-            <div className="flex items-center gap-3.5 pr-11">
-              <Fini mood={step.mood} />
+            <div className={cn('flex items-center pr-11', compact ? 'gap-3' : 'gap-3.5')}>
+              <Fini mood={step.mood} small={compact} />
               <div className="min-w-0 flex-1">
                 <p className="m-0 text-[0.8125rem] font-semibold text-accent">
                   Фини · шаг {activeStep + 1} из {STEPS.length}
                 </p>
-                <h3 id="onboarding-title" className="m-0 mt-0.5 text-[1.1875rem] font-bold leading-snug tracking-[-0.015em]">
+                <h3 id="onboarding-title" className={cn('m-0 mt-0.5 font-bold leading-snug tracking-[-0.015em]', compact ? 'text-[1.0625rem]' : 'text-[1.1875rem]')}>
                   {step.title}
                 </h3>
               </div>
             </div>
-            <p id="onboarding-description" className="m-0 text-[0.9375rem] leading-[1.5] text-ink-2 [text-wrap:pretty]">
+            <p id="onboarding-description" className={cn('m-0 leading-[1.5] text-ink-2 [text-wrap:pretty]', compact ? 'text-[0.875rem]' : 'text-[0.9375rem]')}>
               {step.text}
             </p>
           </motion.div>
@@ -388,14 +413,16 @@ export default function OnboardingTour({ onClose, activeStep, setActiveStep, set
           ))}
         </div>
 
-        <div className="flex items-center justify-between gap-2">
+        {/* On the first step «Назад» is gone, not just hidden, so «Начать экскурсию» has the whole row on a narrow phone. */}
+        <div className={cn('flex items-center gap-2', activeStep === 0 ? 'justify-end' : 'justify-between')}>
           <button
             ref={backRef}
             type="button"
             onClick={() => go(activeStep - 1)}
             className={cn(
-              'flex h-11 items-center gap-1 rounded-full border border-line bg-card px-4 text-[0.9375rem] font-semibold text-ink',
-              activeStep === 0 && 'invisible',
+              'flex items-center gap-1 rounded-full border border-line bg-card px-4 text-[0.9375rem] font-semibold text-ink',
+              compact ? 'h-10' : 'h-11',
+              activeStep === 0 && 'hidden',
             )}
             aria-hidden={activeStep === 0}
             tabIndex={activeStep === 0 ? -1 : undefined}
@@ -407,7 +434,10 @@ export default function OnboardingTour({ onClose, activeStep, setActiveStep, set
             ref={nextRef}
             type="button"
             onClick={() => go(activeStep + 1)}
-            className="flex h-11 shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-accent-fill px-5 text-[0.9375rem] font-semibold text-white shadow-[0_10px_20px_-14px_var(--mgb-accent)]"
+            className={cn(
+              'flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-accent-fill px-5 text-[0.9375rem] font-semibold text-white shadow-[0_10px_20px_-14px_var(--mgb-accent)]',
+              compact ? 'h-10' : 'h-11',
+            )}
           >
             {activeStep === 0 ? 'Начать экскурсию' : last ? 'Поехали!' : 'Далее'}
             {!last && <ChevronRight size={17} strokeWidth={2.4} aria-hidden="true" />}

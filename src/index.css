@@ -172,6 +172,9 @@
     overflow: hidden;
     isolation: isolate;
   }
+  /* A card over other content (the tour) must hide what is under it. */
+  .mgb-card.is-solid { background: #FFFFFF; }
+  .dark .mgb-card.is-solid { background: var(--mgb-card); }
 
   .mgb-glass {
     background: var(--mgb-glass);

@@ -206,15 +206,32 @@ const ORDER = (
 
 export const sceneTokens = (scene: SceneDef, dark: boolean): Tokens => ({ ...BASE[dark ? 'night' : 'day'], ...(dark ? scene.night : scene.day) });
 
-// Every visit shows the next scene; the first visit opens with the glass. `?scene=` shows one on purpose.
+// Every visit draws a scene at random from a shuffled bag, so a newcomer can land on any of them and a returning visitor
+// sees them all before one repeats (a fresh bag never starts with the scene just shown). `?scene=` shows one on purpose.
 // Picked once per page load, so a second render (React's strict mode) never skips a scene.
 let picked: SceneId | null = null;
 export function pickScene(): SceneId {
   if (picked) return picked;
   const forced = new URLSearchParams(window.location.search).get('scene');
   if (forced && forced in SCENES) return (picked = forced as SceneId);
-  const last = parseInt(safeLocalStorage.getItem('mgb_scene') ?? '-1', 10);
-  const i = Number.isFinite(last) ? last + 1 : 0;
-  safeLocalStorage.setItem('mgb_scene', String(i));
-  return (picked = ORDER[((i % ORDER.length) + ORDER.length) % ORDER.length]);
+  let bag: SceneId[] = [];
+  try {
+    bag = (JSON.parse(safeLocalStorage.getItem('mgb_scene_bag') ?? '[]') as string[]).filter((id): id is SceneId => ORDER.includes(id as SceneId));
+  } catch {
+    bag = [];
+  }
+  if (bag.length === 0) {
+    const last = safeLocalStorage.getItem('mgb_scene_last');
+    bag = ORDER.filter((id) => id !== last);
+    for (let i = bag.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [bag[i], bag[j]] = [bag[j], bag[i]];
+    }
+    if (last && ORDER.includes(last as SceneId)) bag.splice(1 + Math.floor(Math.random() * bag.length), 0, last as SceneId);
+  }
+  picked = bag.shift() ?? ORDER[0];
+  safeLocalStorage.setItem('mgb_scene_bag', JSON.stringify(bag));
+  safeLocalStorage.setItem('mgb_scene_last', picked);
+  safeLocalStorage.removeItem('mgb_scene');
+  return picked;
 }

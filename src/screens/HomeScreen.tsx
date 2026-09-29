@@ -61,13 +61,16 @@ export default function HomeScreen({ savedCalculation, ledger, learningPostUnloc
           />
         </div>
 
-        <p className="m-0 mt-6 text-[0.9375rem] font-semibold text-ink lg:mt-8 lg:text-[1.0625rem]">Из каждых 100{NB}₽ расходов</p>
+        <p className="m-0 mt-5 text-[0.9375rem] font-semibold text-ink lg:mt-8 lg:text-[1.0625rem]">Из каждых 100{NB}₽ расходов</p>
+        {/* A phone gets a low band instead of the square, so the whole card fits on about one screen. */}
         <Waffle
           parts={PARTS}
           label={WAFFLE_LABEL}
+          shape="band"
+          rows={5}
           active={lit}
           onActive={setActive}
-          className="mx-auto mt-3 w-full max-w-[20rem] [--gap:5px] md:hidden"
+          className="mt-3 w-full [--gap:4px] md:hidden"
         />
         <Waffle
           parts={PARTS}
@@ -78,7 +81,7 @@ export default function HomeScreen({ savedCalculation, ledger, learningPostUnloc
           className="mt-4 hidden w-full [--gap:5px] md:grid xl:[--gap:6px]"
         />
         <ul
-          className="m-0 mt-4 grid list-none gap-0.5 p-0 md:flex md:flex-wrap md:gap-x-4 md:gap-y-3 lg:mt-5 xl:justify-between"
+          className="m-0 mt-3 grid list-none grid-cols-[repeat(2,minmax(0,1fr))] gap-x-2 gap-y-1.5 p-0 md:flex md:flex-wrap md:gap-x-4 md:gap-y-3 lg:mt-5 xl:justify-between"
           aria-label="Расходы по направлениям"
         >
           {SECTORS.map((sector, i) => (
@@ -90,22 +93,23 @@ export default function HomeScreen({ savedCalculation, ledger, learningPostUnloc
                 onPointerEnter={(event) => event.pointerType === 'mouse' && setActive(sector.id)}
                 onPointerLeave={() => setActive(null)}
                 className={cn(
-                  'mgb-bare flex w-full items-center gap-3 rounded-xl px-2 py-1.5 text-left transition-opacity duration-200 md:grid md:w-auto md:gap-1 md:py-1',
+                  'mgb-bare grid w-full gap-1 rounded-xl px-1.5 py-1 text-left transition-opacity duration-200 md:w-auto md:px-2',
                   lit && lit !== sector.id && 'opacity-40',
                 )}
               >
-                <span className="flex min-w-0 flex-1 items-center gap-3 md:gap-2">
+                <span className="flex min-w-0 flex-1 items-start gap-2">
                   <span
                     aria-hidden="true"
-                    className={cn('mgb-swatch size-3 shrink-0 rounded-[4px] md:size-2.5', sector.id === 'other' && 'ghost')}
+                    className={cn('mgb-swatch mt-[0.3125rem] size-2.5 shrink-0 rounded-[4px]', sector.id === 'other' && 'ghost')}
                     style={sector.id === 'other' ? undefined : { background: SECTOR_COLOR[sector.id] }}
                   />
                   <span className="grid min-w-0 flex-1 leading-tight">
-                    <span className="text-[0.9375rem] font-medium text-ink">{SECTOR_NAME[sector.id]}</span>
-                    <span className="text-[0.8125rem] text-ink-3">{billions(sector.amountBillion)} млрд{NB}₽</span>
+                    {/* A soft hyphen lets the longest name break in a narrow column. */}
+                    <span className="text-[0.875rem] font-medium text-ink md:text-[0.9375rem]">{SECTOR_NAME[sector.id].replace('Здравоохранение', 'Здраво\u00ADохранение')}</span>
+                    <span className="text-[0.75rem] text-ink-3 md:text-[0.8125rem]">{billions(sector.amountBillion)} млрд{NB}₽</span>
                   </span>
                 </span>
-                <b className="shrink-0 text-[1.125rem] font-bold leading-none tracking-[-0.03em] md:order-first md:text-[1.75rem] xl:text-[2rem]">
+                <b className="order-first shrink-0 text-[1.375rem] font-bold leading-none tracking-[-0.03em] md:text-[1.75rem] xl:text-[2rem]">
                   {TILES[i]}
                   <span className="ml-[0.12em] text-[0.7em] text-ink-2">₽</span>
                 </b>
@@ -114,7 +118,7 @@ export default function HomeScreen({ savedCalculation, ledger, learningPostUnloc
           ))}
         </ul>
 
-        <div className="mt-5 flex flex-wrap items-end gap-x-10 gap-y-4 border-t border-line pt-4 lg:mt-7 lg:pt-6">
+        <div className="mt-4 flex flex-wrap items-end gap-x-10 gap-y-3 border-t border-line pt-3.5 lg:mt-7 lg:pt-6">
           <div>
             <span className="block text-[0.8125rem] text-ink-3 lg:text-[0.9375rem]">Доходы</span>
             <b className="text-[1.25rem] font-semibold tracking-[-0.02em] lg:text-[1.625rem]">{trillions(BUDGET_FACTS.income.amountBillion)} трлн{NB}₽</b>
