@@ -1,6 +1,4 @@
-import { Fragment, useEffect, useId, useRef, useState, type CSSProperties } from 'react';
-import { Factory } from 'lucide-react';
-import { motion } from 'motion/react';
+import { Fragment, useEffect, useId, useRef, useState, type CSSProperties, type RefObject } from 'react';
 import { cn } from '../../lib/utils';
 import { BottomAction } from '../../ui/Flow';
 import { reducedMotion } from '../../ui/exhibits/useEntrance';
@@ -43,11 +41,14 @@ const CONDITIONS = [
 
 const RIGHT_COUNT = CONDITIONS.filter((item) => item.right).length;
 
-// The field: the start at the bottom left, the target at the top right. Three right conditions add up exactly to it.
-const START = [80, 330];
-const TARGET = [510, 88];
+// The scene: a small mountain on a slab. The enterprise stands at the foot, «Развитие производства» is the summit.
+// Every chosen condition is one leg of the climb; the three right ones lead from camp to camp up to the top, the wrong
+// ones make the climber slip down and aside, so the rest of the route misses the summit. Units: 600 × 420.
+const W = 600;
+const H = 420;
+const START = [96, 318];
+const TARGET = [428, 98];
 const D = [TARGET[0] - START[0], TARGET[1] - START[1]];
-const L = Math.hypot(D[0], D[1]);
 const rot = ([x, y]: number[], deg: number) => {
   const a = (deg * Math.PI) / 180;
   return [x * Math.cos(a) - y * Math.sin(a), x * Math.sin(a) + y * Math.cos(a)];
@@ -56,13 +57,12 @@ const R1 = rot([D[0] / 3, D[1] / 3], -9);
 const R2 = rot([D[0] / 3, D[1] / 3], 11);
 const R3 = [D[0] - R1[0] - R2[0], D[1] - R1[1] - R2[1]];
 const RIGHT_VECTORS = [R1, R2, R3];
+// A slip: down the slope and aside. Any mix of legs still ends on the slope or the meadow.
 const WRONG_VECTORS = [
-  [150, 70],
-  [-60, 120],
+  [58, 40],
+  [-62, 30],
 ];
-// Before the check every chosen condition points straight at the target, so the field gives nothing away.
-const NEUTRAL = [D[0] / 3, D[1] / 3];
-const INK = { neutral: '#9FB4FF', right: '#34CF9C', wrong: '#FF5A6E' };
+const INK = { right: '#16B38A', wrong: '#E23A4F' };
 
 function vectorOf(i: number) {
   const rights = CONDITIONS.slice(0, i).filter((c) => c.right).length;
@@ -70,222 +70,241 @@ function vectorOf(i: number) {
   return CONDITIONS[i].right ? RIGHT_VECTORS[rights] : WRONG_VECTORS[wrongs];
 }
 
-// Field units (600 × 400) to a place on the screen, so the HTML marks keep a readable size at any width.
-const at = (x: number, y: number) => ({ left: `${(x / 6).toFixed(3)}%`, top: `${(y / 4).toFixed(3)}%` });
-// Where the beam is when it passes a point: seen from the target, clockwise from twelve o'clock.
-const bearing = (x: number, y: number) => ((Math.atan2(y - TARGET[1], x - TARGET[0]) * 180) / Math.PI + 450) % 360;
-// A point on the straight course (0 = start, 1 = target), moved sideways by `side` units.
-const along = (k: number, side = 0) => [START[0] + D[0] * k - (D[1] / L) * side, START[1] + D[1] * k + (D[0] / L) * side];
-const SWEEP_S = 6;
-const TICKS = Array.from({ length: 31 }, (_, i) => i * 20);
-const BEZEL = Array.from({ length: 36 }, (_, i) => i * 10);
+// A leg takes STEP seconds: WALK on the move, then a short stop at the marker.
+const WALK = 0.95;
+const STEP = 1.15;
+const climbTime = (legs: number) => (reducedMotion() ? 0 : legs * STEP);
+const easeInOut = (p: number) => (p < 0.5 ? 2 * p * p : 1 - (-2 * p + 2) ** 2 / 2);
+// Scene units to a place over the picture, so the HTML labels keep a readable size at any width.
+const at = (x: number, y: number) => ({ left: `${((x / W) * 100).toFixed(3)}%`, top: `${((y / H) * 100).toFixed(3)}%` });
 
-// The radar beam turns around the target and a mark lights up as the beam passes it. One loop drives both and it
-// sleeps while the field is off screen. With reduced motion the beam stands still just past the start.
-function useSweep() {
-  const screen = useRef<HTMLDivElement>(null);
+// The massif: one outline, split along a spine into the lit and the shaded face.
+const RIDGE_L = 'M-10 262 L70 236 L140 206 L200 178 L250 156 L300 132 L340 118 L372 106 L420 88';
+const RIDGE_R = 'L452 108 L490 124 L530 154 L570 182 L610 200';
+const SPINE = 'L436 150 L462 214 L486 280 L500 340';
+const TREES = [
+  [10, 322, 30],
+  [470, 330, 26],
+  [512, 334, 38],
+  [536, 344, 52],
+  [562, 332, 32],
+  [586, 350, 46],
+  [404, 392, 26],
+  [424, 396, 34],
+  [566, 394, 40],
+];
+// A fir in two tiers; `half` keeps only the shaded right side.
+const fir = (x: number, y: number, h: number, half = false) => {
+  const [a, b, c, d] = [h * 0.19, h * 0.11, h * 0.27, y - h * 0.46];
+  return half ? `M${x} ${y - h} L${x + a} ${d} L${x + b} ${d} L${x + c} ${y} L${x} ${y} Z` : `M${x} ${y - h} L${x - a} ${d} L${x - b} ${d} L${x - c} ${y} L${x + c} ${y} L${x + b} ${d} L${x + a} ${d} Z`;
+};
+const STARS = [
+  [40, 30], [96, 62], [150, 22], [214, 48], [262, 18], [318, 40], [520, 26], [566, 64], [590, 20], [70, 110], [236, 96],
+];
+
+interface Leg {
+  i: number;
+  n: number;
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  color: string;
+}
+
+// The climb: one loop moves the climber and draws each leg under his feet, so the line never runs ahead of him.
+function useClimb(scene: RefObject<SVGSVGElement | null>, legs: Leg[], revealed: boolean, onDone: () => void) {
   useEffect(() => {
-    const node = screen.current;
-    if (!node) return;
+    const svg = scene.current;
+    const man = svg?.querySelector<SVGGElement>('.p-man');
+    if (!svg || !man || !revealed || legs.length === 0) return;
+    const lines = [...svg.querySelectorAll<SVGPathElement>('.p-walk')];
+    const place = (x: number, y: number, face: number) => man.setAttribute('transform', `translate(${x.toFixed(2)} ${y.toFixed(2)}) scale(${face} 1)`);
+    const last = legs[legs.length - 1];
     if (reducedMotion()) {
-      node.style.setProperty('--sweep', `${bearing(START[0], START[1]) + 25}deg`);
+      place(last.x2, last.y2, last.x2 >= last.x1 ? 1 : -1);
+      onDone();
       return;
     }
     const t0 = performance.now();
     let raf = 0;
     const tick = (now: number) => {
-      const a = ((((now - t0) / 1000) % SWEEP_S) / SWEEP_S) * 360;
-      node.style.setProperty('--sweep', `${a.toFixed(2)}deg`);
-      node.querySelectorAll<HTMLElement>('[data-bearing]').forEach((mark) => {
-        const behind = (a - Number(mark.dataset.bearing) + 360) % 360;
-        mark.style.setProperty('--ping', behind < 110 ? ((1 - behind / 110) ** 2).toFixed(3) : '0');
+      // A frame's timestamp can be a little older than t0.
+      const t = Math.max(0, (now - t0) / 1000);
+      const k = Math.min(legs.length - 1, Math.floor(t / STEP));
+      const p = easeInOut(Math.min(1, Math.max(0, (t - k * STEP) / WALK)));
+      lines.forEach((line) => {
+        const j = Number(line.dataset.leg);
+        line.style.strokeDashoffset = String(j < k ? 0 : j === k ? 1 - p : 1);
       });
-      raf = requestAnimationFrame(tick);
+      const s = legs[k];
+      const bob = p < 1 ? Math.abs(Math.sin(p * Math.PI * 5)) * 1.6 : 0;
+      place(s.x1 + (s.x2 - s.x1) * p, s.y1 + (s.y2 - s.y1) * p - bob, s.x2 >= s.x1 ? 1 : -1);
+      man.classList.toggle('is-walk', p > 0 && p < 1);
+      if (t < legs.length * STEP) raf = requestAnimationFrame(tick);
+      else onDone();
     };
-    const io = new IntersectionObserver(([entry]) => {
-      cancelAnimationFrame(raf);
-      if (entry.isIntersecting) raf = requestAnimationFrame(tick);
-    });
-    io.observe(node);
-    return () => {
-      io.disconnect();
-      cancelAnimationFrame(raf);
-    };
-  }, []);
-  return screen;
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+    // The route is fixed once the check has started, so the climb only follows `revealed`.
+  }, [revealed]);
 }
 
 function Field({ checked, revealed }: { checked: number[]; revealed: boolean }) {
   const reduce = reducedMotion();
-  const screen = useSweep();
+  const scene = useRef<SVGSVGElement>(null);
   const uid = useId().replace(/:/g, '');
+  const [done, setDone] = useState(false);
   const chosen = [...checked].sort((a, b) => a - b);
+  // Before the check the plan is neutral: the chosen legs split the straight way to the summit evenly.
   let [x, y] = START;
-  const segments = chosen.map((i, n) => {
-    const v = revealed ? vectorOf(i) : NEUTRAL;
-    const color = !revealed ? INK.neutral : CONDITIONS[i].right ? INK.right : INK.wrong;
-    const seg = { i, n, x1: x, y1: y, x2: x + v[0], y2: y + v[1], color };
-    x = seg.x2;
-    y = seg.y2;
-    return seg;
+  const legs: Leg[] = chosen.map((i, n) => {
+    const v = revealed ? vectorOf(i) : [D[0] / chosen.length, D[1] / chosen.length];
+    const leg = { i, n, x1: x, y1: y, x2: x + v[0], y2: y + v[1], color: CONDITIONS[i].right ? INK.right : INK.wrong };
+    x = leg.x2;
+    y = leg.y2;
+    return leg;
   });
-  const miss = Math.hypot(x - TARGET[0], y - TARGET[1]);
-  const hit = revealed && miss < 6 && segments.length > 0;
-  const left = hit ? 0 : miss / L;
-  const over = !revealed && segments.length > 3;
-  // After the check the legs turn one by one; the readouts and the effects wait until the route has settled.
-  const settle = reduce || !revealed ? 0 : segments.length * 0.35 + 0.7;
-  const t = (n: number) => ({ duration: reduce ? 0 : 0.7, ease: [0.22, 1, 0.36, 1] as const, delay: reduce ? 0 : revealed ? n * 0.35 : 0 });
-  const route = `M${START.join(' ')}${segments.map((s) => ` L${s.x2.toFixed(1)} ${s.y2.toFixed(1)}`).join('')}`;
-  const state = revealed
-    ? hit
-      ? { text: 'В цели', tone: 'ok' }
-      : { text: 'Мимо цели', tone: 'bad' }
-    : segments.length === 0
-      ? { text: 'Курс не задан', tone: '' }
-      : { text: 'Курс проложен', tone: '' };
-  // The miss: from the end of the route to the target's outer rim.
-  const [mx, my] = [TARGET[0] + ((x - TARGET[0]) / (miss || 1)) * 34, TARGET[1] + ((y - TARGET[1]) / (miss || 1)) * 34];
-
+  const hit = revealed && Math.hypot(x - TARGET[0], y - TARGET[1]) < 6 && legs.length > 0;
+  useClimb(scene, legs, revealed, () => setDone(true));
+  const url = (id: string) => `url(#${uid}${id})`;
   return (
     <div
-      className={cn('mgb-nav', revealed && (hit ? 'is-hit' : 'is-miss'))}
+      className={cn('mgb-peak', done && (hit ? 'is-hit' : 'is-miss'))}
       role="img"
-      aria-label={revealed ? (hit ? 'Курс привёл в цель' : 'Курс прошёл мимо цели') : `Выбрано условий: ${checked.length}`}
-      style={{ '--settle': `${settle}s` } as CSSProperties}
+      aria-label={revealed ? (hit ? 'Альпинист поднялся на вершину' : 'Маршрут прошёл мимо вершины') : `Выбрано условий: ${checked.length}`}
     >
-      <div className="nav-bar" aria-hidden="true">
-        <span className="nav-title">
-          <i />
-          Курс субсидии
-        </span>
-        <span className="nav-pips">
-          {CONDITIONS.map((_, n) => {
-            const s = segments[n];
-            return <i key={n} style={s ? { background: s.color, boxShadow: `0 0 0.5rem ${s.color}` } : undefined} />;
-          })}
-        </span>
-      </div>
+      <svg ref={scene} viewBox={`0 0 ${W} ${H}`} aria-hidden="true">
+        <defs>
+          <linearGradient id={`${uid}sky`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" className="st-sky1" />
+            <stop offset="0.55" className="st-sky2" />
+            <stop offset="1" className="st-sky3" />
+          </linearGradient>
+          <radialGradient id={`${uid}sun`}>
+            <stop offset="0" className="st-sun1" />
+            <stop offset="1" className="st-sun2" />
+          </radialGradient>
+          <linearGradient id={`${uid}lit`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" className="st-lit1" />
+            <stop offset="1" className="st-lit2" />
+          </linearGradient>
+          <linearGradient id={`${uid}shade`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" className="st-shade1" />
+            <stop offset="1" className="st-shade2" />
+          </linearGradient>
+          <linearGradient id={`${uid}far`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" className="st-far1" />
+            <stop offset="1" className="st-far2" />
+          </linearGradient>
+          <linearGradient id={`${uid}mist`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" className="st-mist1" />
+            <stop offset="1" className="st-mist2" />
+          </linearGradient>
+          <linearGradient id={`${uid}meadow`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" className="st-md1" />
+            <stop offset="1" className="st-md2" />
+          </linearGradient>
+        </defs>
 
-      <div ref={screen} className="nav-screen" aria-hidden="true">
-        <div className="nav-sweep" style={at(TARGET[0], TARGET[1])} />
-        <svg viewBox="0 0 600 400">
-          <defs>
-            <pattern id={`${uid}d`} width="20" height="20" patternUnits="userSpaceOnUse">
-              <circle cx="10" cy="10" r="1.1" className="f-dot" />
-            </pattern>
-            <radialGradient id={`${uid}g`}>
-              <stop offset="0" stopColor="#34CF9C" stopOpacity="0.3" />
-              <stop offset="1" stopColor="#34CF9C" stopOpacity="0" />
-            </radialGradient>
-          </defs>
-          <rect width="600" height="400" fill={`url(#${uid}d)`} />
-          {[100, 200, 300, 400, 500].map((v) => (
-            <line key={`v${v}`} x1={v} y1="0" x2={v} y2="400" className="f-major" />
-          ))}
-          {[100, 200, 300].map((v) => (
-            <line key={`h${v}`} x1="0" y1={v} x2="600" y2={v} className="f-major" />
-          ))}
-          {TICKS.map((v) => {
-            const len = v % 100 === 0 ? 10 : 5;
-            return (
-              <Fragment key={v}>
-                <line x1={v} y1="0" x2={v} y2={len} className="f-tick" />
-                <line x1={v} y1={400 - len} x2={v} y2="400" className="f-tick" />
-                {v <= 400 && <line x1="0" y1={v} x2={len} y2={v} className="f-tick" />}
-                {v <= 400 && <line x1={600 - len} y1={v} x2="600" y2={v} className="f-tick" />}
-              </Fragment>
-            );
-          })}
-          {/* Range rings: one, two and three right steps away from the target. */}
-          {[1, 2, 3].map((k) => (
-            <circle key={k} cx={TARGET[0]} cy={TARGET[1]} r={(L * k) / 3} className="f-ring" />
-          ))}
-          {/* The straight course, marked at every third. */}
-          <line x1={along(0.04)[0]} y1={along(0.04)[1]} x2={along(0.925)[0]} y2={along(0.925)[1]} className="f-course" />
-          {[1 / 3, 2 / 3].map((k) => (
-            <line key={k} x1={along(k, -8)[0]} y1={along(k, -8)[1]} x2={along(k, 8)[0]} y2={along(k, 8)[1]} className="f-third" />
-          ))}
-
-          <g className="f-target">
-            <circle cx={TARGET[0]} cy={TARGET[1]} r="66" fill={`url(#${uid}g)`} />
-            {BEZEL.map((deg) => {
-              const a = (deg * Math.PI) / 180;
-              const r0 = deg % 30 === 0 ? 41 : 45;
-              return (
-                <line
-                  key={deg}
-                  x1={TARGET[0] + Math.cos(a) * r0}
-                  y1={TARGET[1] + Math.sin(a) * r0}
-                  x2={TARGET[0] + Math.cos(a) * 49}
-                  y2={TARGET[1] + Math.sin(a) * 49}
-                  className="f-bezel"
-                />
-              );
-            })}
-            <circle cx={TARGET[0]} cy={TARGET[1]} r="32" className="f-rim" />
-            <circle cx={TARGET[0]} cy={TARGET[1]} r="19" className="f-rim" />
-            <circle cx={TARGET[0]} cy={TARGET[1]} r="9" className="f-bull" />
-            {hit &&
-              [0, 1].map((k) => (
-                <circle key={k} cx={TARGET[0]} cy={TARGET[1]} r="19" className="f-ripple" style={{ animationDelay: `calc(var(--settle) + ${k * 1.3}s)` }} />
-              ))}
-          </g>
-
-          {segments.map((s) => {
-            const a = Math.atan2(s.y2 - s.y1, s.x2 - s.x1);
-            const [cx, cy] = [(s.x1 + s.x2) / 2, (s.y1 + s.y2) / 2];
-            const pt = (px: number, py: number) =>
-              `${(cx + px * Math.cos(a) - py * Math.sin(a)).toFixed(2)},${(cy + px * Math.sin(a) + py * Math.cos(a)).toFixed(2)}`;
-            const chevron = `M${pt(-5, -7)} L${pt(3, 0)} L${pt(-5, 7)}`;
-            const from = { x1: s.x1, y1: s.y1, x2: s.x1, y2: s.y1 };
-            const to = { x1: s.x1, y1: s.y1, x2: s.x2, y2: s.y2, stroke: s.color };
-            return (
-              <Fragment key={s.i}>
-                <motion.line className="f-glow" initial={from} animate={to} transition={t(s.n)} />
-                <motion.line className="f-vec" initial={from} animate={to} transition={t(s.n)} />
-                <motion.path className="f-chev" initial={{ d: chevron, opacity: 0 }} animate={{ d: chevron, opacity: 1 }} transition={t(s.n)} />
-              </Fragment>
-            );
-          })}
-          {revealed && !hit && segments.length > 0 && <line x1={x} y1={y} x2={mx} y2={my} className="f-miss" />}
-          {revealed && segments.length > 0 && <path key={route} d={route} pathLength={1} className="f-comet" />}
-        </svg>
-
-        <span className="nav-start" data-bearing={bearing(START[0], START[1]).toFixed(1)} style={at(START[0], START[1])} />
-        <span className="nav-tag" style={at(START[0], START[1] + 20)}>
-          <Factory aria-hidden="true" />
-          Предприятие
-        </span>
-        <span className="nav-tag is-target" style={at(TARGET[0], TARGET[1] + 54)}>
-          Развитие производства
-        </span>
-        {segments.map((s) => (
-          <motion.span
-            key={s.i}
-            className="nav-node"
-            data-bearing={bearing(s.x2, s.y2).toFixed(1)}
-            initial={{ ...at(s.x1, s.y1), scale: 0.4, opacity: 0 }}
-            animate={{ ...at(s.x2, s.y2), scale: 1, opacity: 1 }}
-            transition={t(s.n)}
-            style={{ '--c': s.color } as CSSProperties}
-          >
-            {s.n + 1}
-          </motion.span>
+        <rect width={W} height={H} fill={url('sky')} />
+        {STARS.map(([sx, sy], k) => (
+          <circle key={k} cx={sx} cy={sy} r={k % 3 === 0 ? 1.4 : 1} className="p-star" />
         ))}
-      </div>
+        <circle cx="428" cy="92" r="130" fill={url('sun')} className="p-glow" />
+        <circle cx="428" cy="92" r="30" className="p-sun" />
+        <g className="p-cloud is-a">
+          <path d="M104 86 C104 74 118 68 128 74 C132 60 154 56 164 70 C172 62 190 64 192 78 C204 78 210 86 206 92 L108 92 C104 92 102 90 104 86 Z" />
+        </g>
+        <g className="p-cloud is-b">
+          <path d="M500 150 C500 140 512 136 520 141 C525 131 542 130 549 140 C558 136 570 142 568 152 L504 152 C501 152 499 152 500 150 Z" />
+        </g>
 
-      <div className="nav-foot" aria-hidden="true">
-        <span className="nav-read">
-          <small>{over ? 'Перелёт' : 'До цели'}</small>
-          {Math.round(left * 100)}
-          <span>%</span>
+        {/* Far ranges, fading into the haze. */}
+        <path d="M-10 214 C40 196 80 188 120 198 S190 186 230 196 S320 176 360 190 S470 168 520 184 S590 170 610 176 V330 H-10 Z" fill={url('far')} />
+        <path d="M-10 250 L44 206 L96 180 L140 156 L176 176 L214 196 L250 226 L290 262 V330 H-10 Z" className="p-mid" />
+        <path d="M140 156 L176 176 L214 196 L250 226 L290 262 V330 L200 330 L168 246 Z" className="p-mid-s" />
+
+        <path d={`${RIDGE_L} ${SPINE} L-10 340 Z`} fill={url('lit')} />
+        <path d={`M420 88 ${RIDGE_R} L610 340 L500 340 L486 280 L462 214 L436 150 Z`} fill={url('shade')} />
+        <path d="M200 178 L250 156 L292 250 L244 296 Z M340 118 L372 106 L394 196 L360 228 Z M70 236 L140 206 L150 282 L96 300 Z" className="p-facet" />
+        <path d="M352 114 L372 106 L420 88 L432 134 L422 127 L412 141 L400 126 L386 136 L375 121 L363 127 Z" className="p-snow" />
+        <path d="M420 88 L452 108 L476 117 L467 127 L457 121 L447 135 L438 129 L432 134 Z" className="p-snow-s" />
+        <rect x="-10" y="262" width={W + 20} height="60" fill={url('mist')} />
+
+        <path d="M-10 312 C60 300 130 306 190 314 S320 302 400 310 S540 318 610 306 V400 H-10 Z" fill={url('meadow')} />
+        <path d="M-10 312 C60 300 130 306 190 314 S320 302 400 310 S540 318 610 306" className="p-edge" />
+        {/* Nearer ground: a second roll of meadow. */}
+        <path d="M-10 368 C90 352 200 376 300 364 S500 348 610 362 V400 H-10 Z" className="p-near" />
+        {TREES.map(([tx, ty, th], k) => (
+          <g key={k}>
+            <path d={fir(tx, ty, th)} className="p-tree" />
+            <path d={fir(tx, ty, th, true)} className="p-tree-s" />
+          </g>
+        ))}
+        {/* The enterprise at the foot: a small works with a saw-tooth roof. */}
+        <g className="p-works">
+          <rect x="66" y="270" width="7" height="22" className="w-chimney" />
+          <path d="M30 318 V288 L46 280 V288 L62 280 V288 L78 280 V318 Z" className="w-body" />
+          <path d="M30 288 L46 280 V288 Z M46 288 L62 280 V288 Z M62 288 L78 280 V288 Z" className="w-roof" />
+          <rect x="36" y="298" width="8" height="7" rx="1" className="w-win" />
+          <rect x="50" y="298" width="8" height="7" rx="1" className="w-win" />
+          <rect x="64" y="298" width="8" height="7" rx="1" className="w-win" />
+        </g>
+        {/* The slab the miniature stands on. */}
+        <rect x="-10" y="400" width={W + 20} height="20" className="p-slab" />
+        <line x1="-10" y1="400.5" x2={W + 10} y2="400.5" className="p-slab-edge" />
+
+        {/* The goal: a flag on the summit. */}
+        <line x1="420" y1="89" x2="420" y2="50" className="p-pole" />
+        <path d="M420 51 C430 48 438 56 450 52 L450 66 C438 70 430 62 420 65 Z" className="p-flag" />
+
+        {!revealed && legs.length > 0 && (
+          <path d={`M${START.join(' ')}${legs.map((s) => ` L${s.x2.toFixed(1)} ${s.y2.toFixed(1)}`).join('')}`} className="p-plan" />
+        )}
+        {revealed &&
+          legs.map((s) => (
+            <Fragment key={s.i}>
+              <path d={`M${s.x1} ${s.y1} L${s.x2} ${s.y2}`} pathLength={1} data-leg={s.n} className="p-walk is-under" style={{ strokeDashoffset: done ? 0 : 1 }} />
+              <path d={`M${s.x1} ${s.y1} L${s.x2} ${s.y2}`} pathLength={1} data-leg={s.n} className="p-walk" stroke={s.color} style={{ strokeDashoffset: done ? 0 : 1 }} />
+            </Fragment>
+          ))}
+        {done && !hit && <line x1={x} y1={y} x2={TARGET[0]} y2={TARGET[1]} className="p-miss" />}
+
+        {/* The climber, feet at the origin, facing right. */}
+        <g className={cn('p-man', done && hit && 'is-cheer')} transform={`translate(${START[0]} ${START[1]}) scale(1 1)`}>
+          <g transform="scale(1.2)">
+            <line x1="-1" y1="-11" x2="-2.6" y2="0" className="m-leg is-back" />
+            <line x1="0.6" y1="-11" x2="2.4" y2="0" className="m-leg is-front" />
+            <rect x="-8" y="-22" width="6" height="11.5" rx="2" className="m-pack" />
+            <rect x="-3.4" y="-22.5" width="7.2" height="12.5" rx="2.6" className="m-coat" />
+            <line x1="1.6" y1="-19" x2="5.6" y2="-13.5" className="m-arm" />
+            <line x1="6" y1="-17" x2="7.6" y2="0" className="m-pole" />
+            <circle cx="0.6" cy="-26" r="3.5" className="m-face" />
+            <path d="M-2.9 -26.6 A3.6 3.6 0 0 1 4.1 -26.6 Z" className="m-hat" />
+          </g>
+        </g>
+      </svg>
+
+      <span className="peak-tag is-works" style={at(22, 328)}>
+        Предприятие
+      </span>
+      <span className="peak-tag is-goal" style={at(410, 48)}>
+        Развитие производства
+      </span>
+      {legs.map((s) => (
+        <span
+          key={`${revealed ? 'r' : 'p'}${s.i}`}
+          className="peak-mark"
+          style={{
+            ...at(s.x2, s.y2),
+            '--c': revealed ? s.color : '#3D7BFD',
+            animationDelay: revealed && !reduce ? `${s.n * STEP + WALK}s` : undefined,
+          } as CSSProperties}
+        >
+          {s.n + 1}
         </span>
-        <span className="nav-meter">
-          <i className={cn(over && 'is-over')} style={{ width: `${over ? 100 : Math.max(0, 1 - left) * 100}%` }} />
-        </span>
-        <span className={cn('nav-state', state.tone && `is-${state.tone}`)}>{state.text}</span>
-      </div>
+      ))}
     </div>
   );
 }
@@ -383,8 +402,12 @@ export default function DevelopmentVector(props: GameProps) {
     >
       <Field checked={checked} revealed={revealed} />
       {revealed && (
-        <p aria-live="polite" className={cn('m-0 mt-3 text-center text-[1rem] font-semibold lg:text-[1.125rem]', exact ? 'text-ok-ink' : 'text-accent')}>
-          {exact ? 'В цель: все условия верные' : 'Мимо: красные отрезки уводят в сторону'}
+        <p
+          aria-live="polite"
+          className={cn('mgb-climb-note m-0 mt-3 text-center text-[1rem] font-semibold lg:text-[1.125rem]', exact ? 'text-ok-ink' : 'text-accent')}
+          style={{ animationDelay: `${climbTime(checked.length)}s` }}
+        >
+          {exact ? 'На вершине: все условия верные' : 'Мимо: красные переходы уводят вниз и в сторону'}
         </p>
       )}
 
