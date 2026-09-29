@@ -155,14 +155,13 @@
   }
 
   /* ---------- the climb (Вектор развития) ---------- */
-  /* A miniature: a faceted mountain on a slab, a works at the foot, a flag on the summit and a small climber. Dawn
-     pastels by day, a moonlit night in the dark theme. Colours live here, the shapes in DevelopmentVector.tsx. */
+  /* A flat side-on miniature: mountains grow out of the meadow, a small climber walks along their tops to the flag.
+     Dawn pastels by day, a moonlit night in the dark theme. Colours live here, the shapes in DevelopmentVector.tsx. */
   .mgb-peak {
     --sky1: #B9D0FF; --sky2: #DDE4FB; --sky3: #FBEDE8; --sun1: rgba(255, 226, 180, 0.75); --sun2: rgba(255, 226, 180, 0); --sun: #FFF4DE;
-    --far1: #D6DDF7; --far2: #E9E6F6; --mid: #B3BFEC; --mid-s: #9DABE2;
-    --lit1: #8199E4; --lit2: #6C83D3; --shade1: #5A6EC4; --shade2: #4D61B3; --facet: rgba(24, 34, 110, 0.08);
-    --snow: #FFFFFF; --snow-s: #D5DDF6; --md1: #CFEDDF; --md2: #B2DEC9; --near: #A9D8C2; --edge: rgba(255, 255, 255, 0.7);
-    --mist1: rgba(236, 242, 255, 0); --mist2: rgba(236, 242, 255, 0.75);
+    --far1: #D6DDF7; --far2: #E9E6F6; --mid: #C3CEF1;
+    --lit1: #8A9FE6; --lit2: #6479CC; --shade: rgba(28, 38, 120, 0.2);
+    --snow: #FFFFFF; --md1: #CFEDDF; --md2: #B2DEC9; --near: #A9D8C2; --edge: rgba(255, 255, 255, 0.7);
     --tree: #45AE8F; --tree-s: #2F8E73; --slab: #83C3AB; --slab-edge: rgba(255, 255, 255, 0.45);
     --cloud: rgba(255, 255, 255, 0.85); --star: rgba(255, 255, 255, 0);
     --works: #FFFFFF; --works-roof: #DCE2F4; --works-win: #8EA5F0; --chimney: #CBD3EC;
@@ -171,10 +170,9 @@
   }
   .dark .mgb-peak {
     --sky1: #0A112B; --sky2: #16204A; --sky3: #2A2C5C; --sun1: rgba(190, 205, 255, 0.28); --sun2: rgba(190, 205, 255, 0); --sun: #E6ECFF;
-    --far1: #222C5A; --far2: #262A58; --mid: #2B3670; --mid-s: #232D60;
-    --lit1: #3D4E97; --lit2: #303F80; --shade1: #222D66; --shade2: #1C2657; --facet: rgba(0, 0, 20, 0.14);
-    --snow: #DDE5FF; --snow-s: #8F9DD0; --md1: #1D3B4B; --md2: #16303E; --near: #132A36; --edge: rgba(160, 200, 220, 0.22);
-    --mist1: rgba(40, 60, 110, 0); --mist2: rgba(40, 60, 110, 0.55);
+    --far1: #222C5A; --far2: #262A58; --mid: #28336A;
+    --lit1: #43549E; --lit2: #2E3C7C; --shade: rgba(0, 4, 30, 0.3);
+    --snow: #DDE5FF; --md1: #1D3B4B; --md2: #16303E; --near: #132A36; --edge: rgba(160, 200, 220, 0.22);
     --tree: #1F5A55; --tree-s: #15443F; --slab: #0F2530; --slab-edge: rgba(160, 200, 220, 0.18);
     --cloud: rgba(170, 185, 235, 0.16); --star: rgba(230, 236, 255, 0.85);
     --works: #C9D2EE; --works-roof: #97A3CC; --works-win: #FFD27A; --chimney: #7F8BB6;
@@ -184,10 +182,8 @@
   .mgb-peak .st-sky1 { stop-color: var(--sky1); } .mgb-peak .st-sky2 { stop-color: var(--sky2); } .mgb-peak .st-sky3 { stop-color: var(--sky3); }
   .mgb-peak .st-sun1 { stop-color: var(--sun1); } .mgb-peak .st-sun2 { stop-color: var(--sun2); }
   .mgb-peak .st-lit1 { stop-color: var(--lit1); } .mgb-peak .st-lit2 { stop-color: var(--lit2); }
-  .mgb-peak .st-shade1 { stop-color: var(--shade1); } .mgb-peak .st-shade2 { stop-color: var(--shade2); }
   .mgb-peak .st-far1 { stop-color: var(--far1); } .mgb-peak .st-far2 { stop-color: var(--far2); }
   .mgb-peak .st-md1 { stop-color: var(--md1); } .mgb-peak .st-md2 { stop-color: var(--md2); }
-  .mgb-peak .st-mist1 { stop-color: var(--mist1); } .mgb-peak .st-mist2 { stop-color: var(--mist2); }
   .mgb-peak .p-near { fill: var(--near); }
   .mgb-peak .p-star { fill: var(--star); }
   .mgb-peak .p-sun { fill: var(--sun); }
@@ -195,10 +191,11 @@
   .mgb-peak.is-hit .p-glow { transform: scale(1.35); opacity: 1; }
   .mgb-peak .p-cloud { fill: var(--cloud); animation: mgb-peak-drift 22s ease-in-out infinite alternate; }
   .mgb-peak .p-cloud.is-b { animation-duration: 17s; animation-direction: alternate-reverse; }
+  .mgb-peak .p-cloud.is-c { animation-duration: 26s; opacity: 0.7; }
   @keyframes mgb-peak-drift { from { transform: translateX(-14px); } to { transform: translateX(18px); } }
-  .mgb-peak .p-mid { fill: var(--mid); } .mgb-peak .p-mid-s { fill: var(--mid-s); }
-  .mgb-peak .p-facet { fill: var(--facet); }
-  .mgb-peak .p-snow { fill: var(--snow); } .mgb-peak .p-snow-s { fill: var(--snow-s); }
+  .mgb-peak .p-mid { fill: var(--mid); }
+  .mgb-peak .p-shade { fill: var(--shade); }
+  .mgb-peak .p-snow { fill: var(--snow); }
   .mgb-peak .p-edge { fill: none; stroke: var(--edge); stroke-width: 1.5; }
   .mgb-peak .p-tree { fill: var(--tree); } .mgb-peak .p-tree-s { fill: var(--tree-s); }
   .mgb-peak .p-slab { fill: var(--slab); } .mgb-peak .p-slab-edge { stroke: var(--slab-edge); stroke-width: 1; }
@@ -207,9 +204,8 @@
   .dark .mgb-peak .p-pole { stroke: #C9D2EE; }
   .mgb-peak .p-flag { fill: var(--mgb-c3); transform-box: fill-box; transform-origin: left center; animation: mgb-peak-flag 2.6s ease-in-out infinite; }
   @keyframes mgb-peak-flag { 0%, 100% { transform: skewY(0deg) scaleX(1); } 50% { transform: skewY(-5deg) scaleX(0.92); } }
-  .mgb-peak .p-plan { fill: none; stroke: #fff; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 0.1 8; opacity: 0.95; }
-  .mgb-peak .p-walk { fill: none; stroke-width: 4.5; stroke-linecap: round; stroke-dasharray: 1 1; }
-  .mgb-peak .p-walk.is-under { stroke: rgba(255, 255, 255, 0.75); stroke-width: 9; }
+  .mgb-peak .p-walk { fill: none; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1 1; }
+  .mgb-peak .p-walk.is-under { stroke: rgba(255, 255, 255, 0.8); stroke-width: 8; }
   .dark .mgb-peak .p-walk.is-under { stroke: rgba(10, 16, 40, 0.55); }
   .mgb-peak .p-miss { stroke: #E23A4F; stroke-width: 2.5; stroke-linecap: round; stroke-dasharray: 2 7; animation: mgb-peak-in 500ms ease-out both; }
   @keyframes mgb-peak-in { from { opacity: 0; } }
@@ -236,14 +232,15 @@
     box-shadow: 0 4px 12px -6px rgba(30, 40, 90, 0.35);
   }
   .mgb-peak .peak-tag.is-works { translate: 0 0; }
-  .mgb-peak .peak-tag.is-goal { translate: -100% -50%; text-align: right; max-width: 7.75rem; white-space: normal; border-radius: 0.75rem; padding: 0.3125rem 0.5625rem; line-height: 1.15; }
+  .mgb-peak .peak-tag.is-goal { translate: 0 -50%; max-width: 7.75rem; white-space: normal; border-radius: 0.75rem; padding: 0.3125rem 0.5625rem; line-height: 1.15; }
   .dark .mgb-peak .peak-tag { color: #E8ECFA; background: rgba(20, 28, 60, 0.68); box-shadow: 0 4px 12px -6px rgba(0, 0, 0, 0.6); }
   .mgb-peak .peak-mark {
-    position: absolute; translate: 0.125rem 0.25rem; display: grid; place-items: center; width: 1.5rem; height: 1.5rem; border-radius: 50%;
+    position: absolute; translate: -50% 35%; display: grid; place-items: center; width: 1.5rem; height: 1.5rem; border-radius: 50%;
     background: #fff; color: var(--c); border: 2px solid var(--c); font: 700 0.75rem/1 var(--font-sans); font-variant-numeric: tabular-nums;
-    box-shadow: 0 4px 10px -4px rgba(20, 30, 80, 0.45); transition: left 500ms cubic-bezier(0.22, 1, 0.36, 1), top 500ms cubic-bezier(0.22, 1, 0.36, 1);
+    box-shadow: 0 4px 10px -4px rgba(20, 30, 80, 0.45); transition: opacity 200ms ease-out, scale 260ms cubic-bezier(0.3, 1.5, 0.5, 1);
     animation: mgb-peak-pop 320ms cubic-bezier(0.3, 1.5, 0.5, 1) both;
   }
+  .mgb-peak .peak-mark.is-hidden { opacity: 0; scale: 0.4; }
   @keyframes mgb-peak-pop { from { scale: 0.3; opacity: 0; } }
   .mgb-climb-note { animation: mgb-peak-in 400ms ease-out both; }
 

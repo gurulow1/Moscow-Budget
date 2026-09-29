@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useId, useRef, useState, type CSSProperties, type RefObject } from 'react';
+import { Fragment, useId, useLayoutEffect, useRef, useState, type CSSProperties, type RefObject } from 'react';
 import { cn } from '../../lib/utils';
 import { BottomAction } from '../../ui/Flow';
 import { reducedMotion } from '../../ui/exhibits/useEntrance';
@@ -41,57 +41,197 @@ const CONDITIONS = [
 
 const RIGHT_COUNT = CONDITIONS.filter((item) => item.right).length;
 
-// The scene: a small mountain on a slab. The enterprise stands at the foot, «Развитие производства» is the summit.
-// Every chosen condition is one leg of the climb; the three right ones lead from camp to camp up to the top, the wrong
-// ones make the climber slip down and aside, so the rest of the route misses the summit. Units: 600 × 420.
+// The scene, side on: flat mountains grow out of the meadow and a small climber walks along their tops, left to right,
+// from the works to the flag on «Развитие производства». Every chosen condition grows one more mountain: a right one is
+// a peak a step higher than the last, a wrong one is a drop, so the climber loses height and ends under the summit, at
+// the cliff. Too few right ones and the range stops short. Units: 600 × 400, y down.
+type Pt = [number, number];
 const W = 600;
-const H = 420;
-const START = [96, 318];
-const TARGET = [428, 98];
-const D = [TARGET[0] - START[0], TARGET[1] - START[1]];
-const rot = ([x, y]: number[], deg: number) => {
-  const a = (deg * Math.PI) / 180;
-  return [x * Math.cos(a) - y * Math.sin(a), x * Math.sin(a) + y * Math.cos(a)];
-};
-const R1 = rot([D[0] / 3, D[1] / 3], -9);
-const R2 = rot([D[0] / 3, D[1] / 3], 11);
-const R3 = [D[0] - R1[0] - R2[0], D[1] - R1[1] - R2[1]];
-const RIGHT_VECTORS = [R1, R2, R3];
-// A slip: down the slope and aside. Any mix of legs still ends on the slope or the meadow.
-const WRONG_VECTORS = [
-  [58, 40],
-  [-62, 30],
-];
-const INK = { right: '#16B38A', wrong: '#E23A4F' };
+const H = 400;
+const GROUND = 326;
+const START: Pt = [104, GROUND];
+const SUMMIT: Pt = [404, 106];
+const STEP_X = (SUMMIT[0] - START[0]) / 3;
+const RISES = [60, 90, 70]; // adds up to the summit's height
+const FALLS = [55, 45];
+const BUMP = 16;
+const SNOWLINE = 190;
+const INK = { plan: '#3D7BFD', right: '#16B38A', wrong: '#E23A4F' };
 
-function vectorOf(i: number) {
-  const rights = CONDITIONS.slice(0, i).filter((c) => c.right).length;
-  const wrongs = CONDITIONS.slice(0, i).filter((c) => !c.right).length;
-  return CONDITIONS[i].right ? RIGHT_VECTORS[rights] : WRONG_VECTORS[wrongs];
+interface Leg {
+  i: number;
+  n: number;
+  right: boolean;
+  a: Pt;
+  mid: Pt;
+  end: Pt;
 }
 
-// A leg takes STEP seconds: WALK on the move, then a short stop at the marker.
-const WALK = 0.95;
-const STEP = 1.15;
-const climbTime = (legs: number) => (reducedMotion() ? 0 : legs * STEP);
+const lerp = (a: Pt, b: Pt, k: number): Pt => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
+const rankOf = (i: number, right: boolean) => CONDITIONS.slice(0, i).filter((c) => c.right === right).length;
+
+// The mountains for the chosen conditions. Before the check they are neutral: every one grows a third of the way up
+// (more than three share the way evenly), so the picture gives nothing away; the check gives every leg its real shape.
+function planLegs(chosen: number[], revealed: boolean): Leg[] {
+  let a = START;
+  const share = Math.max(3, chosen.length);
+  return chosen.map((i, n) => {
+    const right = CONDITIONS[i].right;
+    let mid: Pt;
+    let end: Pt;
+    if (!revealed) {
+      end = lerp(START, SUMMIT, (n + 1) / share);
+      mid = n === share - 1 ? lerp(a, end, 0.5) : [a[0] + (end[0] - a[0]) * 0.6, a[1] + (end[1] - a[1]) * 0.6 - BUMP];
+    } else if (right) {
+      const rank = rankOf(i, true);
+      end = [a[0] + STEP_X, a[1] - RISES[rank]];
+      mid = rank === 2 ? lerp(a, end, 0.5) : [a[0] + STEP_X * 0.6, a[1] - RISES[rank] - BUMP];
+    } else {
+      mid = a;
+      end = [a[0], Math.min(GROUND, a[1] + FALLS[rankOf(i, false)])];
+    }
+    const leg = { i, n, right, a, mid, end };
+    a = end;
+    return leg;
+  });
+}
+
+// Timing, in seconds: a toggle grows the range, the check reshapes it, then the climber walks the legs.
+const GROW = 0.7;
+const MORPH = 0.8;
+const PAUSE = 0.15;
+const legTime = (leg: Leg) => (leg.right ? 1.05 : 0.5);
+const climbTime = (checked: number[]) =>
+  reducedMotion() ? 0 : MORPH + planLegs([...checked].sort((a, b) => a - b), true).reduce((sum, leg) => sum + legTime(leg) + PAUSE, 0);
 const easeInOut = (p: number) => (p < 0.5 ? 2 * p * p : 1 - (-2 * p + 2) ** 2 / 2);
+const outBack = (p: number) => 1 + 2.2 * (p - 1) ** 3 + 1.2 * (p - 1) ** 2;
 // Scene units to a place over the picture, so the HTML labels keep a readable size at any width.
 const at = (x: number, y: number) => ({ left: `${((x / W) * 100).toFixed(3)}%`, top: `${((y / H) * 100).toFixed(3)}%` });
 
-// The massif: one outline, split along a spine into the lit and the shaded face.
-const RIDGE_L = 'M-10 262 L70 236 L140 206 L200 178 L250 156 L300 132 L340 118 L372 106 L420 88';
-const RIDGE_R = 'L452 108 L490 124 L530 154 L570 182 L610 200';
-const SPINE = 'L436 150 L462 214 L486 280 L500 340';
+// The grown range as SVG paths, from its ridge (the start, then every leg's middle and end).
+const xy = (p: Pt) => `${p[0].toFixed(1)} ${p[1].toFixed(1)}`;
+const footOf = (last: Pt): Pt => [last[0] + (GROUND - last[1]) * 0.62, GROUND + 2];
+const rangePath = (r: Pt[]) => (r.length < 2 ? '' : `M${r.map(xy).join(' L')} L${xy(footOf(r[r.length - 1]))} L${xy([START[0], GROUND + 2])} Z`);
+const atY = (p: Pt, q: Pt, y: number): Pt => (Math.abs(q[1] - p[1]) < 0.01 ? q : lerp(p, q, Math.min(1, Math.max(0, (y - p[1]) / (q[1] - p[1])))));
+function rangeDetail(ridge: Pt[]) {
+  const r = ridge.filter((p, j) => j === 0 || Math.hypot(p[0] - ridge[j - 1][0], p[1] - ridge[j - 1][1]) > 0.5);
+  let shade = '';
+  let snow = '';
+  for (let j = 1; j < r.length; j++) {
+    const top = r[j];
+    const next = r[j + 1] ?? footOf(top);
+    if (!(top[1] < r[j - 1][1] - 0.5 && next[1] > top[1] + 0.5)) continue;
+    // The side away from the sun is darker: a wedge from each top down to the meadow.
+    shade += `M${xy(top)} L${xy(next)} L${xy([top[0] + (GROUND - top[1]) * 0.24, GROUND + 2])} Z `;
+    // Snow on the high tops (the summit has its own).
+    if (top[1] < SNOWLINE && top[0] < SUMMIT[0] - 2) {
+      const y = top[1] + 20;
+      const [l, rr] = [atY(top, r[j - 1], y), atY(top, next, y)];
+      const w = rr[0] - l[0];
+      snow += `M${xy(l)} L${xy(top)} L${xy(rr)} L${xy([rr[0] - w * 0.3, y + 5])} L${xy([l[0] + w * 0.5, y - 3])} L${xy([l[0] + w * 0.22, y + 6])} Z `;
+    }
+  }
+  return { shade, snow };
+}
+// A point on a leg, by the share of its length walked.
+function along(leg: Leg, k: number): Pt {
+  const l1 = Math.hypot(leg.mid[0] - leg.a[0], leg.mid[1] - leg.a[1]);
+  const l2 = Math.hypot(leg.end[0] - leg.mid[0], leg.end[1] - leg.mid[1]);
+  const s = k * (l1 + l2);
+  return s <= l1 && l1 > 0 ? lerp(leg.a, leg.mid, s / l1) : lerp(leg.mid, leg.end, l2 > 0 ? (s - l1) / l2 : 1);
+}
+
+// One loop grows the range towards the chosen shape and, after the check, walks the climber along its tops, drawing
+// the trail under his feet and showing each leg's number as he reaches it.
+function useRange(root: RefObject<HTMLDivElement | null>, legs: Leg[], revealed: boolean, onDone: () => void) {
+  const shown = useRef<Pt[]>([]);
+  const key = `${revealed}|${legs.map((l) => `${xy(l.mid)} ${xy(l.end)}`).join('|')}`;
+  useLayoutEffect(() => {
+    const box = root.current;
+    if (!box) return;
+    const find = <T extends Element>(sel: string) => box.querySelector(sel) as T;
+    const land = [find<SVGPathElement>('.p-range'), find<SVGPathElement>('.p-range-clip')];
+    const shade = find<SVGPathElement>('.p-range-shade');
+    const snow = find<SVGPathElement>('.p-range-snow');
+    const man = find<SVGGElement>('.p-man');
+    const marks = [...box.querySelectorAll<HTMLElement>('.peak-mark')];
+    const trails = [...box.querySelectorAll<SVGPathElement>('.p-walk')];
+    const target = legs.flatMap((l) => [l.mid, l.end]);
+    const from = target.map((p, j) => shown.current[j] ?? ([p[0], GROUND + 2] as Pt));
+    const reduce = reducedMotion();
+    const grow = reduce ? 0 : revealed ? MORPH : GROW;
+    const ease = revealed ? easeInOut : outBack;
+    const plan: { leg: Leg; t: number; dur: number }[] = [];
+    let total = grow;
+    for (const leg of legs) {
+      plan.push({ leg, t: total, dur: legTime(leg) });
+      total += legTime(leg) + PAUSE;
+    }
+    if (!revealed) total = grow;
+
+    const draw = (t: number) => {
+      const k = grow ? ease(Math.min(1, t / grow)) : 1;
+      const pts = target.map((p, j): Pt => [from[j][0] + (p[0] - from[j][0]) * k, from[j][1] + (p[1] - from[j][1]) * k]);
+      shown.current = pts;
+      const ridge = [START, ...pts];
+      const d = rangePath(ridge);
+      land.forEach((path) => path.setAttribute('d', d));
+      const detail = rangeDetail(ridge);
+      shade.setAttribute('d', detail.shade);
+      snow.setAttribute('d', detail.snow);
+      marks.forEach((mark) => {
+        const p = pts[Number(mark.dataset.leg) * 2 + 1];
+        if (p) Object.assign(mark.style, at(p[0], p[1]));
+      });
+      if (!revealed) return;
+      let pos = START;
+      let walking = false;
+      plan.forEach(({ leg, t: ts, dur }) => {
+        const p = Math.min(1, Math.max(0, (t - ts) / dur));
+        const walked = leg.right ? easeInOut(p) : p * p;
+        trails.filter((path) => Number(path.dataset.leg) === leg.n).forEach((path) => (path.style.strokeDashoffset = String(1 - walked)));
+        marks.find((mark) => Number(mark.dataset.leg) === leg.n)?.classList.toggle('is-hidden', p < 1);
+        if (t >= ts) {
+          pos = along(leg, walked);
+          walking = walking || (leg.right && p > 0 && p < 1);
+        }
+      });
+      const bob = walking ? Math.abs(Math.sin(t * Math.PI * 5.2)) * 1.5 : 0;
+      man.setAttribute('transform', `translate(${pos[0].toFixed(2)} ${(pos[1] - bob).toFixed(2)})`);
+      man.classList.toggle('is-walk', walking);
+    };
+
+    draw(reduce ? total : 0);
+    if (reduce || total === 0) {
+      if (revealed) onDone();
+      return;
+    }
+    const t0 = performance.now();
+    let raf = 0;
+    const tick = (now: number) => {
+      // A frame's timestamp can be a little older than t0.
+      const t = Math.max(0, (now - t0) / 1000);
+      draw(t);
+      if (t < total) raf = requestAnimationFrame(tick);
+      else if (revealed) onDone();
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+    // `key` stands for `legs` and `revealed`.
+  }, [key]);
+}
+
+// The goal: a fixed peak on the right with a cliff towards the climber. Right legs meet its summit.
+const GOAL = 'M404 106 L428 124 L446 118 L490 166 L528 182 L610 236 V328 L400 328 L404 290 L396 250 L402 206 L394 166 L400 132 Z';
+const GOAL_SHADE = 'M404 106 L428 124 L446 118 L490 166 L528 182 L610 236 V328 L474 328 Z';
+const GOAL_SNOW = 'M400 132 L404 106 L428 124 L446 118 L452 124 L440 134 L430 128 L420 140 L411 130 L402 142 Z';
 const TREES = [
-  [10, 322, 30],
-  [470, 330, 26],
-  [512, 334, 38],
-  [536, 344, 52],
-  [562, 332, 32],
-  [586, 350, 46],
-  [404, 392, 26],
-  [424, 396, 34],
-  [566, 394, 40],
+  [468, 332, 26],
+  [548, 334, 38],
+  [574, 338, 28],
+  [236, 374, 24],
+  [256, 378, 34],
+  [520, 376, 30],
 ];
 // A fir in two tiers; `half` keeps only the shaded right side.
 const fir = (x: number, y: number, h: number, half = false) => {
@@ -102,79 +242,27 @@ const STARS = [
   [40, 30], [96, 62], [150, 22], [214, 48], [262, 18], [318, 40], [520, 26], [566, 64], [590, 20], [70, 110], [236, 96],
 ];
 
-interface Leg {
-  i: number;
-  n: number;
-  x1: number;
-  y1: number;
-  x2: number;
-  y2: number;
-  color: string;
-}
-
-// The climb: one loop moves the climber and draws each leg under his feet, so the line never runs ahead of him.
-function useClimb(scene: RefObject<SVGSVGElement | null>, legs: Leg[], revealed: boolean, onDone: () => void) {
-  useEffect(() => {
-    const svg = scene.current;
-    const man = svg?.querySelector<SVGGElement>('.p-man');
-    if (!svg || !man || !revealed || legs.length === 0) return;
-    const lines = [...svg.querySelectorAll<SVGPathElement>('.p-walk')];
-    const place = (x: number, y: number, face: number) => man.setAttribute('transform', `translate(${x.toFixed(2)} ${y.toFixed(2)}) scale(${face} 1)`);
-    const last = legs[legs.length - 1];
-    if (reducedMotion()) {
-      place(last.x2, last.y2, last.x2 >= last.x1 ? 1 : -1);
-      onDone();
-      return;
-    }
-    const t0 = performance.now();
-    let raf = 0;
-    const tick = (now: number) => {
-      // A frame's timestamp can be a little older than t0.
-      const t = Math.max(0, (now - t0) / 1000);
-      const k = Math.min(legs.length - 1, Math.floor(t / STEP));
-      const p = easeInOut(Math.min(1, Math.max(0, (t - k * STEP) / WALK)));
-      lines.forEach((line) => {
-        const j = Number(line.dataset.leg);
-        line.style.strokeDashoffset = String(j < k ? 0 : j === k ? 1 - p : 1);
-      });
-      const s = legs[k];
-      const bob = p < 1 ? Math.abs(Math.sin(p * Math.PI * 5)) * 1.6 : 0;
-      place(s.x1 + (s.x2 - s.x1) * p, s.y1 + (s.y2 - s.y1) * p - bob, s.x2 >= s.x1 ? 1 : -1);
-      man.classList.toggle('is-walk', p > 0 && p < 1);
-      if (t < legs.length * STEP) raf = requestAnimationFrame(tick);
-      else onDone();
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-    // The route is fixed once the check has started, so the climb only follows `revealed`.
-  }, [revealed]);
-}
-
 function Field({ checked, revealed }: { checked: number[]; revealed: boolean }) {
-  const reduce = reducedMotion();
-  const scene = useRef<SVGSVGElement>(null);
+  const root = useRef<HTMLDivElement>(null);
   const uid = useId().replace(/:/g, '');
   const [done, setDone] = useState(false);
-  const chosen = [...checked].sort((a, b) => a - b);
-  // Before the check the plan is neutral: the chosen legs split the straight way to the summit evenly.
-  let [x, y] = START;
-  const legs: Leg[] = chosen.map((i, n) => {
-    const v = revealed ? vectorOf(i) : [D[0] / chosen.length, D[1] / chosen.length];
-    const leg = { i, n, x1: x, y1: y, x2: x + v[0], y2: y + v[1], color: CONDITIONS[i].right ? INK.right : INK.wrong };
-    x = leg.x2;
-    y = leg.y2;
-    return leg;
-  });
-  const hit = revealed && Math.hypot(x - TARGET[0], y - TARGET[1]) < 6 && legs.length > 0;
-  useClimb(scene, legs, revealed, () => setDone(true));
+  const legs = planLegs(
+    [...checked].sort((a, b) => a - b),
+    revealed,
+  );
+  const last = legs[legs.length - 1];
+  const hit = revealed && !!last && Math.hypot(last.end[0] - SUMMIT[0], last.end[1] - SUMMIT[1]) < 1;
+  useRange(root, legs, revealed, () => setDone(true));
   const url = (id: string) => `url(#${uid}${id})`;
+
   return (
     <div
+      ref={root}
       className={cn('mgb-peak', done && (hit ? 'is-hit' : 'is-miss'))}
       role="img"
-      aria-label={revealed ? (hit ? 'Альпинист поднялся на вершину' : 'Маршрут прошёл мимо вершины') : `Выбрано условий: ${checked.length}`}
+      aria-label={revealed ? (hit ? 'Альпинист поднялся на вершину' : 'Альпинист не дошёл до вершины') : `Выбрано условий: ${checked.length}`}
     >
-      <svg ref={scene} viewBox={`0 0 ${W} ${H}`} aria-hidden="true">
+      <svg viewBox={`0 0 ${W} ${H}`} aria-hidden="true">
         <defs>
           <linearGradient id={`${uid}sky`} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0" className="st-sky1" />
@@ -185,57 +273,57 @@ function Field({ checked, revealed }: { checked: number[]; revealed: boolean }) 
             <stop offset="0" className="st-sun1" />
             <stop offset="1" className="st-sun2" />
           </radialGradient>
-          <linearGradient id={`${uid}lit`} x1="0" y1="0" x2="0" y2="1">
+          {/* One gradient for every mountain, in scene units, so a grown range and the goal peak join seamlessly. */}
+          <linearGradient id={`${uid}rock`} gradientUnits="userSpaceOnUse" x1="0" y1="100" x2="0" y2="330">
             <stop offset="0" className="st-lit1" />
             <stop offset="1" className="st-lit2" />
-          </linearGradient>
-          <linearGradient id={`${uid}shade`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" className="st-shade1" />
-            <stop offset="1" className="st-shade2" />
           </linearGradient>
           <linearGradient id={`${uid}far`} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0" className="st-far1" />
             <stop offset="1" className="st-far2" />
           </linearGradient>
-          <linearGradient id={`${uid}mist`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" className="st-mist1" />
-            <stop offset="1" className="st-mist2" />
-          </linearGradient>
           <linearGradient id={`${uid}meadow`} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0" className="st-md1" />
             <stop offset="1" className="st-md2" />
           </linearGradient>
+          <clipPath id={`${uid}clip`}>
+            <path className="p-range-clip" />
+          </clipPath>
         </defs>
 
         <rect width={W} height={H} fill={url('sky')} />
         {STARS.map(([sx, sy], k) => (
           <circle key={k} cx={sx} cy={sy} r={k % 3 === 0 ? 1.4 : 1} className="p-star" />
         ))}
-        <circle cx="428" cy="92" r="130" fill={url('sun')} className="p-glow" />
-        <circle cx="428" cy="92" r="30" className="p-sun" />
+        <circle cx="408" cy="104" r="130" fill={url('sun')} className="p-glow" />
+        <circle cx="408" cy="104" r="30" className="p-sun" />
         <g className="p-cloud is-a">
-          <path d="M104 86 C104 74 118 68 128 74 C132 60 154 56 164 70 C172 62 190 64 192 78 C204 78 210 86 206 92 L108 92 C104 92 102 90 104 86 Z" />
+          <path d="M64 70 C64 58 78 52 88 58 C92 44 114 40 124 54 C132 46 150 48 152 62 C164 62 170 70 166 76 L68 76 C64 76 62 74 64 70 Z" />
+        </g>
+        <g className="p-cloud is-c">
+          <path d="M236 112 C236 104 246 100 252 104 C256 96 270 95 275 103 C282 100 292 105 290 113 L240 113 C237 113 235 113 236 112 Z" />
         </g>
         <g className="p-cloud is-b">
           <path d="M500 150 C500 140 512 136 520 141 C525 131 542 130 549 140 C558 136 570 142 568 152 L504 152 C501 152 499 152 500 150 Z" />
         </g>
 
-        {/* Far ranges, fading into the haze. */}
-        <path d="M-10 214 C40 196 80 188 120 198 S190 186 230 196 S320 176 360 190 S470 168 520 184 S590 170 610 176 V330 H-10 Z" fill={url('far')} />
-        <path d="M-10 250 L44 206 L96 180 L140 156 L176 176 L214 196 L250 226 L290 262 V330 H-10 Z" className="p-mid" />
-        <path d="M140 156 L176 176 L214 196 L250 226 L290 262 V330 L200 330 L168 246 Z" className="p-mid-s" />
+        {/* Far ranges in the haze, then soft hills. */}
+        <path d="M-10 262 L44 222 L92 240 L150 196 L206 234 L262 210 L318 246 L366 214 L420 250 L470 222 L528 248 L610 214 V330 H-10 Z" fill={url('far')} />
+        <path d="M-10 300 C40 276 90 272 140 290 S240 270 300 292 S420 280 480 296 S570 282 610 290 V330 H-10 Z" className="p-mid" />
 
-        <path d={`${RIDGE_L} ${SPINE} L-10 340 Z`} fill={url('lit')} />
-        <path d={`M420 88 ${RIDGE_R} L610 340 L500 340 L486 280 L462 214 L436 150 Z`} fill={url('shade')} />
-        <path d="M200 178 L250 156 L292 250 L244 296 Z M340 118 L372 106 L394 196 L360 228 Z M70 236 L140 206 L150 282 L96 300 Z" className="p-facet" />
-        <path d="M352 114 L372 106 L420 88 L432 134 L422 127 L412 141 L400 126 L386 136 L375 121 L363 127 Z" className="p-snow" />
-        <path d="M420 88 L452 108 L476 117 L467 127 L457 121 L447 135 L438 129 L432 134 Z" className="p-snow-s" />
-        <rect x="-10" y="262" width={W + 20} height="60" fill={url('mist')} />
+        {/* The grown range sits behind the goal peak, so a right route meets its summit without a seam. */}
+        <path className="p-range" fill={url('rock')} />
+        <g clipPath={url('clip')}>
+          <path className="p-range-shade p-shade" />
+          <path className="p-range-snow p-snow" />
+        </g>
+        <path d={GOAL} fill={url('rock')} />
+        <path d={GOAL_SHADE} className="p-shade" />
+        <path d={GOAL_SNOW} className="p-snow" />
 
-        <path d="M-10 312 C60 300 130 306 190 314 S320 302 400 310 S540 318 610 306 V400 H-10 Z" fill={url('meadow')} />
-        <path d="M-10 312 C60 300 130 306 190 314 S320 302 400 310 S540 318 610 306" className="p-edge" />
-        {/* Nearer ground: a second roll of meadow. */}
-        <path d="M-10 368 C90 352 200 376 300 364 S500 348 610 362 V400 H-10 Z" className="p-near" />
+        <path d="M-10 324 C80 318 170 330 260 324 S460 318 610 326 V380 H-10 Z" fill={url('meadow')} />
+        <path d="M-10 324 C80 318 170 330 260 324 S460 318 610 326" className="p-edge" />
+        <path d="M-10 352 C100 344 200 360 320 352 S520 344 610 354 V380 H-10 Z" className="p-near" />
         {TREES.map(([tx, ty, th], k) => (
           <g key={k}>
             <path d={fir(tx, ty, th)} className="p-tree" />
@@ -244,36 +332,42 @@ function Field({ checked, revealed }: { checked: number[]; revealed: boolean }) 
         ))}
         {/* The enterprise at the foot: a small works with a saw-tooth roof. */}
         <g className="p-works">
-          <rect x="66" y="270" width="7" height="22" className="w-chimney" />
-          <path d="M30 318 V288 L46 280 V288 L62 280 V288 L78 280 V318 Z" className="w-body" />
-          <path d="M30 288 L46 280 V288 Z M46 288 L62 280 V288 Z M62 288 L78 280 V288 Z" className="w-roof" />
-          <rect x="36" y="298" width="8" height="7" rx="1" className="w-win" />
-          <rect x="50" y="298" width="8" height="7" rx="1" className="w-win" />
-          <rect x="64" y="298" width="8" height="7" rx="1" className="w-win" />
+          <rect x="64" y="278" width="7" height="22" className="w-chimney" />
+          <path d="M28 328 V298 L44 290 V298 L60 290 V298 L76 290 V328 Z" className="w-body" />
+          <path d="M28 298 L44 290 V298 Z M44 298 L60 290 V298 Z M60 298 L76 290 V298 Z" className="w-roof" />
+          <rect x="34" y="307" width="8" height="7" rx="1" className="w-win" />
+          <rect x="48" y="307" width="8" height="7" rx="1" className="w-win" />
+          <rect x="62" y="307" width="8" height="7" rx="1" className="w-win" />
         </g>
         {/* The slab the miniature stands on. */}
-        <rect x="-10" y="400" width={W + 20} height="20" className="p-slab" />
-        <line x1="-10" y1="400.5" x2={W + 10} y2="400.5" className="p-slab-edge" />
+        <rect x="-10" y="380" width={W + 20} height="20" className="p-slab" />
+        <line x1="-10" y1="380.5" x2={W + 10} y2="380.5" className="p-slab-edge" />
 
-        {/* The goal: a flag on the summit. */}
-        <line x1="420" y1="89" x2="420" y2="50" className="p-pole" />
-        <path d="M420 51 C430 48 438 56 450 52 L450 66 C438 70 430 62 420 65 Z" className="p-flag" />
+        {/* The goal flag, just past the summit. */}
+        <line x1="413" y1="113" x2="413" y2="66" className="p-pole" />
+        <path d="M413 67 C423 64 431 72 443 68 L443 82 C431 86 423 78 413 81 Z" className="p-flag" />
 
-        {!revealed && legs.length > 0 && (
-          <path d={`M${START.join(' ')}${legs.map((s) => ` L${s.x2.toFixed(1)} ${s.y2.toFixed(1)}`).join('')}`} className="p-plan" />
-        )}
         {revealed &&
-          legs.map((s) => (
-            <Fragment key={s.i}>
-              <path d={`M${s.x1} ${s.y1} L${s.x2} ${s.y2}`} pathLength={1} data-leg={s.n} className="p-walk is-under" style={{ strokeDashoffset: done ? 0 : 1 }} />
-              <path d={`M${s.x1} ${s.y1} L${s.x2} ${s.y2}`} pathLength={1} data-leg={s.n} className="p-walk" stroke={s.color} style={{ strokeDashoffset: done ? 0 : 1 }} />
+          legs.map((leg) => (
+            <Fragment key={leg.i}>
+              {[true, false].map((under) => (
+                <path
+                  key={String(under)}
+                  d={`M${xy(leg.a)} L${xy(leg.mid)} L${xy(leg.end)}`}
+                  pathLength={1}
+                  data-leg={leg.n}
+                  className={cn('p-walk', under && 'is-under')}
+                  stroke={under ? undefined : leg.right ? INK.right : INK.wrong}
+                  style={{ strokeDashoffset: done ? 0 : 1 }}
+                />
+              ))}
             </Fragment>
           ))}
-        {done && !hit && <line x1={x} y1={y} x2={TARGET[0]} y2={TARGET[1]} className="p-miss" />}
+        {done && !hit && last && <line x1={last.end[0]} y1={last.end[1] - 34} x2={SUMMIT[0]} y2={SUMMIT[1] + 4} className="p-miss" />}
 
         {/* The climber, feet at the origin, facing right. */}
-        <g className={cn('p-man', done && hit && 'is-cheer')} transform={`translate(${START[0]} ${START[1]}) scale(1 1)`}>
-          <g transform="scale(1.2)">
+        <g className={cn('p-man', done && hit && 'is-cheer')} transform={`translate(${START[0]} ${START[1]})`}>
+          <g transform="scale(1.25)">
             <line x1="-1" y1="-11" x2="-2.6" y2="0" className="m-leg is-back" />
             <line x1="0.6" y1="-11" x2="2.4" y2="0" className="m-leg is-front" />
             <rect x="-8" y="-22" width="6" height="11.5" rx="2" className="m-pack" />
@@ -286,23 +380,20 @@ function Field({ checked, revealed }: { checked: number[]; revealed: boolean }) 
         </g>
       </svg>
 
-      <span className="peak-tag is-works" style={at(22, 328)}>
+      <span className="peak-tag is-works" style={at(16, 334)}>
         Предприятие
       </span>
-      <span className="peak-tag is-goal" style={at(410, 48)}>
+      <span className="peak-tag is-goal" style={at(450, 74)}>
         Развитие производства
       </span>
-      {legs.map((s) => (
+      {legs.map((leg) => (
         <span
-          key={`${revealed ? 'r' : 'p'}${s.i}`}
-          className="peak-mark"
-          style={{
-            ...at(s.x2, s.y2),
-            '--c': revealed ? s.color : '#3D7BFD',
-            animationDelay: revealed && !reduce ? `${s.n * STEP + WALK}s` : undefined,
-          } as CSSProperties}
+          key={`${revealed ? 'r' : 'p'}${leg.i}`}
+          data-leg={leg.n}
+          className={cn('peak-mark', revealed && !done && 'is-hidden')}
+          style={{ ...at(leg.end[0], leg.end[1]), '--c': !revealed ? INK.plan : leg.right ? INK.right : INK.wrong } as CSSProperties}
         >
-          {s.n + 1}
+          {leg.n + 1}
         </span>
       ))}
     </div>
@@ -405,9 +496,9 @@ export default function DevelopmentVector(props: GameProps) {
         <p
           aria-live="polite"
           className={cn('mgb-climb-note m-0 mt-3 text-center text-[1rem] font-semibold lg:text-[1.125rem]', exact ? 'text-ok-ink' : 'text-accent')}
-          style={{ animationDelay: `${climbTime(checked.length)}s` }}
+          style={{ animationDelay: `${climbTime(checked)}s` }}
         >
-          {exact ? 'На вершине: все условия верные' : 'Мимо: красные переходы уводят вниз и в сторону'}
+          {exact ? 'На вершине: все условия верные' : 'Мимо: лишние условия тянут вниз, без верных хребет обрывается'}
         </p>
       )}
 
