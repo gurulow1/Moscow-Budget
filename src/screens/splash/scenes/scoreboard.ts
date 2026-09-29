@@ -69,19 +69,21 @@ export const mountScoreboard: MountScene = (ctx) => {
     const pw = cols * pitch + 24;
     const ph = rows * pitch + 24;
     geo = { cols, rows, pitch, x0: (r.width - pw) / 2 + 12, y0: (r.height - ph) / 2 + 12 };
-    // The unlit grid is drawn once.
+    // The unlit grid is drawn once. Its colours can come from the page: a card on the light page makes the board
+    // graphite (--led-body, --led-lamp); the start screen keeps it black.
+    const css = getComputedStyle(stage);
     dimLayer = el('canvas');
     dimLayer.width = cv.width;
     dimLayer.height = cv.height;
     const d = dimLayer.getContext('2d');
-    d.fillStyle = '#0D0E11';
+    d.fillStyle = css.getPropertyValue('--led-body').trim() || '#0D0E11';
     d.beginPath();
     d.roundRect((geo.x0 - 12) * k, (geo.y0 - 12) * k, pw * k, ph * k, 14 * k);
     d.fill();
     d.strokeStyle = 'rgba(255,255,255,0.08)';
     d.lineWidth = k;
     d.stroke();
-    d.fillStyle = '#26221D';
+    d.fillStyle = css.getPropertyValue('--led-lamp').trim() || '#26221D';
     for (let y = 0; y < rows; y++) {
       for (let x = 0; x < cols; x++) {
         d.beginPath();

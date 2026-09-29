@@ -118,12 +118,13 @@
 .mgb-flap .cell::after { content: ''; position: absolute; left: 0; right: 0; top: calc(50% - 0.5px); height: 1px; background: var(--flap-seam, #0A0B0E); z-index: 3; }
 .mgb-flap .amber, .mgb-flap .cell.amber { --ink: #FFB547; }
 
-/* The board as a card. Light theme: graphite, so it sits on the pale page as an object, not a hole; its flaps are a
-   shade deeper than the body. Night: dark metal close to the other cards. */
+/* The board as a card. Light theme: a graphite body, so it sits on the pale page as an object, not a hole; the flaps
+   are much deeper than the body and cast a small shadow, so they read as real mechanical tiles, and the amber glows.
+   Night: dark metal close to the other cards. */
 .mgb-board {
-  --flap-t: linear-gradient(180deg, #30343C 0%, #2A2E35 100%);
-  --flap-b: linear-gradient(180deg, #25282F 0%, #2B2F36 100%);
-  --flap-seam: rgba(12, 14, 18, 0.7);
+  --flap-t: linear-gradient(180deg, #25282E 0%, #1F2227 100%);
+  --flap-b: linear-gradient(180deg, #1A1C21 0%, #202328 100%);
+  --flap-seam: rgba(0, 0, 0, 0.8);
   background: linear-gradient(180deg, #41464F 0%, #353941 100%);
   color: #F3EFE6;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), inset 0 0 0 1px rgba(255, 255, 255, 0.04), 0 2px 4px rgba(20, 24, 34, 0.1), 0 26px 44px -28px rgba(20, 28, 50, 0.55);
@@ -139,6 +140,8 @@
   content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 0;
   background: linear-gradient(118deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0) 38%);
 }
+.mgb-board .mgb-flap .cell { border-radius: 3px; box-shadow: 0 1px 0 rgba(255, 255, 255, 0.07), 0 3px 5px -1px rgba(0, 0, 0, 0.4); }
+.mgb-board .mgb-flap .amber i, .mgb-board .mgb-flap .cell.amber i { text-shadow: 0 0 10px rgba(255, 181, 71, 0.45); }
 .mgb-board-label { font-family: var(--font-mono); font-weight: 600; letter-spacing: 0.14em; color: rgba(243, 239, 230, 0.66); text-transform: uppercase; }
 .mgb-board-btn {
   font-family: var(--font-mono); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
@@ -271,6 +274,9 @@
 /* ---------- a start-screen scene as a card ----------
    Unlayered like splash.css, whose .mgb-splash rules these adjust for a card instead of a whole screen. */
 .mgb-splash.mgb-scene-card { display: flex; flex-direction: column; min-height: 22rem; line-height: 1.45; }
+/* The LED board in a card on the light page is graphite like the other boards, its unlit lamps deeper than the body. */
+.mgb-scene-card { --led-body: #3B4049; --led-lamp: #25272B; }
+.dark .mgb-scene-card { --led-body: #0D0E11; --led-lamp: #26221D; }
 .mgb-scene-card .sc-words { position: relative; z-index: 1; padding: 1.25rem 1.25rem 0; }
 .mgb-scene-card .sc-eyebrow { margin: 0; font-size: 0.875rem; font-weight: 600; letter-spacing: -0.01em; color: var(--s-ink-3); }
 .mgb-scene-card .sc-title { margin: 0.25rem 0 0; font-size: 1.625rem; line-height: 1.08; font-weight: 700; letter-spacing: -0.04em; color: var(--s-ink); text-wrap: balance; max-width: 16em; }
