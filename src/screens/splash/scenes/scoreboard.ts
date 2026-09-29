@@ -1,5 +1,5 @@
 import { BUDGET, clamp01, el, outCubic, rgba, type MountScene } from '../kit';
-import { ledText } from './ledFont';
+import { ledBig, ledText, type LedGlyphs } from './ledFont';
 
 // A stadium LED board: how much the budget spends on each resident in a year.
 const AMBER = [255, 178, 52];
@@ -10,12 +10,6 @@ const LINE1 = 'МОСКВА';
 const LINE2 = '2026';
 const MARQ = 'НА КАЖДОГО ИЗ 13 274 285 ЖИТЕЛЕЙ В ГОД  ·  ШКОЛЫ  ·  МЕТРО  ·  БОЛЬНИЦЫ  ·  ПАРКИ  ·  ДОРОГИ  ·  ';
 const fmt = (v: number) => `${String(v).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} ₽`;
-
-interface Glyphs {
-  w: number;
-  h: number;
-  bits: Uint8Array;
-}
 
 export const mountScoreboard: MountScene = (ctx) => {
   const { stage } = ctx;
@@ -29,36 +23,8 @@ export const mountScoreboard: MountScene = (ctx) => {
   let k = 1;
   let dimLayer: HTMLCanvasElement | null = null;
   let glow: HTMLCanvasElement | null = null;
-  let marq: Glyphs | null = null;
-  let cache: Record<string, Glyphs> = {};
+  let marq: LedGlyphs | null = null;
   let lastKey = '';
-
-  // The big figure: the font drawn large, then averaged down to the grid (the seven-row lines use ledText).
-  function raster(text: string, rows: number): Glyphs {
-    if (cache[text + rows]) return cache[text + rows];
-    const SS = 6;
-    const c = el('canvas');
-    const x = c.getContext('2d', { willReadFrequently: true });
-    const font = `700 ${rows * SS * 1.3}px "JetBrains Mono", ui-monospace, monospace`;
-    x.font = font;
-    const w = Math.ceil(x.measureText(text).width / SS) + 1;
-    c.width = w * SS;
-    c.height = rows * SS;
-    x.font = font;
-    x.fillStyle = '#fff';
-    x.textBaseline = 'alphabetic';
-    x.fillText(text, 0, rows * SS * 0.96);
-    const d = x.getImageData(0, 0, c.width, c.height).data;
-    const bits = new Uint8Array(w * rows);
-    for (let yy = 0; yy < rows; yy++) {
-      for (let xx = 0; xx < w; xx++) {
-        let sum = 0;
-        for (let a = 0; a < SS; a++) for (let b = 0; b < SS; b++) sum += d[((yy * SS + a) * c.width + (xx * SS + b)) * 4 + 3];
-        bits[yy * w + xx] = sum / (SS * SS * 255) > 0.4 ? 1 : 0;
-      }
-    }
-    return (cache[text + rows] = { w, h: rows, bits });
-  }
 
   function resize() {
     const fit = ctx.fitCanvas(cv);
@@ -95,7 +61,6 @@ export const mountScoreboard: MountScene = (ctx) => {
     glow = el('canvas');
     glow.width = cv.width;
     glow.height = cv.height;
-    cache = {};
     marq = ledText(MARQ);
     lastKey = '';
   }
@@ -105,7 +70,7 @@ export const mountScoreboard: MountScene = (ctx) => {
     const { cols, rows, pitch, x0, y0 } = geo;
     const on = new Uint8Array(cols * rows);
     const hot = new Uint8Array(cols * rows);
-    const put = (img: Glyphs, cx0: number, ry: number, isHot: boolean) => {
+    const put = (img: LedGlyphs, cx0: number, ry: number, isHot: boolean) => {
       for (let y = 0; y < img.h; y++) {
         for (let x = 0; x < img.w; x++) {
           if (!img.bits[y * img.w + x]) continue;
@@ -117,14 +82,6 @@ export const mountScoreboard: MountScene = (ctx) => {
         }
       }
     };
-    // The largest lettering that still fits the board.
-    const fit = (text: string, max: number) => {
-      for (let r = max; r > 4; r--) {
-        const im = raster(text, r);
-        if (im.w <= cols - 6) return im;
-      }
-      return raster(text, 5);
-    };
     const l1 = ledText(LINE1);
     const l2 = ledText(LINE2);
     put(l1, 3, 3, false);
@@ -132,8 +89,7 @@ export const mountScoreboard: MountScene = (ctx) => {
     // The big number counts up to 481 000 in whole thousands.
     const cp = REDUCE ? 1 : outCubic(clamp01((t - 0.9) / 1.3));
     const bigText = fmt(Math.round((PER * cp) / 1000) * 1000);
-    const rowsFit = fit(fmt(PER), 15).h;
-    const big = raster(bigText, rowsFit);
+    const big = ledBig(bigText);
     put(big, Math.round((cols - big.w) / 2), 14 + Math.round((15 - big.h) / 2), true);
     // The marquee crawls one lamp at a time along the bottom line.
     const off = REDUCE ? 0 : Math.floor(Math.max(0, t - 1.6) * 20);
