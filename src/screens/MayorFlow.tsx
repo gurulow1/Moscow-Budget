@@ -312,7 +312,7 @@ export default function MayorFlow({
             <section className="mgb-console px-3 pb-4 pt-4 sm:px-5 lg:px-7 lg:pb-6 lg:pt-6" aria-label="Показатели района">
               <div className="flex items-center justify-between gap-3 px-1">
                 <span className="mgb-console-label">Пульт мэра</span>
-                <span className="mgb-console-label">{preview ? 'жёлтая стрелка — после решения' : 'выберите решение'}</span>
+                <span className="mgb-console-label">{preview ? 'оранжевая стрелка — после решения' : 'выберите решение'}</span>
               </div>
               <div className="mt-3">
                 <Dials {...now} preview={preview} />
@@ -377,10 +377,10 @@ export default function MayorFlow({
 
   const status =
     f.total <= budget
-      ? { text: f.total === budget ? 'ровно в лимите' : `резерв ${mln(budget - f.total)}`, className: 'text-[#34CF9C]' }
+      ? { text: f.total === budget ? 'ровно в лимите' : `резерв ${mln(budget - f.total)}`, className: 'text-[var(--con-ok-ink)]' }
       : {
           text: `дефицит ${mln(f.deficitMln)}${f.danger ? ` — больше ${TARGET_DEFICIT}${NB}%` : ' — допустимо'}`,
-          className: f.danger ? 'text-[#FF7384]' : 'text-[#FFB547]',
+          className: f.danger ? 'text-[var(--con-bad-ink)]' : 'text-[var(--con-warn)]',
         };
 
   return (
@@ -443,7 +443,7 @@ export default function MayorFlow({
             <div className="flex items-baseline justify-between gap-3">
               <span className="mgb-console-label">Бюджет района</span>
               <span aria-live="polite" className="text-[0.875rem] lg:text-[1rem]">
-                <b className="font-semibold">{f.total}</b> <span className="text-[rgba(243,239,230,0.6)]">из {mln(budget)}</span>
+                <b className="font-semibold">{f.total}</b> <span className="text-[var(--con-ink-2)]">из {mln(budget)}</span>
                 <span className={cn('ml-2 font-semibold', status.className)}>· {status.text}</span>
               </span>
             </div>
@@ -469,7 +469,7 @@ export default function MayorFlow({
               </Fragment>
             ))}
           </div>
-          <p className="m-0 mt-4 px-1 text-center text-[0.8125rem] leading-[1.45] text-[rgba(243,239,230,0.55)] [text-wrap:balance]">
+          <p className="m-0 mt-4 px-1 text-center text-[0.8125rem] leading-[1.45] text-[var(--con-ink-3)] [text-wrap:balance]">
             Комфорт растёт от сфер с высоким спросом (он подсвечен), эффективность — от транспорта, образования и резерва.
           </p>
         </section>

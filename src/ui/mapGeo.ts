@@ -1,11 +1,15 @@
 import MAP from '../data/moscowDistricts.json';
 
-// Moscow's districts from OpenStreetMap (scripts/moscow-districts.py): kilometres from the Kremlin, x to the east, y to the south.
+// Moscow's districts from OpenStreetMap (scripts/moscow-districts.py), smoothed into soft shapes that still fit together:
+// kilometres from the Kremlin, x to the east, y to the south.
 export interface District {
   name: string;
   okrug: string;
   d: string;
+  /** The label point. */
   c: number[];
+  /** The district's edge straight above the label point, where a name tag points. */
+  top: number;
   area: number;
 }
 

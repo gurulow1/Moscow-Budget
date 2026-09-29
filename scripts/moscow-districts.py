@@ -1,10 +1,15 @@
 # Builds src/data/moscowDistricts.json, the map of Moscow for «Карта районов» and «Виртуальный мэр»:
 # every district of the nine okrugs inside MKAD and just beyond it (no Zelenograd, no New Moscow) with its name,
-# okrug and a label point; the Moskva and the big ponds, the large parks and forests, the metro lines in their colours.
+# okrug and a label point; the Moskva and the big ponds, the large parks and forests.
+#
+# The map is drawn as soft tiles, not as a survey: the borders lose their wiggle (shared edges are simplified together,
+# so neighbours still fit), every district is shrunk to leave an even gap and gets rounded corners, the river runs
+# between the tiles, and only the big parks stay, painted on the tiles.
 #
 #   python scripts/moscow-districts.py [--cache DIR]
 #
-# Needs shapely. Downloads four Overpass responses into the cache folder (kept for reruns).
+# Needs shapely 2.1+ (GEOS 3.12+ for coverage_simplify). Downloads three Overpass responses into the cache folder
+# (kept for reruns).
 # Data: © OpenStreetMap contributors, ODbL (https://www.openstreetmap.org/copyright).
 #
 # Coordinates are kilometres from the Kremlin in SVG orientation (x to the east, y to the south), rounded to 10 m.
@@ -25,8 +30,10 @@ QUERIES = {
     'green.json': f'[out:json][timeout:400]{BBOX};(way["leisure"="park"](if: length() > 1500);relation["leisure"="park"];'
     'way["landuse"="forest"](if: length() > 1500);relation["landuse"="forest"];way["natural"="wood"](if: length() > 1500);'
     'relation["natural"="wood"];);out geom;',
-    'metro.json': '[out:json][timeout:300][bbox:55.49,37.3,55.97,37.97];relation["route"="subway"];out geom;',
 }
+TOLERANCE = 0.25  # km: the wiggle a border loses
+SMOOTH = 3  # rounds of corner cutting
+REACH = 19.5  # km from the Kremlin: districts further out are left off
 LAT0, LON0 = 55.7520, 37.6175  # the Kremlin
 KX = 111.320 * math.cos(math.radians(LAT0))
 KY = 110.574
@@ -118,23 +125,53 @@ def path(g, digits=2):
     return ''.join(out)
 
 
-def line_path(g, digits=2):
+def rounded(g, r_in, r_out):
+    """Inner corners rounded with r_in, outer ones with r_out; parts narrower than the outer rounding go."""
+    q = 8
+    return g.buffer(r_in, quad_segs=q).buffer(-r_in - r_out, quad_segs=q).buffer(r_out, quad_segs=q)
+
+
+def chaikin(pts, rounds=SMOOTH):
+    """Corner cutting: a polyline becomes a smooth curve. Open lines keep their ends, so borders still meet."""
+    pts = list(pts)
+    closed = pts[0] == pts[-1]
+    for _ in range(rounds):
+        ring = pts[:-1] if closed else pts
+        pairs = list(zip(ring, ring[1:] + ring[:1])) if closed else list(zip(ring, ring[1:]))
+        cut = [p for (x0, y0), (x1, y1) in pairs for p in ((0.75 * x0 + 0.25 * x1, 0.75 * y0 + 0.25 * y1), (0.25 * x0 + 0.75 * x1, 0.25 * y0 + 0.75 * y1))]
+        pts = cut + cut[:1] if closed else [pts[0], *cut, pts[-1]]
+    return pts
+
+
+def smooth_polys(g, rounds=SMOOTH, min_area=0.0):
+    """Every ring of a (multi)polygon smoothed on its own; for shapes that share no borders."""
     out = []
-    for l in ([g] if g.geom_type == 'LineString' else list(getattr(g, 'geoms', []))):
-        pts = [(round(x, digits), round(y, digits)) for x, y in l.coords]
-        if len(pts) < 2:
+    for p in polys(g):
+        if p.area < min_area:
             continue
-        rel, (px, py) = [], pts[0]
-        for x, y in pts[1:]:
-            dx, dy = round(x - px, digits), round(y - py, digits)
-            if dx or dy:
-                rel.append(f'{dx:g} {dy:g}')
-            px, py = x, y
-        out.append(f'M{pts[0][0]:g} {pts[0][1]:g}l' + ' '.join(rel))
-    return ''.join(out)
+        shell = chaikin(p.exterior.coords, rounds)
+        holes = [chaikin(r.coords, rounds) for r in p.interiors if Polygon(r).area > min_area]
+        out.append(Polygon(shell, holes).buffer(0))
+    return unary_union(out)
 
 
-def main(cache):
+def smooth_coverage(shapes):
+    """Smooth curves for polygons that tile the plane: the network of borders is smoothed once, edge by edge
+    (every edge keeps its ends at the junctions), then cut back into faces, each given to the polygon it lies in."""
+    net = linemerge(unary_union([g.boundary for g in shapes]))
+    edges = list(getattr(net, 'geoms', [net]))
+    faces = list(polygonize([LineString(chaikin(e.coords)) for e in edges]))
+    tree = shapely.STRtree(shapes)
+    owned = [[] for _ in shapes]
+    for f in faces:
+        pt = f.representative_point()
+        for i in tree.query(pt, predicate='within'):
+            owned[i].append(f)
+            break
+    return [unary_union(fs).buffer(0) if fs else g for fs, g in zip(owned, shapes)]
+
+
+def main(cache, out_path=OUT):
     fetch(cache)
     okrugs, districts = [], []
     for e in load(cache, 'admin-geom.json'):
@@ -144,19 +181,33 @@ def main(cache):
             continue
         (okrugs if t.get('admin_level') == '5' else districts).append((t.get('name', ''), t.get('ref', ''), g))
     city = unary_union([g for _, _, g in okrugs])
-    items = []
+    frame = box(*city.bounds).buffer(1.5)
+
+    kept = []
     for name, _, g in districts:
         inside = g.intersection(city)
         if inside.area < 0.5 * g.area or inside.area < 0.3:
             continue
+        # Moscow in MKAD and just beyond it: the far districts (Vnukovo, Molzhaninovsky, Kurkino…) would stick out.
+        c = inside.representative_point()
+        if math.hypot(c.x, c.y) > REACH:
+            print('  beyond the ring:', name)
+            continue
+        far = [p for p in polys(inside) if math.hypot(p.centroid.x, p.centroid.y) > REACH + 2]
+        if far:
+            print('  exclave dropped:', name)
+            inside = unary_union([p for p in polys(inside) if p not in far])
         okrug = max(okrugs, key=lambda o: o[2].intersection(inside).area)
         short = name.replace('район ', '').replace(' район', '').replace('муниципальный округ ', '').strip()
-        simple = inside.simplify(0.03, preserve_topology=True)
-        label = inside.representative_point() if inside.geom_type != 'Polygon' else polylabel(inside, tolerance=0.05)
-        items.append({'name': short, 'okrug': okrug[1] or okrug[0], 'd': path(simple), 'c': [round(label.x, 2), round(label.y, 2)], 'area': round(inside.area, 2)})
-    items.sort(key=lambda d: d['name'])
-    frame = box(*city.bounds).buffer(1.5)
+        kept.append((short, okrug[1] or okrug[0], inside))
+    # Shared borders lose their wiggle together, then turn into smooth curves together, so neighbours still fit.
+    simple = [g.buffer(0) for g in shapely.coverage_simplify([g for _, _, g in kept], TOLERANCE)]
+    soft = smooth_coverage(simple)
 
+    # The city as one slab: the outline of all districts, holes filled, crumbs dropped.
+    land = unary_union([Polygon(p.exterior) for p in polys(unary_union(soft)) if p.area > 1])
+
+    # The Moskva and the big ponds as smooth water on the slab; the districts stop at the banks.
     water = []
     for e in load(cache, 'water.json'):
         g = element_polygon(e)
@@ -165,8 +216,23 @@ def main(cache):
         g = g.intersection(frame)
         if g.area > 0.02:
             water.append(g)
-    water_all = unary_union(water).simplify(0.015, preserve_topology=True)
+    water_big = unary_union([p for p in polys(unary_union(water)) if p.area > 0.15])
+    river = smooth_polys(rounded(water_big.simplify(0.04), 0.2, 0.03), 2, 0.05).intersection(land)
 
+    items = []
+    for (name, okrug, raw), g in zip(kept, soft):
+        t = g.difference(river)
+        t = unary_union([p for p in polys(t) if p.area > 0.08 * g.area]).simplify(0.004)
+        main_part = max(polys(t), key=lambda p: p.area)
+        label = polylabel(main_part, tolerance=0.05)
+        # Where a name tag above the district points: the edge straight above the label point.
+        top = LineString([(label.x, t.bounds[1] - 1), (label.x, label.y)]).intersection(main_part).bounds[1]
+        items.append({'name': name, 'okrug': okrug, 'd': path(t), 'c': [round(label.x, 2), round(label.y, 2)], 'top': round(top, 2), 'area': round(raw.area, 2)})
+        if abs(t.area - raw.area) > 0.25 * raw.area:
+            print('  area changed a lot:', name, round(raw.area, 2), '->', round(t.area, 2))
+    items.sort(key=lambda d: d['name'])
+
+    # The big parks and forests painted on the slab.
     green = []
     for e in load(cache, 'green.json'):
         g = element_polygon(e)
@@ -175,35 +241,21 @@ def main(cache):
         g = g.intersection(city)
         if g.area > 0.25:
             green.append(g)
-    green_all = unary_union(green).simplify(0.04, preserve_topology=True)
-
-    metro = {}
-    for e in load(cache, 'metro.json'):
-        t = e.get('tags', {})
-        color = (t.get('colour') or t.get('color') or '#888888').upper()
-        ways = [way_line(m) for m in e.get('members', []) if m.get('type') == 'way' and m.get('role', '') in ('', 'route')]
-        ways = [w for w in ways if w is not None]
-        if not ways:
-            continue
-        metro.setdefault(color, []).extend(ways)
-    lines = []
-    for color, ws in metro.items():
-        merged = linemerge(unary_union(ws)).intersection(frame).simplify(0.02)
-        if not merged.is_empty:
-            lines.append({'color': color, 'd': line_path(merged)})
+    green_all = rounded(unary_union(green).simplify(0.05), 0.15, 0.2).difference(river).intersection(land)
+    green_all = smooth_polys(green_all, 2, 0.4).simplify(0.006)
 
     out = {
         'attribution': '© участники OpenStreetMap',
-        'bounds': [round(v, 2) for v in city.bounds],
+        'bounds': [round(v, 2) for v in land.bounds],
+        'land': path(land.simplify(0.004)),
         'districts': items,
-        'water': path(water_all),
+        'water': path(river.simplify(0.004)),
         'green': path(green_all),
-        'metro': lines,
     }
-    os.makedirs(os.path.dirname(OUT), exist_ok=True)
-    with open(OUT, 'w', encoding='utf-8') as f:
+    os.makedirs(os.path.dirname(os.path.abspath(out_path)), exist_ok=True)
+    with open(out_path, 'w', encoding='utf-8') as f:
         json.dump(out, f, ensure_ascii=False, separators=(',', ':'))
-    print('districts', len(items), 'metro lines', len(lines), 'bytes', os.path.getsize(OUT))
+    print('districts', len(items), 'bytes', os.path.getsize(out_path))
     for want in ('Хамовники', 'Сокольники', 'Тверской', 'Крылатское', 'Выхино-Жулебино'):
         print(' ', want, any(d['name'] == want for d in items))
 
@@ -211,4 +263,6 @@ def main(cache):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--cache', default=os.path.join(tempfile.gettempdir(), 'mgb-osm-cache'))
-    main(parser.parse_args().cache)
+    parser.add_argument('--out', default=OUT)
+    args = parser.parse_args()
+    main(args.cache, args.out)

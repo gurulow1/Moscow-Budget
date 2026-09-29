@@ -53,7 +53,7 @@ export default function Gauge({ label, value, max, target, direction, preview, c
           </g>
         )}
         <g className="g-needle" style={{ transform: `rotate(${(f * 180).toFixed(2)}deg)` }}>
-          <path d={`M${CX + 12},${CY - 1.6} L${CX - R + 14},${CY} L${CX + 12},${CY + 1.6} Z`} />
+          <path d={`M${CX + 3},${CY - 1.8} L${CX - R + 14},${CY} L${CX + 3},${CY + 1.8} Z`} />
         </g>
         <circle cx={CX} cy={CY} r="7" className="g-hub" />
         <circle cx={CX} cy={CY} r="2.6" className="g-hub-dot" />

@@ -14,8 +14,6 @@ interface DistrictMapProps {
 }
 
 const NB = ' ';
-// Moscow inside MKAD, in km from the Kremlin.
-const MKAD = [-19.5, -19.5, 39, 39];
 
 // The whole city from OpenStreetMap with the game's five districts lit; beside it, the chosen district's passport.
 export default function DistrictMap({ item, onClose, onOpenMayor }: DistrictMapProps) {
@@ -47,7 +45,6 @@ export default function DistrictMap({ item, onClose, onOpenMayor }: DistrictMapP
             selected={selected}
             onSelect={setSelected}
             follow={false}
-            frame={MKAD}
           />
           <p className="pointer-events-none absolute bottom-3 left-4 right-4 m-0 text-[0.75rem] leading-snug text-ink-3 lg:bottom-5 lg:left-6">
             Москва в МКАД · пять районов игры · ✓ — знак района · © участники OpenStreetMap

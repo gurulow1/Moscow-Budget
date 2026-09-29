@@ -102,6 +102,13 @@
   color-scheme: dark;
 }
 
+/* How high a district tile of the map is lifted, in screen pixels; registered so it can animate. */
+@property --lift {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0;
+}
+
 @layer base {
   html, body {
     overflow-x: hidden;
@@ -341,21 +348,73 @@
   .mgb-verdict-ok { border-color: color-mix(in srgb, var(--mgb-ok-ink) 30%, transparent); }
   .mgb-verdict-bad { border-color: color-mix(in srgb, var(--mgb-accent) 30%, transparent); }
 
-  /* The map of Moscow: quiet tiles with hairline gaps, the river, parks and metro; the game's districts lit. */
-  .mgb-map { --map-tile: #E3E8F0; --map-gap: #F7F9FC; --map-water: #A9CBF4; --map-green: #D3EBDD; --map-pick: #F7D9DE; --map-pick-on: var(--mgb-accent); --map-ink: #1E2638; }
-  .dark .mgb-map { --map-tile: #1B212C; --map-gap: #0A0D13; --map-water: #1F3E6B; --map-green: #16302A; --map-pick: #3A1E26; --map-pick-on: #E0405A; --map-ink: #E9EDF4; }
-  .mgb-map path { vector-effect: non-scaling-stroke; }
-  .mgb-map-tile { fill: var(--map-tile); stroke: var(--map-gap); stroke-width: 1; }
-  .mgb-map-green { fill: var(--map-green); opacity: 0.9; pointer-events: none; }
-  .mgb-map-water { fill: var(--map-water); pointer-events: none; }
-  .mgb-map-metro path { fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; opacity: 0.55; pointer-events: none; }
-  .mgb-map-pick { cursor: pointer; outline: none; }
-  .mgb-map-pick path { fill: var(--map-pick); stroke: var(--map-gap); stroke-width: 1.2; transition: fill 250ms ease-out; }
-  .mgb-map-pick.is-done path { fill: color-mix(in srgb, var(--mgb-ok-ink) 26%, var(--map-tile)); }
-  .mgb-map-pick.is-hover path, .mgb-map-pick:focus-visible path { fill: color-mix(in srgb, var(--mgb-accent) 45%, var(--map-pick)); }
-  .mgb-map-pick.is-on path { fill: var(--map-pick-on); stroke: #fff; stroke-width: 1.6; }
-  .mgb-map-label { font: 700 calc(var(--k, 0.13) * 12.5px) var(--font-sans); fill: var(--map-ink); text-anchor: middle; dominant-baseline: middle; paint-order: stroke; stroke: var(--map-gap); stroke-width: calc(var(--k, 0.13) * 3.2px); stroke-linejoin: round; pointer-events: none; letter-spacing: -0.01em; }
-  .mgb-map-label.is-on { font-size: calc(var(--k, 0.13) * 15px); fill: #fff; stroke: color-mix(in srgb, var(--map-pick-on) 80%, #000); }
+  /* The map of Moscow as an object: the city is a slab (a side --slab px deep, a soft shadow on the card), the districts
+     are parted by white lines, the parks and the river lie on it. --k is map units per screen pixel, so depths and lines
+     stay the same at any zoom. The game's districts are tinted; the chosen one rises (--lift, in px) in red. */
+  .mgb-map {
+    --slab: 8;
+    --map-top-a: #F1F5FA; --map-top-b: #E3E9F2; --map-side: #C2CCDA; --map-line: #FFFFFF; --map-shadow: rgba(24, 36, 70, 0.28);
+    --map-water: #9CC6F6; --map-green: #CDEBD9;
+    --map-pick-a: #FFDCE2; --map-pick-b: #FBC6CF; --map-pick-side: #E09AA7;
+    --map-done-a: #D3F1E3; --map-done-side: #8BCDB2;
+    --map-on-a: #FF6679; --map-on-b: #D6263A; --map-on-side: #8E1624;
+  }
+  .dark .mgb-map {
+    --map-top-a: #222A36; --map-top-b: #1A202A; --map-side: #0B0E14; --map-line: #0F131A; --map-shadow: rgba(0, 0, 0, 0.7);
+    --map-water: #1D3A62; --map-green: #1D322C;
+    --map-pick-a: #4A2530; --map-pick-b: #5A2A36; --map-pick-side: #1C0B10;
+    --map-done-a: #1B4234; --map-done-side: #07170F;
+    --map-on-a: #FF5E72; --map-on-b: #D93448; --map-on-side: #6A0F1B;
+  }
+  .mgb-map path { vector-effect: non-scaling-stroke; pointer-events: none; }
+  .mgb-map .m-top-a { stop-color: var(--map-top-a); }
+  .mgb-map .m-top-b { stop-color: var(--map-top-b); }
+  .mgb-map .m-on-a { stop-color: var(--map-on-a); }
+  .mgb-map .m-on-b { stop-color: var(--map-on-b); }
+  .mgb-map-slab-shadow { fill: var(--map-shadow); transform: translateY(calc(var(--k, 0.05) * (var(--slab) + 8) * 1px)); }
+  .mgb-map-slab-side { fill: var(--map-side); transform: translateY(calc(var(--k, 0.05) * var(--slab) * (1 - var(--t)) * 1px)); }
+  .mgb-map-slab-top { fill: url(#mgb-map-top); }
+  .mgb-map-green { fill: var(--map-green); }
+  .mgb-map-borders { fill: none; stroke: var(--map-line); stroke-width: 1.6; stroke-linejoin: round; }
+  .mgb-map-water { fill: var(--map-water); }
+
+  .mgb-map-pick { --lift: 0; cursor: pointer; outline: none; transition: --lift 420ms cubic-bezier(0.34, 1.56, 0.64, 1); }
+  .mgb-map-pick path { pointer-events: auto; }
+  .mgb-map-pick :is(.p-shadow, .p-side) { pointer-events: none; }
+  .mgb-map-pick.is-hover, .mgb-map-pick:focus-visible { --lift: 3; }
+  .mgb-map-pick.is-on { --lift: 7; }
+  .mgb-map-pick :is(.p-side, .p-top) { transform: translateY(calc(var(--k, 0.05) * var(--lift) * var(--t) * -1px)); }
+  .mgb-map-pick .p-side { fill: var(--map-pick-side); }
+  .mgb-map-pick .p-top { fill: var(--map-pick-a); stroke: var(--map-line); stroke-width: 1.6; stroke-linejoin: round; transition: fill 250ms ease-out; }
+  .mgb-map-pick.is-done .p-side { fill: var(--map-done-side); }
+  .mgb-map-pick.is-done .p-top { fill: var(--map-done-a); }
+  .mgb-map-pick.is-hover .p-top, .mgb-map-pick:focus-visible .p-top { fill: var(--map-pick-b); }
+  .mgb-map-pick.is-on .p-side { fill: var(--map-on-side); }
+  .mgb-map-pick.is-on .p-top { fill: url(#mgb-map-on); stroke: rgba(255, 255, 255, 0.75); }
+  .mgb-map-pick .p-shadow { fill: #0E1524; opacity: calc(var(--lift) * 0.045); transform: translateY(calc(var(--k, 0.05) * var(--lift) * 0.7px)); }
+  .dark .mgb-map-pick .p-shadow { fill: #000; opacity: calc(var(--lift) * 0.09); }
+
+  /* Name tags above the districts, placed by MoscowMap: a pill with a little stem pointing at the district. */
+  .mgb-map-label {
+    position: absolute; left: 0; top: 0; translate: -50% calc(-100% - 0.5rem);
+    display: inline-flex; align-items: center; gap: 0.25rem; height: 1.5rem; padding: 0 0.5625rem;
+    border-radius: 999px; background: #FFFFFF; color: var(--mgb-ink-2);
+    font-size: 0.6875rem; font-weight: 700; letter-spacing: -0.005em; white-space: nowrap; cursor: pointer;
+    box-shadow: 0 1px 2px rgba(14, 21, 36, 0.12), 0 6px 14px -8px rgba(14, 21, 36, 0.45);
+    transition: opacity 200ms ease-out;
+  }
+  .mgb-map-label::after {
+    content: ''; position: absolute; left: 50%; bottom: -0.25rem; width: 0.5rem; height: 0.5rem; margin-left: -0.25rem;
+    background: inherit; border-radius: 0 0 2px 0; transform: rotate(45deg);
+  }
+  .dark .mgb-map-label { background: #2A3240; box-shadow: 0 8px 16px -8px rgba(0, 0, 0, 0.9); }
+  .mgb-map-label.is-on { z-index: 1; height: 1.875rem; padding: 0 0.8125rem; font-size: 0.875rem; color: #0E1524; background: #FFFFFF; box-shadow: 0 2px 4px rgba(14, 21, 36, 0.14), 0 12px 24px -10px rgba(14, 21, 36, 0.6); }
+  .mgb-map-label svg { width: 0.75rem; height: 0.75rem; fill: none; stroke: var(--mgb-ok-ink); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .mgb-map-label.is-on svg { stroke: #0B7A58; }
+  @media (min-width: 1024px) {
+    .mgb-map-label { height: 1.625rem; font-size: 0.75rem; }
+    .mgb-map-label.is-on { height: 2.125rem; font-size: 1rem; }
+  }
 
   @media (prefers-reduced-motion: reduce) {
     .mgb-aurora span,
