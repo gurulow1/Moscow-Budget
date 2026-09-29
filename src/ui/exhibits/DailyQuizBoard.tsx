@@ -58,14 +58,14 @@ export default function DailyQuizBoard({ ledger, onStart, className }: DailyQuiz
           className="[--cw:min(2.125rem,calc(100cqw/13.1))]"
         />
       </div>
-      <p className="relative m-0 mt-5 text-[0.8125rem] font-medium text-[rgba(243,239,230,0.5)] lg:mt-6 lg:text-[0.875rem]">Первый вопрос</p>
+      <p className="relative m-0 mt-5 text-[0.8125rem] font-medium text-[rgba(243,239,230,0.68)] lg:mt-6 lg:text-[0.875rem]">Первый вопрос</p>
       <h2
         id="daily-quiz-title"
         className="relative m-0 mt-1 text-[1.25rem] font-bold leading-[1.2] tracking-[-0.025em] text-[#F7F4EE] [text-wrap:pretty] lg:text-[1.5rem]"
       >
         {question}
       </h2>
-      <p className="relative m-0 mt-2 text-[0.875rem] leading-snug text-[rgba(243,239,230,0.62)] lg:text-[0.9375rem]">
+      <p className="relative m-0 mt-2 text-[0.875rem] leading-snug text-[rgba(243,239,230,0.76)] lg:text-[0.9375rem]">
         {done
           ? `Сегодня ${done.correctAnswers} из 3 верных${done.points > 0 ? ` · +${done.points}${NB}${plural(done.points, ['балл', 'балла', 'баллов'])}` : ''}`
           : `3 вопроса · ${PILOT_POINTS_PER_ANSWER}${NB}баллов за верный ответ`}

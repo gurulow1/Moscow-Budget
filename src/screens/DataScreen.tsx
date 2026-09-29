@@ -163,7 +163,7 @@ function ProgramsBoard() {
         <h2 id="programs-title" className="m-0 text-[1.375rem] font-bold leading-tight tracking-[-0.03em] text-[#F7F4EE] lg:text-[2rem]">
           Табло госпрограмм
         </h2>
-        <p className="m-0 text-[0.875rem] text-[rgba(243,239,230,0.6)] lg:text-[1rem]">расходы 2026 года, млрд{NB}₽</p>
+        <p className="m-0 text-[0.875rem] text-[rgba(243,239,230,0.74)] lg:text-[1rem]">расходы 2026 года, млрд{NB}₽</p>
       </div>
       <div className="relative mt-4 hidden justify-between md:flex lg:mt-6">
         <span className="mgb-board-label text-[0.6875rem] lg:text-[0.75rem]">Программа</span>
@@ -186,7 +186,7 @@ function ProgramsBoard() {
           ))}
         </div>
       </div>
-      <p className="relative m-0 mt-4 text-[0.8125rem] leading-snug text-[rgba(243,239,230,0.55)] lg:mt-6 lg:text-[0.875rem]">
+      <p className="relative m-0 mt-4 text-[0.8125rem] leading-snug text-[rgba(243,239,230,0.7)] lg:mt-6 lg:text-[0.875rem]">
         Здравоохранение — без учёта денег Фонда ОМС. Городская среда, цифровая среда и спорт входят в «Другие программы».
       </p>
     </section>

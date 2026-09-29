@@ -108,28 +108,38 @@
 .mgb-flap-row { display: flex; gap: calc(var(--cw) * 0.1); }
 .mgb-flap .cell { position: relative; width: var(--cw); height: calc(var(--cw) * 1.42); perspective: calc(var(--cw) * 7); flex: none; }
 .mgb-flap .cell > span { position: absolute; left: 0; right: 0; height: 50%; overflow: hidden; backface-visibility: hidden; }
-.mgb-flap .cell .t, .mgb-flap .cell .ft { top: 0; border-radius: 3px 3px 0 0; background: linear-gradient(180deg, #292C33 0%, #22252B 100%); }
-.mgb-flap .cell .b, .mgb-flap .cell .fb { bottom: 0; border-radius: 0 0 3px 3px; background: linear-gradient(180deg, #1D2025 0%, #23262C 100%); }
+.mgb-flap .cell .t, .mgb-flap .cell .ft { top: 0; border-radius: 3px 3px 0 0; background: var(--flap-t, linear-gradient(180deg, #292C33 0%, #22252B 100%)); }
+.mgb-flap .cell .b, .mgb-flap .cell .fb { bottom: 0; border-radius: 0 0 3px 3px; background: var(--flap-b, linear-gradient(180deg, #1D2025 0%, #23262C 100%)); }
 .mgb-flap .cell i { position: absolute; left: 0; right: 0; height: 200%; display: flex; align-items: center; justify-content: center; font-style: normal; font-weight: 700; font-size: calc(var(--cw) * 0.84); line-height: 1; color: var(--ink, #F3EFE6); }
 .mgb-flap .cell .t i, .mgb-flap .cell .ft i { top: 0; }
 .mgb-flap .cell .b i, .mgb-flap .cell .fb i { bottom: 0; }
 .mgb-flap .cell .ft { transform-origin: 50% 100%; z-index: 2; visibility: hidden; }
 .mgb-flap .cell .fb { transform-origin: 50% 0%; z-index: 2; visibility: hidden; }
-.mgb-flap .cell::after { content: ''; position: absolute; left: 0; right: 0; top: calc(50% - 0.5px); height: 1px; background: #0A0B0E; z-index: 3; }
+.mgb-flap .cell::after { content: ''; position: absolute; left: 0; right: 0; top: calc(50% - 0.5px); height: 1px; background: var(--flap-seam, #0A0B0E); z-index: 3; }
 .mgb-flap .amber, .mgb-flap .cell.amber { --ink: #FFB547; }
 
-/* The board as a card: dark metal in both themes. */
+/* The board as a card. Light theme: graphite, so it sits on the pale page as an object, not a hole; its flaps are a
+   shade deeper than the body. Night: dark metal close to the other cards. */
 .mgb-board {
-  background: linear-gradient(180deg, #17191E 0%, #0F1115 100%);
+  --flap-t: linear-gradient(180deg, #30343C 0%, #2A2E35 100%);
+  --flap-b: linear-gradient(180deg, #25282F 0%, #2B2F36 100%);
+  --flap-seam: rgba(12, 14, 18, 0.7);
+  background: linear-gradient(180deg, #41464F 0%, #353941 100%);
   color: #F3EFE6;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 2px 4px rgba(0, 0, 0, 0.12), 0 30px 50px -30px rgba(10, 14, 30, 0.6);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), inset 0 0 0 1px rgba(255, 255, 255, 0.04), 0 2px 4px rgba(20, 24, 34, 0.1), 0 26px 44px -28px rgba(20, 28, 50, 0.55);
 }
-.dark .mgb-board { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 0 0 1px rgba(255, 255, 255, 0.06), 0 34px 60px -30px rgba(0, 0, 0, 0.9); }
+.dark .mgb-board {
+  --flap-t: linear-gradient(180deg, #292C33 0%, #22252B 100%);
+  --flap-b: linear-gradient(180deg, #1D2025 0%, #23262C 100%);
+  --flap-seam: #0A0B0E;
+  background: linear-gradient(180deg, #1B1E24 0%, #14161B 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 0 0 1px rgba(255, 255, 255, 0.06), 0 34px 60px -30px rgba(0, 0, 0, 0.9);
+}
 .mgb-board::before {
   content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 0;
   background: linear-gradient(118deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0) 38%);
 }
-.mgb-board-label { font-family: var(--font-mono); font-weight: 600; letter-spacing: 0.14em; color: rgba(243, 239, 230, 0.5); text-transform: uppercase; }
+.mgb-board-label { font-family: var(--font-mono); font-weight: 600; letter-spacing: 0.14em; color: rgba(243, 239, 230, 0.66); text-transform: uppercase; }
 .mgb-board-btn {
   font-family: var(--font-mono); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
   background: #FFB547; color: #17130A;
